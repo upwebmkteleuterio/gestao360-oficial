@@ -26,5 +26,5 @@
   - Business logic/Services are located in `src/services/`.
 - **Icons**: Exclusively use `lucide-react`. Ensure icons are sized consistently (usually `w-4 h-4` or `w-5 h-5`).
 - **Development Workflow**:
-  - The main entry point is `src/pages/Index.tsx`.
-  - Always update `Index.tsx` to include or link to new features/components to ensure visibility in the preview.
+  - The main entry point is `src/App.tsx`.
+  - Routes are defined in `src/App.tsx`, with the default landing page being `src/pages/Dashboard.tsx`.

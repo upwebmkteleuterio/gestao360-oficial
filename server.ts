@@ -2,6 +2,11 @@ import express from "express";
 import path from "path";
 import { createServer as createViteServer } from "vite";
 
+// Force development mode if not specified to ensure Vite runs in this environment
+if (!process.env.NODE_ENV) {
+  process.env.NODE_ENV = 'development';
+}
+
 async function startServer() {
   const app = express();
 
@@ -61,12 +66,16 @@ async function startServer() {
   });
 
   // Vite middleware for development
+  console.log(`Starting in ${process.env.NODE_ENV || 'development'} mode`);
+  
   if (process.env.NODE_ENV !== "production") {
+    console.log("Initializing Vite dev server...");
     const vite = await createViteServer({
       server: { middlewareMode: true },
       appType: "spa",
     });
     app.use(vite.middlewares);
+    console.log("Vite middleware loaded.");
   } else {
     const distPath = path.join(process.cwd(), 'dist');
     app.use(express.static(distPath));
