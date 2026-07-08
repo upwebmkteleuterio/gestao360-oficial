@@ -606,8 +606,8 @@ export default function Configuracoes() {
                   ) : (
                     paginatedUsers.map((u) => {
                       // Get custom initials
-                      const nameParts = u.nome.split(' ');
-                      const initials = nameParts.map(p => p[0]).join('').substring(0, 2).toUpperCase();
+                      const nameParts = (u.nome || u.email || 'User').split(' ');
+                      const initials = nameParts.map(p => p ? p[0] : '').join('').substring(0, 2).toUpperCase();
 
                       // Render beautiful visual profiles matching Screenshot 6 exactly
                       return (

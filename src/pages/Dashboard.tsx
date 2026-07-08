@@ -208,36 +208,38 @@ export default function Dashboard() {
         <section className="flex flex-wrap items-center justify-between gap-4 bg-white dark:bg-surface p-4 rounded-lg border border-surface-border shadow-sm">
           <div className="flex flex-wrap items-center gap-4 w-full md:w-auto">
             <div className="flex flex-col">
-              <span className="text-xs font-medium text-secondary mb-1">Período de Análise</span>
+              <span className="text-xs font-medium text-secondary mb-1">Seletor de Período</span>
               <div className="flex items-center gap-2 border border-surface-border rounded-lg px-3 py-2 bg-surface">
                 <Calendar className="w-5 h-5 text-secondary" />
-                <input 
-                  type="text" 
-                  readOnly
-                  value={periodFilter === 'all' ? 'Todo o Período' : periodFilter === '2023-10' ? 'Outubro 2023' : periodFilter === '2026-06' ? 'Junho 2026' : customStart ? `${customStart} até ${customEnd}` : 'Filtrar'}
-                  className="bg-transparent border-none p-0 text-sm font-semibold focus:ring-0 w-48 text-on-surface focus:outline-none"
-                />
+                <select
+                  value={periodFilter}
+                  onChange={(e) => {
+                    setPeriodFilter(e.target.value as any);
+                    if (e.target.value !== 'custom') {
+                      setCustomStart('');
+                      setCustomEnd('');
+                    }
+                  }}
+                  className="bg-transparent border-none p-0 text-sm font-semibold focus:ring-0 w-48 text-on-surface focus:outline-none cursor-pointer"
+                >
+                  <option value="all">Todo o Período</option>
+                  <option value="este-mes">Este Mês</option>
+                  <option value="2023-10">Outubro 2023</option>
+                  <option value="2026-06">Junho 2026</option>
+                  <option value="90-dias">Últimos 90 dias</option>
+                </select>
               </div>
             </div>
 
-            <div className="flex flex-col">
-              <span className="text-xs font-medium text-secondary mb-1">Atalho</span>
-              <select 
-                value={periodFilter}
-                onChange={(e) => {
-                  setPeriodFilter(e.target.value as any);
-                  if (e.target.value !== 'custom') {
-                    setCustomStart('');
-                    setCustomEnd('');
-                  }
-                }}
-                className="border border-surface-border rounded-lg px-3 py-2 bg-surface text-sm font-semibold focus:ring-2 focus:ring-primary-container outline-none min-w-[140px] text-on-surface cursor-pointer"
-              >
-                <option value="all">Este Mês</option>
-                <option value="2023-10">Mês Passado</option>
-                <option value="2026-06">Últimos 90 dias</option>
-              </select>
-            </div>
+            {periodFilter === 'all' && (
+              <div className="flex flex-col animate-fade-in">
+                <span className="text-xs font-medium text-secondary mb-1">Status de Dados</span>
+                <div className="flex items-center gap-2 px-3 py-2 bg-bank-truth-green/10 rounded-lg">
+                  <CheckCircle2 className="w-4 h-4 text-bank-truth-green" />
+                  <span className="text-xs font-bold text-bank-truth-green">Visão Consolidada</span>
+                </div>
+              </div>
+            )}
           </div>
 
           <div className="flex items-center gap-2">
@@ -245,8 +247,25 @@ export default function Dashboard() {
               <Filter className="w-5 h-5 text-secondary" />
               Filtros Avançados
             </button>
-            <button 
-              onClick={() => alert('Download do relatório em formato CSV iniciado.')}
+            <button
+              onClick={() => {
+                const headers = 'KPI,Valor\n';
+                const rows = [
+                  ['Saldo Consolidado', valueFormatter(totals.consolidatedBalance)],
+                  ['Saldo Simulado', valueFormatter(totals.simulatedBalance)],
+                  ['Pendentes Master', valueFormatter(totals.outPending)],
+                  ['Percentual Pagos', `${totals.paidPercent}%`],
+                  ['Percentual Atrasados', `${totals.unpaidPercent}%`],
+                  ['Percentual BPI', `${totals.bpiPercent}%`]
+                ].map(r => r.join(',')).join('\n');
+                
+                const blob = new Blob([headers + rows], { type: 'text/csv;charset=utf-8;' });
+                const url = URL.createObjectURL(blob);
+                const link = document.createElement('a');
+                link.setAttribute('href', url);
+                link.setAttribute('download', 'resumo_financeiro_dashboard.csv');
+                link.click();
+              }}
               className="flex items-center gap-2 px-4 py-2 bg-secondary hover:bg-neutral-700 text-white rounded-lg text-sm font-semibold transition-all"
             >
               <Download className="w-5 h-5" />
