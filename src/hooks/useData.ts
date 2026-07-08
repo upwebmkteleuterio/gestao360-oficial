@@ -11,13 +11,17 @@ import { usuariosService } from '../services/usuariosService';
 import { auditoriaService } from '../services/auditoriaService';
 import { TipoDiferenca } from '../types';
 
-export function useFinancialSummary() {
+export function useFinancialSummary(filters?: { accountId?: string, costCenterId?: string }) {
   const { user } = useAuth();
   
   return useQuery({
-    queryKey: ['financialSummary', user?.id],
+    queryKey: ['financialSummary', user?.id, filters],
     queryFn: async () => {
-      const { data, error } = await supabase.rpc('get_financial_summary', { p_user_id: user?.id });
+      const { data, error } = await supabase.rpc('get_financial_summary', {
+        p_user_id: user?.id,
+        p_account_id: filters?.accountId || null,
+        p_cost_center_id: filters?.costCenterId || null
+      });
       if (error) throw error;
       return data[0];
     },

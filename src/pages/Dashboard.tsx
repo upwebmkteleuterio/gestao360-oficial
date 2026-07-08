@@ -26,10 +26,19 @@ import { useDragScroll } from '../hooks/useDragScroll';
 export default function Dashboard() {
   const dragScrollAccounts = useDragScroll();
   const dragScrollTabs = useDragScroll();
+
+  // Advanced Filter States
+  const [showAdvancedFilters, setShowAdvancedFilters] = useState(false);
+  const [selectedAccountId, setSelectedAccountId] = useState<string | null>(null);
+  const [selectedCCId, setSelectedCCId] = useState<string | null>(null);
+
   const { data: lancamentos = [], isLoading: loadingLancamentos } = useLancamentos();
   const { data: contas = [], isLoading: loadingContas } = useContas();
   const { data: centrosCusto = [] } = useCentrosCusto();
-  const { data: summary, isLoading: loadingSummary } = useFinancialSummary();
+  const { data: summary, isLoading: loadingSummary } = useFinancialSummary({
+    accountId: selectedAccountId || undefined,
+    costCenterId: selectedCCId || undefined
+  });
   
   const { setActiveTab, setModalOpen } = useUIStore();
 
@@ -243,9 +252,16 @@ export default function Dashboard() {
           </div>
 
           <div className="flex items-center gap-2">
-            <button className="flex items-center gap-2 px-4 py-2 border border-surface-border rounded-lg text-sm font-semibold text-secondary hover:bg-neutral-50 transition-all">
-              <Filter className="w-5 h-5 text-secondary" />
-              Filtros Avançados
+            <button
+              onClick={() => setShowAdvancedFilters(!showAdvancedFilters)}
+              className={`flex items-center gap-2 px-4 py-2 border rounded-lg text-sm font-semibold transition-all ${
+                showAdvancedFilters || selectedAccountId || selectedCCId
+                  ? 'bg-primary/10 border-primary text-primary'
+                  : 'border-surface-border text-secondary hover:bg-neutral-50'
+              }`}
+            >
+              <Filter className="w-5 h-5" />
+              Filtros Avançados {(selectedAccountId || selectedCCId) && '•'}
             </button>
             <button
               onClick={() => {
@@ -273,9 +289,60 @@ export default function Dashboard() {
             </button>
           </div>
         </section>
+
+        {/* Advanced Filters Panel (Expandable) */}
+        {showAdvancedFilters && (
+          <section className="grid grid-cols-1 md:grid-cols-3 gap-4 bg-surface-low-low p-4 rounded-lg border border-surface-border animate-fade-in">
+            <div className="flex flex-col gap-1.5">
+              <label className="text-xs font-bold text-secondary uppercase">Filtrar por Conta</label>
+              <select
+                value={selectedAccountId || ''}
+                onChange={(e) => setSelectedAccountId(e.target.value || null)}
+                className="w-full bg-surface border border-surface-border rounded-lg px-3 py-2 text-sm font-semibold outline-none focus:ring-2 focus:ring-primary/20"
+              >
+                <option value="">Todas as Contas</option>
+                {contas.map(c => (
+                  <option key={c.id} value={c.id}>{c.nome}</option>
+                ))}
+              </select>
+            </div>
+            <div className="flex flex-col gap-1.5">
+              <label className="text-xs font-bold text-secondary uppercase">Centro de Custo</label>
+              <select
+                value={selectedCCId || ''}
+                onChange={(e) => setSelectedCCId(e.target.value || null)}
+                className="w-full bg-surface border border-surface-border rounded-lg px-3 py-2 text-sm font-semibold outline-none focus:ring-2 focus:ring-primary/20"
+              >
+                <option value="">Todos os Centros</option>
+                {centrosCusto.map(cc => (
+                  <option key={cc.id} value={cc.id}>{cc.nome}</option>
+                ))}
+              </select>
+            </div>
+            <div className="flex items-end">
+              <button
+                onClick={() => { setSelectedAccountId(null); setSelectedCCId(null); }}
+                className="text-xs font-bold text-alert-red hover:underline mb-3"
+              >
+                Limpar Filtros Avançados
+              </button>
+            </div>
+          </section>
+        )}
       </div>
 
-      {/* Main KPIs Row (Three Cards styled exactly like original HTML) */}
+      {/* Cash Flow Alert (Negative Balance Warning) */}
+      {totals.simulatedBalance < 0 && (
+        <section className="bg-alert-red/10 border-l-4 border-alert-red p-4 rounded-r-lg flex items-center gap-4 animate-bounce">
+          <AlertTriangle className="w-8 h-8 text-alert-red shrink-0" />
+          <div>
+            <h4 className="text-sm font-bold text-alert-red uppercase">Alerta de Fluxo de Caixa Negativo</h4>
+            <p className="text-xs text-alert-red/80 font-medium">O saldo simulado para o final do período está negativo ({valueFormatter(totals.simulatedBalance)}). Revise seus lançamentos pendentes.</p>
+          </div>
+        </section>
+      )}
+
+      {/* Main KPIs Row */}
       <section className="grid grid-cols-1 md:grid-cols-3 gap-6">
         {/* Card 1 */}
         <div className="bg-white dark:bg-surface p-6 rounded-xl border border-surface-border shadow-sm hover:shadow-md transition-shadow relative overflow-hidden group">
@@ -287,10 +354,12 @@ export default function Dashboard() {
           <h3 className="text-2xl font-bold font-mono text-on-surface">
             {valueFormatter(totals.consolidatedBalance)}
           </h3>
-          <p className="text-xs font-semibold text-bank-truth-green mt-2 flex items-center gap-1">
-            <TrendingUp className="w-4 h-4" />
-            +4.2% em relação a ontem
-          </p>
+          <div className={`text-xs font-semibold mt-2 flex items-center gap-1 ${
+            (summary?.trend_percentage || 0) >= 0 ? 'text-bank-truth-green' : 'text-alert-red'
+          }`}>
+            {(summary?.trend_percentage || 0) >= 0 ? <TrendingUp className="w-4 h-4" /> : <TrendingDown className="w-4 h-4" />}
+            {summary?.trend_percentage > 0 ? '+' : ''}{summary?.trend_percentage || 0}% em relação aos últimos 30 dias
+          </div>
         </div>
 
         {/* Card 2 */}
