@@ -9,7 +9,42 @@ import { lancamentosService } from '../services/lancamentosService';
 import { conciliacoesService } from '../services/conciliacoesService';
 import { usuariosService } from '../services/usuariosService';
 import { auditoriaService } from '../services/auditoriaService';
+import { notificationsService } from '../services/notificationsService';
 import { TipoDiferenca } from '../types';
+
+export function useNotifications() {
+  const queryClient = useQueryClient();
+  const { user } = useAuth();
+
+  const query = useQuery({
+    queryKey: ['notifications', user?.id],
+    queryFn: notificationsService.getAll,
+    enabled: !!user?.id,
+    refetchInterval: 30000, // Refetch every 30s
+  });
+
+  const markReadMutation = useMutation({
+    mutationFn: notificationsService.markAsRead,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['notifications'] });
+    }
+  });
+
+  const markAllReadMutation = useMutation({
+    mutationFn: notificationsService.markAllAsRead,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['notifications'] });
+    }
+  });
+
+  return {
+    ...query,
+    notifications: query.data || [],
+    unreadCount: (query.data || []).filter(n => !n.read).length,
+    markAsRead: markReadMutation.mutateAsync,
+    markAllAsRead: markAllReadMutation.mutateAsync
+  };
+}
 
 export function useFinancialSummary(filters?: { accountId?: string, costCenterId?: string }) {
   const { user } = useAuth();

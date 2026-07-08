@@ -1,12 +1,13 @@
 import React, { useEffect, useState } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { Plus, Menu, LogOut } from 'lucide-react';
+import { Plus, Menu, LogOut, Bell, Check, Clock } from 'lucide-react';
 
 // Persisted store & services
 import { useUIStore } from './store/uiStore';
 import { initializeDatabase } from './services/db';
 import { AuthProvider, useAuth } from './hooks/useAuth';
+import { useNotifications } from './hooks/useData';
 
 // Custom layout components
 import Sidebar from './components/Sidebar';
@@ -36,6 +37,83 @@ const queryClient = new QueryClient({
     }
   }
 });
+
+function NotificationDropdown() {
+  const { notifications, unreadCount, markAsRead, markAllRead } = useNotifications();
+  const [isOpen, setIsOpen] = useState(false);
+  const navigate = useNavigate();
+
+  return (
+    <div className="relative">
+      <button
+        type="button"
+        onClick={() => setIsOpen(!isOpen)}
+        className="p-2 text-secondary hover:text-primary transition-colors relative"
+      >
+        <Bell className="w-5 h-5" />
+        {unreadCount > 0 && (
+          <span className="absolute top-1 right-1 w-4 h-4 bg-alert-red text-white text-[10px] font-black rounded-full flex items-center justify-center border-2 border-surface">
+            {unreadCount}
+          </span>
+        )}
+      </button>
+
+      {isOpen && (
+        <>
+          <div className="fixed inset-0 z-40" onClick={() => setIsOpen(false)}></div>
+          <div className="absolute right-0 mt-2 w-80 bg-surface border border-surface-border rounded-xl shadow-2xl z-50 overflow-hidden animate-fade-in">
+            <div className="p-4 border-b border-surface-border flex items-center justify-between bg-surface-low-low">
+              <h3 className="text-xs font-black uppercase tracking-wider text-on-surface">Notificações</h3>
+              {unreadCount > 0 && (
+                <button
+                  onClick={() => markAllRead()}
+                  className="text-[10px] font-bold text-primary hover:underline"
+                >
+                  Marcar todas como lidas
+                </button>
+              )}
+            </div>
+            <div className="max-h-[350px] overflow-y-auto">
+              {notifications.length === 0 ? (
+                <div className="p-8 text-center text-on-surface-variant/40">
+                  <Bell className="w-8 h-8 mx-auto mb-2 opacity-20" />
+                  <p className="text-xs font-medium">Nenhuma notificação</p>
+                </div>
+              ) : (
+                notifications.map(n => (
+                  <div
+                    key={n.id}
+                    onClick={() => {
+                      markAsRead(n.id);
+                      if (n.link) navigate(n.link);
+                      setIsOpen(false);
+                    }}
+                    className={`p-4 border-b border-surface-border hover:bg-surface-low-low transition-colors cursor-pointer relative ${!n.read ? 'bg-primary/5' : ''}`}
+                  >
+                    {!n.read && <div className="absolute left-1.5 top-1/2 -translate-y-1/2 w-1.5 h-1.5 bg-primary rounded-full"></div>}
+                    <div className="flex flex-col gap-0.5">
+                      <p className="text-xs font-bold text-on-surface">{n.title}</p>
+                      <p className="text-[11px] text-on-surface-variant line-clamp-2">{n.message}</p>
+                      <div className="flex items-center gap-1 mt-1.5 text-[9px] font-bold text-secondary uppercase tracking-tight">
+                        <Clock className="w-3 h-3" />
+                        {new Date(n.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                      </div>
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
+            <div className="p-3 bg-surface-low-low border-t border-surface-border text-center">
+              <button className="text-[10px] font-bold text-secondary hover:text-primary transition-colors">
+                Ver todas as notificações
+              </button>
+            </div>
+          </div>
+        </>
+      )}
+    </div>
+  );
+}
 
 function PrivateRoute({ children }: { children: React.ReactNode }) {
   const { session, isLoading } = useAuth();
@@ -101,6 +179,7 @@ function AppContent() {
 
                   {/* Quick Actions */}
                   <div className="flex items-center gap-3">
+                    <NotificationDropdown />
                     <button
                       type="button"
                       onClick={() => setModalOpen('isNovoLancamentoOpen', true)}
