@@ -1,0 +1,123 @@
+export type UserPerfil = 'master' | 'gerente' | 'colaborador';
+
+export interface UserProfile {
+  id: string;
+  nome: string;
+  email: string;
+  perfil: UserPerfil;
+  status: boolean;
+  created_at: string;
+}
+
+export type EntidadeTipo = 'cliente' | 'fornecedor' | 'ambos';
+
+export interface EntidadeNegocio {
+  id: string;
+  tipo: EntidadeTipo;
+  nome_razao_social: string;
+  documento: string; // CPF or CNPJ
+  status_sincronizacao: boolean;
+  created_at: string;
+  email?: string;
+  telefone?: string;
+  data_nascimento?: string;
+  status_base?: 'ativo' | 'inativo' | 'bpi';
+}
+
+export interface CentroCusto {
+  id: string;
+  nome: string;
+  descricao: string;
+}
+
+export interface CategoriaFinanceira {
+  id: string;
+  nome: string;
+  tipo: 'entrada' | 'saida';
+}
+
+export interface ContaBancaria {
+  id: string;
+  nome_banco: string;
+  data_abertura: string;
+  saldo_inicial: number;
+}
+
+export type StatusAprovacao = 'pendente_digital' | 'digital' | 'confirmado_master';
+export type StatusPagamento = 'aberto' | 'pago' | 'pago_parcial' | 'bpi';
+
+export interface LancamentoFinanceiro {
+  id: string;
+  tipo: 'entrada' | 'saida';
+  valor_previsto: number;
+  data_vencimento: string;
+  data_emissao: string;
+  entidade_id: string;
+  centro_custo_id: string;
+  categoria_id: string;
+  conta_bancaria_id: string;
+  comprovante_url?: string;
+  observacoes: string;
+  recorrencia_id?: string; // Null if single parcel
+  numero_parcela?: number; // parcel number if recurring
+  status_aprovacao: StatusAprovacao;
+  status_pagamento: StatusPagamento;
+  usuario_criador_id: string;
+  status_sincronizacao: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface TransacaoBanco {
+  id: string;
+  conta_bancaria_id: string;
+  data_transacao: string;
+  valor: number;
+  descricao_banco: string;
+  tipo_movimento: 'debito' | 'credito';
+  hash_transacao: string; // duplicate prevention
+  status_conciliacao: boolean;
+}
+
+export interface Conciliacao {
+  id: string;
+  lancamento_id: string;
+  transacao_banco_id: string;
+  usuario_conciliador_id: string;
+  data_conciliacao: string;
+}
+
+export type TipoDiferenca = 'juros' | 'multa' | 'desconto' | 'tarifa' | 'pagamento_parcial' | 'ajuste_manual';
+
+export interface DiferencaFinanceira {
+  id: string;
+  conciliacao_id: string;
+  tipo_diferenca: TipoDiferenca;
+  valor_diferenca: number;
+  observacao_justificativa: string;
+}
+
+export interface Recorrencia {
+  id: string;
+  periodicidade: 'diario' | 'semanal' | 'mensal' | 'anual';
+  quantidade_total_parcelas: number;
+  data_inicio: string;
+}
+
+export interface AuditoriaLog {
+  id: string;
+  tabela_afetada: string;
+  registro_id: string;
+  usuario_id: string;
+  acao: 'INSERT' | 'UPDATE' | 'DELETE';
+  dados_anteriores?: Record<string, any>;
+  dados_novos?: Record<string, any>;
+  data_hora: string;
+}
+
+export interface ResumoSaldo {
+  conta_bancaria_id: string;
+  saldo_consolidado: number;
+  saldo_simulado: number;
+  ultima_atualizacao: string;
+}

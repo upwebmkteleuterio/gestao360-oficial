@@ -1,0 +1,171 @@
+import React, { useEffect } from 'react';
+import { useLocation, useNavigate } from 'react-router-dom';
+import { 
+  BarChart3, 
+  Coins, 
+  Settings, 
+  LayoutDashboard, 
+  FileSpreadsheet, 
+  UserSquare2,
+  Moon,
+  Sun,
+  ShieldCheck,
+  X
+} from 'lucide-react';
+import { useUIStore, TabType } from '../store/uiStore';
+import { useUsuarios } from '../hooks/useData';
+
+interface SidebarProps {
+  isOpen: boolean;
+  onClose: () => void;
+}
+
+export default function Sidebar({ isOpen, onClose }: SidebarProps) {
+  const { 
+    theme, 
+    setTheme, 
+    activeTab, 
+    setActiveTab, 
+    currentUserId,
+    setCurrentUserId
+  } = useUIStore();
+
+  const { data: usuarios = [] } = useUsuarios();
+  const location = useLocation();
+  const navigate = useNavigate();
+
+  const activeUserProfile = usuarios.find(u => u.id === currentUserId);
+
+  // Sync theme with HTML document class
+  useEffect(() => {
+    const root = window.document.documentElement;
+    if (theme === 'dark') {
+      root.classList.add('dark');
+    } else {
+      root.classList.remove('dark');
+    }
+  }, [theme]);
+
+  const toggleTheme = () => {
+    setTheme(theme === 'dark' ? 'light' : 'dark');
+  };
+
+  const navItems = [
+    { id: 'dashboard' as TabType, label: 'Painel Geral', icon: LayoutDashboard, path: '/dashboard' },
+    { id: 'lancamentos' as TabType, label: 'Lançamentos', icon: Coins, path: '/lancamentos' },
+    { id: 'conciliacao' as TabType, label: 'Conciliação Bancária', icon: FileSpreadsheet, path: '/conciliacao' },
+    { id: 'cadastros' as TabType, label: 'CRM & Cadastros', icon: UserSquare2, path: '/cadastros' },
+    { id: 'relatorios' as TabType, label: 'Relatórios Analíticos', icon: BarChart3, path: '/relatorios' },
+    { id: 'configuracoes' as TabType, label: 'Configurações', icon: Settings, path: '/configuracoes' }
+  ];
+
+  return (
+    <>
+      {/* Mobile Backdrop Overlay */}
+      {isOpen && (
+        <div 
+          onClick={onClose}
+          className="fixed inset-0 bg-neutral-900/40 backdrop-blur-xs z-45 lg:hidden"
+        />
+      )}
+
+      <aside 
+        className={`bg-surface border-r border-surface-border flex flex-col h-screen lg:shrink-0 lg:sticky lg:top-0 focus-none select-none print:hidden z-50 transition-transform duration-300
+          fixed inset-y-0 left-0 lg:static lg:translate-x-0 w-64
+          ${isOpen ? 'translate-x-0 shadow-2xl' : '-translate-x-full lg:translate-x-0'}
+        `}
+        id="main-sidebar-rail"
+      >
+        {/* Product branding */}
+        <div className="p-6 border-b border-surface-border flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="w-8 h-8 rounded-lg bg-primary flex items-center justify-center text-on-primary font-black text-lg shadow-sm font-sans tracking-tighter">
+              G
+            </div>
+            <div>
+              <span className="font-extrabold text-sm tracking-tight text-on-background block">Gestão 360</span>
+              <span className="text-[10px] uppercase font-bold tracking-wider text-primary block">CFO ERP Headquarters</span>
+            </div>
+          </div>
+
+          {/* Close Button on mobile */}
+          <button
+            onClick={onClose}
+            className="p-1 px-2 rounded-lg text-secondary hover:bg-neutral-100 lg:hidden"
+            aria-label="Fechar Menu"
+          >
+            <X className="w-5 h-5" />
+          </button>
+        </div>
+
+        {/* Navigation list */}
+        <nav className="flex-1 p-4 space-y-1.5 overflow-y-auto">
+          {navItems.map(item => {
+            const isActive = location.pathname.startsWith(item.path);
+            const Icon = item.icon;
+            return (
+              <button
+                key={item.id}
+                onClick={() => {
+                  navigate(item.path);
+                  setActiveTab(item.id); // keep synced with zustand if anything still depends on it
+                  onClose();
+                }}
+                className={`w-full flex items-center gap-3 px-3.5 py-2.5 rounded-lg text-xs font-bold transition-all text-left ${
+                  isActive 
+                    ? 'bg-primary-container text-on-primary-container font-extrabold shadow-xs' 
+                    : 'text-on-surface-variant hover:bg-surface-container hover:text-on-surface'
+                }`}
+              >
+                <Icon className="w-4 h-4 shrink-0" />
+                {item.label}
+              </button>
+            );
+          })}
+        </nav>
+
+      {/* Footer controls: Switch Active User and toggle Dark mode */}
+      <div className="p-4 border-t border-surface-border bg-surface-container-low space-y-4">
+        {/* User profile preview */}
+        {activeUserProfile && (
+          <div className="p-2.5 rounded-lg border border-surface-border bg-surface flex items-center gap-2.5 shadow-xs">
+            <div className="w-8 h-8 rounded-full bg-primary/20 text-primary flex items-center justify-center text-center">
+              <ShieldCheck className="w-4 h-4" />
+            </div>
+            <div className="min-w-0 flex-1">
+              <span className="font-bold text-xs text-on-background truncate block" title={activeUserProfile.nome}>
+                {activeUserProfile.nome}
+              </span>
+              <span className="text-[10px] capital font-bold text-on-surface-variant uppercase tracking-wider block">
+                {activeUserProfile.perfil}
+              </span>
+            </div>
+          </div>
+        )}
+
+        <div className="flex items-center justify-between pt-1">
+          {/* Theme switcher */}
+          <button 
+            onClick={toggleTheme}
+            className="p-2 rounded-lg border border-surface-border text-on-surface hover:bg-surface-container transition-all flex items-center gap-1.5 text-xs font-semibold"
+          >
+            {theme === 'dark' ? (
+              <>
+                <Sun className="w-4 h-4 text-primary" />
+                <span className="text-[10px]">Claro</span>
+              </>
+            ) : (
+              <>
+                <Moon className="w-4 h-4 text-on-surface-variant" />
+                <span className="text-[10px]">Escuro</span>
+              </>
+            )}
+          </button>
+          
+          <span className="text-[9px] font-bold text-on-surface-variant/40">v3.6.0 Stable</span>
+        </div>
+      </div>
+    </aside>
+    </>
+  );
+}

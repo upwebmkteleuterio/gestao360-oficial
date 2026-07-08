@@ -1,0 +1,294 @@
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { entidadesService } from '../services/entidadesService';
+import { centrosCustoService } from '../services/centrosCustoService';
+import { categoriasService } from '../services/categoriasService';
+import { contasService } from '../services/contasService';
+import { lancamentosService } from '../services/lancamentosService';
+import { conciliacoesService } from '../services/conciliacoesService';
+import { usuariosService } from '../services/usuariosService';
+import { auditoriaService } from '../services/auditoriaService';
+import { TipoDiferenca } from '../types';
+
+export function useEntidades() {
+  const queryClient = useQueryClient();
+  
+  const query = useQuery({
+    queryKey: ['entidades'],
+    queryFn: entidadesService.getAll
+  });
+
+  const createMutation = useMutation({
+    mutationFn: entidadesService.create,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['entidades'] });
+    }
+  });
+
+  const updateMutation = useMutation({
+    mutationFn: ({ id, data }: { id: string, data: any }) => entidadesService.update(id, data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['entidades'] });
+    }
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: entidadesService.delete,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['entidades'] });
+    }
+  });
+
+  return {
+    ...query,
+    createEntity: createMutation.mutateAsync,
+    updateEntity: updateMutation.mutateAsync,
+    deleteEntity: deleteMutation.mutateAsync,
+    isCreating: createMutation.isPending,
+    isUpdating: updateMutation.isPending,
+    isDeleting: deleteMutation.isPending
+  };
+}
+
+export function useCentrosCusto() {
+  const queryClient = useQueryClient();
+
+  const query = useQuery({
+    queryKey: ['centrosCusto'],
+    queryFn: centrosCustoService.getAll
+  });
+
+  const createMutation = useMutation({
+    mutationFn: centrosCustoService.create,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['centrosCusto'] });
+    }
+  });
+
+  const updateMutation = useMutation({
+    mutationFn: ({ id, data }: { id: string, data: any }) => centrosCustoService.update(id, data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['centrosCusto'] });
+    }
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: centrosCustoService.delete,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['centrosCusto'] });
+    }
+  });
+
+  return {
+    ...query,
+    createCC: createMutation.mutateAsync,
+    updateCC: updateMutation.mutateAsync,
+    deleteCC: deleteMutation.mutateAsync,
+    isCreating: createMutation.isPending
+  };
+}
+
+export function useCategorias() {
+  const queryClient = useQueryClient();
+
+  const query = useQuery({
+    queryKey: ['categorias'],
+    queryFn: categoriasService.getAll
+  });
+
+  const createMutation = useMutation({
+    mutationFn: categoriasService.create,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['categorias'] });
+    }
+  });
+
+  return {
+    ...query,
+    createCategory: createMutation.mutateAsync,
+    isCreating: createMutation.isPending
+  };
+}
+
+export function useContas() {
+  const queryClient = useQueryClient();
+
+  const query = useQuery({
+    queryKey: ['contas'],
+    queryFn: contasService.getAll
+  });
+
+  const createMutation = useMutation({
+    mutationFn: contasService.create,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['contas'] });
+    }
+  });
+
+  return {
+    ...query,
+    createAccount: createMutation.mutateAsync,
+    isCreating: createMutation.isPending
+  };
+}
+
+export function useLancamentos() {
+  const queryClient = useQueryClient();
+
+  const query = useQuery({
+    queryKey: ['lancamentos'],
+    queryFn: lancamentosService.getAll
+  });
+
+  const createMutation = useMutation({
+    mutationFn: ({ item, recorrencia }: { item: any, recorrencia?: any }) => lancamentosService.create(item, recorrencia),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['lancamentos'] });
+    }
+  });
+
+  const updateMutation = useMutation({
+    mutationFn: ({ id, data, mode }: { id: string, data: any, mode?: 'single' | 'all' }) => 
+      lancamentosService.update(id, data, mode),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['lancamentos'] });
+      queryClient.invalidateQueries({ queryKey: ['auditoriaLogs'] });
+    }
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: ({ id, mode }: { id: string, mode?: 'single' | 'all' }) => lancamentosService.delete(id, mode),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['lancamentos'] });
+      queryClient.invalidateQueries({ queryKey: ['auditoriaLogs'] });
+    }
+  });
+
+  const batchApproveMutation = useMutation({
+    mutationFn: ({ ids, targetStatus }: { ids: string[], targetStatus: 'digital' | 'confirmado_master' }) => 
+      lancamentosService.approveInBatch(ids, targetStatus),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['lancamentos'] });
+      queryClient.invalidateQueries({ queryKey: ['auditoriaLogs'] });
+    }
+  });
+
+  return {
+    ...query,
+    createLancamento: createMutation.mutateAsync,
+    updateLancamento: updateMutation.mutateAsync,
+    deleteLancamento: deleteMutation.mutateAsync,
+    batchApprove: batchApproveMutation.mutateAsync,
+    isCreating: createMutation.isPending,
+    isUpdating: updateMutation.isPending,
+    isDeleting: deleteMutation.isPending,
+    isBatchApproving: batchApproveMutation.isPending
+  };
+}
+
+export function useConciliacao() {
+  const queryClient = useQueryClient();
+
+  const conciliacoesQuery = useQuery({
+    queryKey: ['conciliacoes'],
+    queryFn: conciliacoesService.getConciliacoes
+  });
+
+  const diferencasQuery = useQuery({
+    queryKey: ['diferencas'],
+    queryFn: conciliacoesService.getDiferencas
+  });
+
+  const transacoesQuery = useQuery({
+    queryKey: ['transacoes'],
+    queryFn: conciliacoesService.getAllTransacoes
+  });
+
+  const importMutation = useMutation({
+    mutationFn: ({ contaBancariaId, rows }: { contaBancariaId: string, rows: any[] }) => 
+      conciliacoesService.importCSV(contaBancariaId, rows),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['transacoes'] });
+    }
+  });
+
+  const linkMutation = useMutation({
+    mutationFn: ({ lancamentoId, transacaoBancoId, usuarioId }: { lancamentoId: string, transacaoBancoId: string, usuarioId: string }) => 
+      conciliacoesService.linkConciliacao(lancamentoId, transacaoBancoId, usuarioId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['conciliacoes'] });
+      queryClient.invalidateQueries({ queryKey: ['transacoes'] });
+      queryClient.invalidateQueries({ queryKey: ['lancamentos'] });
+      queryClient.invalidateQueries({ queryKey: ['auditoriaLogs'] });
+    }
+  });
+
+  const unlinkMutation = useMutation({
+    mutationFn: ({ conciliacaoId, usuarioId }: { conciliacaoId: string, usuarioId: string }) => 
+      conciliacoesService.unlinkConciliacao(conciliacaoId, usuarioId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['conciliacoes'] });
+      queryClient.invalidateQueries({ queryKey: ['transacoes'] });
+      queryClient.invalidateQueries({ queryKey: ['lancamentos'] });
+      queryClient.invalidateQueries({ queryKey: ['diferencas'] });
+      queryClient.invalidateQueries({ queryKey: ['auditoriaLogs'] });
+    }
+  });
+
+  const classifyDifferenceMutation = useMutation({
+    mutationFn: ({ conciliacaoId, tipoDiferenca, valorDiferenca, observacaoJustificativa }: { conciliacaoId: string, tipoDiferenca: TipoDiferenca, valorDiferenca: number, observacaoJustificativa: string }) => 
+      conciliacoesService.classifyDifference(conciliacaoId, tipoDiferenca, valorDiferenca, observacaoJustificativa),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['diferencas'] });
+    }
+  });
+
+  return {
+    conciliacoes: conciliacoesQuery.data || [],
+    diferencas: diferencasQuery.data || [],
+    transacoes: transacoesQuery.data || [],
+    isFetchingTransacoes: transacoesQuery.isPending,
+    isLinking: linkMutation.isPending,
+    isUnlinking: unlinkMutation.isPending,
+    importCSV: importMutation.mutateAsync,
+    linkConciliacao: linkMutation.mutateAsync,
+    unlinkConciliacao: unlinkMutation.mutateAsync,
+    classifyDifference: classifyDifferenceMutation.mutateAsync
+  };
+}
+
+export function useUsuarios() {
+  const queryClient = useQueryClient();
+
+  const query = useQuery({
+    queryKey: ['usuarios'],
+    queryFn: usuariosService.getAll
+  });
+
+  const createMutation = useMutation({
+    mutationFn: usuariosService.create,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['usuarios'] });
+    }
+  });
+
+  const updateMutation = useMutation({
+    mutationFn: ({ id, data }: { id: string, data: any }) => usuariosService.update(id, data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['usuarios'] });
+    }
+  });
+
+  return {
+    ...query,
+    inviteUser: createMutation.mutateAsync,
+    updateUser: updateMutation.mutateAsync,
+    isInviting: createMutation.isPending
+  };
+}
+
+export function useAuditoriaLogs() {
+  return useQuery({
+    queryKey: ['auditoriaLogs'],
+    queryFn: auditoriaService.getAll
+  });
+}
