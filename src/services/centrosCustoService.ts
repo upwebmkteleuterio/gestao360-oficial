@@ -1,42 +1,48 @@
-import { db, getData, KEYS } from './db';
+import { supabase } from '@/integrations/supabase/client';
 import { CentroCusto } from '../types';
 
 export const centrosCustoService = {
   getAll: async (): Promise<CentroCusto[]> => {
-    return db.centrosCusto.getAll();
-  },
-
-  getById: async (id: string): Promise<CentroCusto | undefined> => {
-    const list = await db.centrosCusto.getAll();
-    return list.find(item => item.id === id);
+    const { data, error } = await supabase
+      .from('centros_custo')
+      .select('*')
+      .order('nome', { ascending: true });
+    
+    if (error) throw error;
+    return data as CentroCusto[];
   },
 
   create: async (item: Omit<CentroCusto, 'id'>): Promise<CentroCusto> => {
-    const list = getData<CentroCusto>(KEYS.CENTROS_CUSTO);
-    const newItem: CentroCusto = {
-      ...item,
-      id: 'cc_' + Math.random().toString(36).substr(2, 9),
-    };
-    list.push(newItem);
-    await db.centrosCusto.save(list);
-    return newItem;
+    const { data: { user } } = await supabase.auth.getUser();
+    const { data, error } = await supabase
+      .from('centros_custo')
+      .insert([{ ...item, user_id: user?.id }])
+      .select()
+      .single();
+    
+    if (error) throw error;
+    return data as CentroCusto;
   },
 
   update: async (id: string, item: Partial<Omit<CentroCusto, 'id'>>): Promise<CentroCusto> => {
-    const list = getData<CentroCusto>(KEYS.CENTROS_CUSTO);
-    const index = list.findIndex(r => r.id === id);
-    if (index === -1) throw new Error('Centro de custo não encontrado');
-    const updated = { ...list[index], ...item };
-    list[index] = updated;
-    await db.centrosCusto.save(list);
-    return updated;
+    const { data, error } = await supabase
+      .from('centros_custo')
+      .update(item)
+      .eq('id', id)
+      .select()
+      .single();
+    
+    if (error) throw error;
+    return data as CentroCusto;
   },
 
   delete: async (id: string): Promise<boolean> => {
-    const list = getData<CentroCusto>(KEYS.CENTROS_CUSTO);
-    const filtered = list.filter(r => r.id !== id);
-    if (filtered.length === list.length) return false;
-    await db.centrosCusto.save(filtered);
+    const { error } = await supabase
+      .from('centros_custo')
+      .delete()
+      .eq('id', id);
+    
+    if (error) throw error;
     return true;
   }
 };

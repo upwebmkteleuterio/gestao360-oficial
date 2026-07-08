@@ -1,43 +1,48 @@
-import { db, getData, KEYS, setData } from './db';
+import { supabase } from '@/integrations/supabase/client';
 import { EntidadeNegocio } from '../types';
 
 export const entidadesService = {
   getAll: async (): Promise<EntidadeNegocio[]> => {
-    return db.entidades.getAll();
+    const { data, error } = await supabase
+      .from('entidades_negocio')
+      .select('*')
+      .order('nome_razao_social', { ascending: true });
+    
+    if (error) throw error;
+    return data as EntidadeNegocio[];
   },
 
-  getById: async (id: string): Promise<EntidadeNegocio | undefined> => {
-    const list = await db.entidades.getAll();
-    return list.find(item => item.id === id);
+  create: async (item: Omit<EntidadeNegocio, 'id'>): Promise<EntidadeNegocio> => {
+    const { data: { user } } = await supabase.auth.getUser();
+    const { data, error } = await supabase
+      .from('entidades_negocio')
+      .insert([{ ...item, user_id: user?.id }])
+      .select()
+      .single();
+    
+    if (error) throw error;
+    return data as EntidadeNegocio;
   },
 
-  create: async (item: Omit<EntidadeNegocio, 'id' | 'created_at'>): Promise<EntidadeNegocio> => {
-    const list = getData<EntidadeNegocio>(KEYS.ENTIDADES);
-    const newItem: EntidadeNegocio = {
-      ...item,
-      id: 'ent_' + Math.random().toString(36).substr(2, 9),
-      created_at: new Date().toISOString()
-    };
-    list.push(newItem);
-    await db.entidades.save(list);
-    return newItem;
-  },
-
-  update: async (id: string, item: Partial<Omit<EntidadeNegocio, 'id' | 'created_at'>>): Promise<EntidadeNegocio> => {
-    const list = getData<EntidadeNegocio>(KEYS.ENTIDADES);
-    const index = list.findIndex(r => r.id === id);
-    if (index === -1) throw new Error('Entidade não encontrada');
-    const updated = { ...list[index], ...item };
-    list[index] = updated;
-    await db.entidades.save(list);
-    return updated;
+  update: async (id: string, data: any): Promise<EntidadeNegocio> => {
+    const { data: updatedData, error } = await supabase
+      .from('entidades_negocio')
+      .update(data)
+      .eq('id', id)
+      .select()
+      .single();
+    
+    if (error) throw error;
+    return updatedData as EntidadeNegocio;
   },
 
   delete: async (id: string): Promise<boolean> => {
-    const list = getData<EntidadeNegocio>(KEYS.ENTIDADES);
-    const filtered = list.filter(r => r.id !== id);
-    if (filtered.length === list.length) return false;
-    await db.entidades.save(filtered);
+    const { error } = await supabase
+      .from('entidades_negocio')
+      .delete()
+      .eq('id', id);
+    
+    if (error) throw error;
     return true;
   }
 };

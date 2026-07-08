@@ -1,4 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from './useAuth';
 import { entidadesService } from '../services/entidadesService';
 import { centrosCustoService } from '../services/centrosCustoService';
 import { categoriasService } from '../services/categoriasService';
@@ -8,6 +10,20 @@ import { conciliacoesService } from '../services/conciliacoesService';
 import { usuariosService } from '../services/usuariosService';
 import { auditoriaService } from '../services/auditoriaService';
 import { TipoDiferenca } from '../types';
+
+export function useFinancialSummary() {
+  const { user } = useAuth();
+  
+  return useQuery({
+    queryKey: ['financialSummary', user?.id],
+    queryFn: async () => {
+      const { data, error } = await supabase.rpc('get_financial_summary', { p_user_id: user?.id });
+      if (error) throw error;
+      return data[0];
+    },
+    enabled: !!user?.id
+  });
+}
 
 export function useEntidades() {
   const queryClient = useQueryClient();

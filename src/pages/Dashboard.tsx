@@ -19,7 +19,7 @@ import {
   LineChart,
   Landmark
 } from 'lucide-react';
-import { useLancamentos, useContas, useEntidades, useCentrosCusto } from '../hooks/useData';
+import { useLancamentos, useContas, useCentrosCusto, useFinancialSummary } from '../hooks/useData';
 import { useUIStore } from '../store/uiStore';
 import { useDragScroll } from '../hooks/useDragScroll';
 
@@ -29,6 +29,7 @@ export default function Dashboard() {
   const { data: lancamentos = [], isLoading: loadingLancamentos } = useLancamentos();
   const { data: contas = [], isLoading: loadingContas } = useContas();
   const { data: centrosCusto = [] } = useCentrosCusto();
+  const { data: summary, isLoading: loadingSummary } = useFinancialSummary();
   
   const { setActiveTab, setModalOpen } = useUIStore();
 
@@ -56,30 +57,10 @@ export default function Dashboard() {
 
   // CALCULATION 1: Consolidated cash balance (initial balance of all accounts + master_confirmed launches)
   const totals = useMemo(() => {
-    let initialBalanceTotal = contas.reduce((acc, c) => acc + c.saldo_inicial, 0);
-
-    // Filter confirmed master launches
-    const confirmedMasterLaunches = filteredLancamentos.filter(l => l.status_aprovacao === 'confirmado_master');
-    
-    const consolidatedChange = confirmedMasterLaunches.reduce((acc, item) => {
-      const val = item.valor_previsto;
-      return item.tipo === 'entrada' ? acc + val : acc - val;
-    }, 0);
-
-    const consolidatedBalance = initialBalanceTotal + consolidatedChange;
-
-    // Simulated balance matches consolidated + digital + pendente_digital
-    const simulatedChange = filteredLancamentos.reduce((acc, item) => {
-      const val = item.valor_previsto;
-      return item.tipo === 'entrada' ? acc + val : acc - val;
-    }, 0);
-
-    const simulatedBalance = initialBalanceTotal + simulatedChange;
-
-    // Pagamentos Não Consolidados (saídas with pendente_digital or digital)
-    const outPending = filteredLancamentos
-      .filter(l => l.tipo === 'saida' && l.status_aprovacao !== 'confirmado_master')
-      .reduce((acc, l) => acc + l.valor_previsto, 0);
+    // Se o summary estiver disponível, usamos os dados do banco, senão calculamos localmente (fallback)
+    const consolidatedBalance = summary?.consolidated_balance ?? 0;
+    const simulatedBalance = summary?.simulated_balance ?? 0;
+    const outPending = summary?.pending_payments ?? 0;
 
     // Inadimplência breakdowns
     const paidSum = filteredLancamentos.filter(l => l.status_pagamento === 'pago').length;
@@ -98,7 +79,7 @@ export default function Dashboard() {
       unpaidCount: unpaidSum,
       bpiCount: bpiSum
     };
-  }, [contas, filteredLancamentos]);
+  }, [summary, filteredLancamentos]);
 
   // Balance breakdown per account
   const accountsBalances = useMemo(() => {
@@ -161,7 +142,7 @@ export default function Dashboard() {
     setActiveTab('lancamentos');
   };
 
-  if (loadingLancamentos || loadingContas) {
+  if (loadingLancamentos || loadingContas || loadingSummary) {
     return (
       <div className="flex-1 flex items-center justify-center min-h-[400px]">
         <div className="flex flex-col items-center gap-2">

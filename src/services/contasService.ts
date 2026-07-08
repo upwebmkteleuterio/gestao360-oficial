@@ -1,42 +1,61 @@
-import { db, getData, KEYS } from './db';
+import { supabase } from '@/integrations/supabase/client';
 import { ContaBancaria } from '../types';
 
 export const contasService = {
   getAll: async (): Promise<ContaBancaria[]> => {
-    return db.contas.getAll();
+    const { data, error } = await supabase
+      .from('contas_bancarias')
+      .select('*')
+      .order('nome', { ascending: true });
+    
+    if (error) throw error;
+    return data as ContaBancaria[];
   },
 
   getById: async (id: string): Promise<ContaBancaria | undefined> => {
-    const list = await db.contas.getAll();
-    return list.find(item => item.id === id);
+    const { data, error } = await supabase
+      .from('contas_bancarias')
+      .select('*')
+      .eq('id', id)
+      .single();
+    
+    if (error) throw error;
+    return data as ContaBancaria;
   },
 
   create: async (item: Omit<ContaBancaria, 'id'>): Promise<ContaBancaria> => {
-    const list = getData<ContaBancaria>(KEYS.CONTAS);
-    const newItem: ContaBancaria = {
-      ...item,
-      id: 'conta_' + Math.random().toString(36).substr(2, 9),
-    };
-    list.push(newItem);
-    await db.contas.save(list);
-    return newItem;
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) throw new Error('Usuário não autenticado');
+
+    const { data, error } = await supabase
+      .from('contas_bancarias')
+      .insert([{ ...item, user_id: user.id }])
+      .select()
+      .single();
+    
+    if (error) throw error;
+    return data as ContaBancaria;
   },
 
   update: async (id: string, item: Partial<Omit<ContaBancaria, 'id'>>): Promise<ContaBancaria> => {
-    const list = getData<ContaBancaria>(KEYS.CONTAS);
-    const index = list.findIndex(r => r.id === id);
-    if (index === -1) throw new Error('Conta não encontrada');
-    const updated = { ...list[index], ...item };
-    list[index] = updated;
-    await db.contas.save(list);
-    return updated;
+    const { data, error } = await supabase
+      .from('contas_bancarias')
+      .update(item)
+      .eq('id', id)
+      .select()
+      .single();
+    
+    if (error) throw error;
+    return data as ContaBancaria;
   },
 
   delete: async (id: string): Promise<boolean> => {
-    const list = getData<ContaBancaria>(KEYS.CONTAS);
-    const filtered = list.filter(r => r.id !== id);
-    if (filtered.length === list.length) return false;
-    await db.contas.save(filtered);
+    const { error } = await supabase
+      .from('contas_bancarias')
+      .delete()
+      .eq('id', id);
+    
+    if (error) throw error;
     return true;
   }
 };
