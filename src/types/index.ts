@@ -38,9 +38,12 @@ export interface CategoriaFinanceira {
 
 export interface ContaBancaria {
   id: string;
+  nome: string;
   nome_banco: string;
-  data_abertura: string;
+  agencia: string;
+  conta: string;
   saldo_inicial: number;
+  data_abertura: string;
 }
 
 export type StatusAprovacao = 'pendente_digital' | 'digital' | 'confirmado_master';

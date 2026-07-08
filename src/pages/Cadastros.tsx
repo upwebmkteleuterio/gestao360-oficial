@@ -684,9 +684,9 @@ export default function Cadastros() {
                 ) : (
                   contas.map(c => (
                     <tr key={c.id} className="border-b border-surface-border hover:bg-surface-low-low transition-colors">
-                      <td className="py-4 px-6 font-bold text-on-background">{c.nome_banco}</td>
+                      <td className="py-4 px-6 font-bold text-on-background">{c.nome_banco || c.nome || 'N/A'}</td>
                       <td className="py-4 px-6 font-mono text-on-surface-variant/80">
-                        {c.data_abertura.substring(0, 10).split('-').reverse().join('/')}
+                        {c.data_abertura ? c.data_abertura.substring(0, 10).split('-').reverse().join('/') : 'N/A'}
                       </td>
                       <td className="py-4 px-6 font-mono font-bold text-right text-bank-truth-green">
                         {valueFormatter(c.saldo_inicial)}

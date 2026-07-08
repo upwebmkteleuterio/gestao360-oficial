@@ -341,11 +341,11 @@ export default function Dashboard() {
                 <div key={acc.id} className="flex-shrink-0 w-64 bg-white dark:bg-surface p-4 border border-surface-border rounded-lg flex items-center justify-between group cursor-pointer hover:border-primary transition-colors">
                   <div className="flex items-center gap-3">
                     <div className={`w-10 h-10 rounded-lg ${bgColors[colorIdx]} flex items-center justify-center font-bold ${textColors[colorIdx]} shrink-0 uppercase`}>
-                      {acc.nome.substring(0, 2)}
+                      {(acc.nome || '').substring(0, 2)}
                     </div>
                     <div>
-                      <p className="text-sm font-bold text-on-surface truncate w-24" title={acc.nome}>{acc.nome}</p>
-                      <p className="text-xs text-secondary truncate w-24">{acc.agencia} {acc.conta}</p>
+                      <p className="text-sm font-bold text-on-surface truncate w-24" title={acc.nome || ''}>{acc.nome || 'N/A'}</p>
+                      <p className="text-xs text-secondary truncate w-24">{acc.agencia || ''} {acc.conta || ''}</p>
                     </div>
                   </div>
                   <p className="text-sm font-bold font-mono text-on-surface">
