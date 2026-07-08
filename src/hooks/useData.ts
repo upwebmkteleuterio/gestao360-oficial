@@ -147,12 +147,12 @@ export function useContas() {
   };
 }
 
-export function useLancamentos() {
+export function useLancamentos(filters?: any) {
   const queryClient = useQueryClient();
 
   const query = useQuery({
-    queryKey: ['lancamentos'],
-    queryFn: lancamentosService.getAll
+    queryKey: ['lancamentos', filters],
+    queryFn: () => lancamentosService.getAll(filters)
   });
 
   const createMutation = useMutation({

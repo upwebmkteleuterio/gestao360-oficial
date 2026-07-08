@@ -141,9 +141,11 @@ export default function Configuracoes() {
   const filteredUsers = useMemo(() => {
     return usuarios.filter(u => {
       const matchQuery = teamSearch.toLowerCase();
+      const nome = (u.nome || '').toLowerCase();
+      const email = (u.email || '').toLowerCase();
       return (
-        u.nome.toLowerCase().includes(matchQuery) ||
-        u.email.toLowerCase().includes(matchQuery)
+        nome.includes(matchQuery) ||
+        email.includes(matchQuery)
       );
     });
   }, [usuarios, teamSearch]);

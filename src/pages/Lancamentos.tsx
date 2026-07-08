@@ -10,44 +10,42 @@ import {
   CheckCircle, 
   Download,
   X,
-  AlertOctagon
+  AlertOctagon,
+  Loader2
 } from 'lucide-react';
 import { useLancamentos, useContas, useEntidades, useCategorias } from '../hooks/useData';
 import { useUIStore } from '../store/uiStore';
 import { LancamentoFinanceiro } from '../types';
 
 export default function Lancamentos() {
-  // Query Hooks
-  const { 
-    data: lancamentos = [], 
-    updateLancamento, 
-    deleteLancamento, 
-    batchApprove,
-    isUpdating,
-    isDeleting,
-    isBatchApproving
-  } = useLancamentos();
-  
-  const { data: contas = [] } = useContas();
-  const { data: entidades = [] } = useEntidades();
-  const { data: categorias = [] } = useCategorias();
-
-  // Zustand Store
-  const { 
-    currentUserId,
-    setModalOpen,
-    setSelectedLancamentoIdForModal,
-    setLancamentoFormDraft,
-    resetAllDrafts,
-    setSelectedRecorrenciaAction
-  } = useUIStore();
-
   // Filter States
   const [searchTerm, setSearchTerm] = useState('');
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
   const [approvalStatus, setApprovalStatus] = useState('all');
   const [typeFilter, setTypeFilter] = useState<'all' | 'entrada' | 'saida'>('all');
+
+  // Query Hooks with server-side filters
+  const {
+    data: lancamentos = [],
+    updateLancamento,
+    deleteLancamento,
+    batchApprove,
+    isUpdating,
+    isDeleting,
+    isBatchApproving,
+    isLoading
+  } = useLancamentos({
+    searchTerm,
+    startDate,
+    endDate,
+    approvalStatus,
+    type: typeFilter
+  });
+  
+  const { data: contas = [] } = useContas();
+  const { data: entidades = [] } = useEntidades();
+  const { data: categorias = [] } = useCategorias();
 
   // Checkbox Selection State for Batch Actions
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
@@ -76,50 +74,13 @@ export default function Lancamentos() {
     return contas.find(c => c.id === id)?.nome_banco || 'Sem Conta';
   };
 
-  // Filter application
-  const filteredLancamentos = useMemo(() => {
-    let result = [...lancamentos];
-
-    // Search by entity name
-    if (searchTerm.trim() !== '') {
-      const lower = searchTerm.toLowerCase();
-      result = result.filter(item => {
-        const entName = getEntidadeName(item.entidade_id).toLowerCase();
-        return entName.includes(lower);
-      });
-    }
-
-    // Start date check
-    if (startDate !== '') {
-      result = result.filter(item => item.data_vencimento >= startDate);
-    }
-
-    // End date check
-    if (endDate !== '') {
-      result = result.filter(item => item.data_vencimento <= endDate);
-    }
-
-    // Approval status dropdown
-    if (approvalStatus !== 'all') {
-      result = result.filter(item => item.status_aprovacao === approvalStatus);
-    }
-
-    // Type indicator toggle
-    if (typeFilter !== 'all') {
-      result = result.filter(item => item.tipo === typeFilter);
-    }
-
-    // Sort by recent due or recently made
-    return result.sort((a, b) => b.data_vencimento.localeCompare(a.data_vencimento));
-  }, [lancamentos, searchTerm, startDate, endDate, approvalStatus, typeFilter, entidades]);
-
   // Pagination logic
   const paginatedLancamentos = useMemo(() => {
     const startIdx = (currentPage - 1) * itemsPerPage;
-    return filteredLancamentos.slice(startIdx, startIdx + itemsPerPage);
-  }, [filteredLancamentos, currentPage]);
+    return lancamentos.slice(startIdx, startIdx + itemsPerPage);
+  }, [lancamentos, currentPage]);
 
-  const totalPages = Math.max(Math.ceil(filteredLancamentos.length / itemsPerPage), 1);
+  const totalPages = Math.max(Math.ceil(lancamentos.length / itemsPerPage), 1);
 
   // Checkbox Handlers
   const handleSelectAll = (checked: boolean) => {
@@ -153,7 +114,7 @@ export default function Lancamentos() {
   // Export CSV simulation
   const handleExportCSV = () => {
     const headers = 'ID,Tipo,Vencimento,Emissao,Entidade,Categoria,Conta,Valor,StatusAproc,StatusPag\n';
-    const csvContent = filteredLancamentos.map(l => {
+    const csvContent = lancamentos.map(l => {
       const ent = getEntidadeName(l.entidade_id);
       const cat = getCategoriaName(l.categoria_id);
       const con = getContaName(l.conta_bancaria_id);
@@ -428,7 +389,16 @@ export default function Lancamentos() {
               </tr>
             </thead>
             <tbody className="text-xs text-on-surface">
-              {paginatedLancamentos.length === 0 ? (
+              {isLoading ? (
+                <tr>
+                  <td colSpan={10} className="py-12 text-center">
+                    <div className="flex flex-col items-center gap-2">
+                      <Loader2 className="w-6 h-6 text-primary animate-spin" />
+                      <span className="text-on-surface-variant font-medium">Carregando lançamentos...</span>
+                    </div>
+                  </td>
+                </tr>
+              ) : paginatedLancamentos.length === 0 ? (
                 <tr>
                   <td colSpan={10} className="py-12 text-center text-on-surface-variant font-medium">
                     Nenhum lançamento corresponde aos filtros configurados.
@@ -569,7 +539,7 @@ export default function Lancamentos() {
         {/* Pagination bar */}
         <div className="bg-surface px-4 py-3 border-t border-surface-border flex items-center justify-between">
           <span className="text-on-surface-variant font-medium text-xs">
-            Mostrando {(currentPage - 1) * itemsPerPage + 1} a {Math.min(currentPage * itemsPerPage, filteredLancamentos.length)} de {filteredLancamentos.length} registros
+            Mostrando {(currentPage - 1) * itemsPerPage + 1} a {Math.min(currentPage * itemsPerPage, lancamentos.length)} de {lancamentos.length} registros
           </span>
 
           <div className="flex items-center gap-1">

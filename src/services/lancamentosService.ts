@@ -1,22 +1,49 @@
 import { supabase } from '@/integrations/supabase/client';
 import { LancamentoFinanceiro } from '../types';
 
+export interface LancamentoFilters {
+  searchTerm?: string;
+  startDate?: string;
+  endDate?: string;
+  approvalStatus?: string;
+  type?: string;
+}
+
 export const lancamentosService = {
-  getAll: async (): Promise<LancamentoFinanceiro[]> => {
-    const { data, error } = await supabase
+  getAll: async (filters?: LancamentoFilters): Promise<LancamentoFinanceiro[]> => {
+    let query = supabase
       .from('lancamentos_financeiros')
-      .select('*')
+      .select('*, entidades_negocio!inner(nome_razao_social)')
       .order('data_vencimento', { ascending: false });
+
+    if (filters) {
+      if (filters.startDate) {
+        query = query.gte('data_vencimento', filters.startDate);
+      }
+      if (filters.endDate) {
+        query = query.lte('data_vencimento', filters.endDate);
+      }
+      if (filters.approvalStatus && filters.approvalStatus !== 'all') {
+        query = query.eq('status_aprovacao', filters.approvalStatus);
+      }
+      if (filters.type && filters.type !== 'all') {
+        query = query.eq('tipo', filters.type);
+      }
+      if (filters.searchTerm) {
+        query = query.ilike('entidades_negocio.nome_razao_social', `%${filters.searchTerm}%`);
+      }
+    }
+
+    const { data, error } = await query;
     
     if (error) throw error;
-    return data as LancamentoFinanceiro[];
+    return data as any[];
   },
 
   create: async (item: any, recorrencia?: any): Promise<LancamentoFinanceiro> => {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) throw new Error('Usuário não autenticado');
 
-    // Se houver recorrência, poderíamos tratar aqui, mas vamos focar no lançamento simples primeiro
     const { data, error } = await supabase
       .from('lancamentos_financeiros')
       .insert([{ 
