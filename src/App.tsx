@@ -17,6 +17,7 @@ import Login from './pages/Login';
 import Dashboard from './pages/Dashboard';
 import Lancamentos from './pages/Lancamentos';
 import Conciliacao from './pages/Conciliacao';
+import CRM from './pages/CRM';
 import Cadastros from './pages/Cadastros';
 import Relatorios from './pages/Relatorios';
 import Configuracoes from './pages/Configuracoes';
@@ -65,12 +66,13 @@ function NotificationDropdown() {
               <h3 className="text-xs font-black uppercase tracking-wider text-on-surface">Notificações</h3>
               {unreadCount > 0 && (
                 <button
-                  onClick={() => markAllRead()}
+                  onClick={() => markAllAsRead()}
                   className="text-[10px] font-bold text-primary hover:underline"
                 >
                   Marcar todas como lidas
                 </button>
               )}
+
             </div>
             <div className="max-h-[350px] overflow-y-auto">
               {notifications.length === 0 ? (
@@ -195,8 +197,10 @@ function AppContent() {
                       <Route path="/dashboard" element={<Dashboard />} />
                       <Route path="/lancamentos" element={<Lancamentos />} />
                       <Route path="/conciliacao" element={<Conciliacao />} />
+                      <Route path="/crm" element={<CRM />} />
                       <Route path="/cadastros" element={<Cadastros />} />
                       <Route path="/relatorios" element={<Relatorios />} />
+
                       <Route path="/configuracoes" element={<Configuracoes />} />
                     </Routes>
                   </div>
