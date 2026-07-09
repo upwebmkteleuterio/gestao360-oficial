@@ -90,20 +90,48 @@ export default function Conciliacao() {
 
   // Available forecasts
   const availableLaunches = useMemo(() => {
-    return lancamentos
-      .filter(l => {
-        const isMatched = conciliacoes.some(con => con.lancamento_id === l.id);
-        if (isMatched) return false;
+    const activeTx = transacoes.find(t => t.id === selectedTransacaoForConciliationId);
+    
+    let filtered = lancamentos.filter(l => {
+      const isMatched = conciliacoes.some(con => con.lancamento_id === l.id);
+      if (isMatched) return false;
 
-        if (erpSearch.trim() !== '') {
-          const entName = entidades.find(e => e.id === l.entidade_id)?.nome_razao_social || '';
-          return entName.toLowerCase().includes(erpSearch.toLowerCase()) || 
-                 l.observacoes.toLowerCase().includes(erpSearch.toLowerCase());
-        }
+      if (erpSearch.trim() !== '') {
+        const entName = entidades.find(e => e.id === l.entidade_id)?.nome_razao_social || '';
+        return entName.toLowerCase().includes(erpSearch.toLowerCase()) ||
+               l.observacoes.toLowerCase().includes(erpSearch.toLowerCase());
+      }
 
-        return true;
+      return true;
+    });
+
+    if (activeTx) {
+      // Sort by relevance score
+      filtered = [...filtered].sort((a, b) => {
+        const score = (l: LancamentoFinanceiro) => {
+          let s = 0;
+          const erpVal = l.tipo === 'saida' ? -l.valor_previsto : l.valor_previsto;
+          const valDiff = Math.abs(activeTx.valor - erpVal);
+          
+          // Exact value match
+          if (valDiff < 0.01) s += 100;
+          
+          // Date matching
+          const tDate = new Date(activeTx.data_transacao);
+          const lDate = new Date(l.data_vencimento);
+          const dayDiff = Math.abs((tDate.getTime() - lDate.getTime()) / (1000 * 60 * 60 * 24));
+          
+          if (dayDiff === 0) s += 50;
+          else if (dayDiff <= 3) s += 20;
+          
+          return s;
+        };
+        return score(b) - score(a);
       });
-  }, [lancamentos, conciliacoes, erpSearch, entidades]);
+    }
+
+    return filtered;
+  }, [lancamentos, conciliacoes, erpSearch, entidades, selectedTransacaoForConciliationId, transacoes]);
 
   const getEntidadeName = (id: string) => {
     return entidades.find(e => e.id === id)?.nome_razao_social || 'Desconhecido';
@@ -515,8 +543,20 @@ export default function Conciliacao() {
                     {availableLaunches.length === 0 ? <div className="py-12 text-center text-[10px] font-black uppercase text-neutral-300 border-2 border-dashed border-neutral-100 rounded-2xl">Vazio</div> : 
                     availableLaunches.map(l => {
                       const isSelected = selectedLancamentoForConciliationId === l.id;
+                      
+                      // Match check for UI badge
+                      const erpVal = l.tipo === 'saida' ? -l.valor_previsto : l.valor_previsto;
+                      const isExactMatch = selectedTxForWorkspace &&
+                                           Math.abs(selectedTxForWorkspace.valor - erpVal) < 0.01 &&
+                                           selectedTxForWorkspace.data_transacao === l.data_vencimento;
+
                       return (
-                        <div key={l.id} onClick={() => handleSelectERPItemForLink(l)} className={`p-4 border-2 rounded-2xl cursor-pointer transition-all shadow-sm ${isSelected ? 'border-primary bg-primary/5 ring-4 ring-primary/10' : 'border-neutral-50 bg-white hover:border-neutral-200'}`}>
+                        <div key={l.id} onClick={() => handleSelectERPItemForLink(l)} className={`p-4 border-2 rounded-2xl cursor-pointer transition-all shadow-sm relative overflow-hidden ${isSelected ? 'border-primary bg-primary/5 ring-4 ring-primary/10' : 'border-neutral-50 bg-white hover:border-neutral-200'}`}>
+                          {isExactMatch && (
+                            <div className="absolute top-0 right-0 px-3 py-1 bg-bank-truth-green text-white text-[8px] font-black uppercase tracking-widest rounded-bl-xl">
+                              Sugestão Ideal
+                            </div>
+                          )}
                           <div className="flex justify-between items-start mb-2"><h4 className="font-black text-xs text-neutral-900 uppercase tracking-tight">{getEntidadeName(l.entidade_id)}</h4>{isSelected && <Check className="w-4 h-4 text-primary" />}</div>
                           <p className="text-[10px] text-neutral-500 font-bold mb-3 uppercase tracking-tighter line-clamp-1">{l.observacoes}</p>
                           <div className="flex items-center justify-between pt-3 border-t border-neutral-50 text-[9px] font-black uppercase tracking-widest text-neutral-400"><span>Venc: {formatShorthandDate(l.data_vencimento)}</span><span className="text-neutral-900">{valueFormatter(l.valor_previsto, l.tipo)}</span></div>
