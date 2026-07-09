@@ -1,9 +1,13 @@
 import React from 'react';
 import styled from 'styled-components';
 
-export default function Button({ children, className = '', ...props }: React.ComponentProps<"button">) {
+interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
+  children: React.ReactNode;
+}
+
+const Button = ({ children, ...props }: ButtonProps) => {
   return (
-    <StyledWrapper className={className}>
+    <StyledWrapper>
       <button className="Btn" {...props}>
         {children}
       </button>
@@ -12,67 +16,59 @@ export default function Button({ children, className = '', ...props }: React.Com
 }
 
 const StyledWrapper = styled.div`
-  display: inline-block;
-  
   .Btn {
-    padding: 0 24px;
-    height: 42px;
+    min-width: 130px;
+    height: 40px;
     display: flex;
     align-items: center;
     justify-content: center;
-    background-color: #0f0f0f;
+    background-color: rgb(15, 15, 15);
     border: none;
     color: white;
-    font-size: 11px;
-    font-weight: 800;
-    text-transform: uppercase;
-    letter-spacing: 0.12em;
-    gap: 10px;
+    font-weight: 600;
+    gap: 8px;
     cursor: pointer;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    box-shadow: 5px 5px 10px rgba(0, 0, 0, 0.103);
     position: relative;
     overflow: hidden;
-    transition: all .3s cubic-bezier(0.23, 1, 0.32, 1);
-    border-radius: 6px;
+    transition-duration: .3s;
+    padding: 0 16px;
   }
 
+  /* SVG icon support if passed inside children */
   .Btn svg {
     width: 16px;
-    height: 16px;
-    transition: transform 0.3s ease;
-  }
-
-  .Btn:hover:not(:disabled) svg {
-    transform: translateX(2px);
+    fill: white;
   }
 
   .Btn:disabled {
-    opacity: 0.4;
+    opacity: 0.5;
     cursor: not-allowed;
-    filter: grayscale(1);
   }
 
   .Btn::before {
-    width: 130%;
-    height: 100%;
+    width: 100%;
+    height: 130px; /* High enough to cover on transform */
     position: absolute;
     content: "";
     background-color: white;
-    border-radius: 0 50% 50% 0;
-    left: -135%;
+    border-radius: 50%;
+    left: -100%;
     top: 0;
-    transition: all 0.4s cubic-bezier(0.23, 1, 0.32, 1);
+    transition-duration: .3s;
     mix-blend-mode: difference;
-    pointer-events: none;
-    z-index: 1;
   }
 
   .Btn:hover:not(:disabled)::before {
-    left: 0;
+    transition-duration: .3s;
+    transform: translate(100%,-50%);
     border-radius: 0;
   }
 
   .Btn:active:not(:disabled) {
-    transform: scale(0.97);
+    transform: translate(5px,5px);
+    transition-duration: .3s;
   }
 `;
+
+export default Button;
