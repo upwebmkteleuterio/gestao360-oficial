@@ -143,7 +143,6 @@ export default function Dashboard() {
             <section className="flex flex-wrap items-center justify-between gap-4 bg-white dark:bg-surface p-4 rounded-lg border border-surface-border shadow-sm animate-fade-in">
               <div className="flex flex-wrap items-center gap-4">
                 <div className="flex flex-col"><span className="text-xs font-medium text-secondary mb-1">Seletor de Período</span><div className="flex items-center gap-2 border border-surface-border rounded-lg px-3 py-2 bg-surface"><Calendar className="w-5 h-5 text-secondary" /><select value={periodFilter} onChange={(e) => setPeriodFilter(e.target.value as any)} className="bg-transparent border-none p-0 text-sm font-semibold focus:ring-0 w-48 text-on-surface outline-none cursor-pointer"><option value="all">Todo o Período</option><option value="este-mes">Este Mês</option><option value="2023-10">Outubro 2023</option><option value="2026-06">Junho 2026</option></select></div></div>
-                <div className="flex flex-col"><span className="text-xs font-medium text-secondary mb-1">Status</span><div className="flex items-center gap-2 px-3 py-2 bg-bank-truth-green/10 rounded-lg"><CheckCircle2 className="w-4 h-4 text-bank-truth-green" /><span className="text-xs font-bold text-bank-truth-green">Dados Reais do Banco</span></div></div>
               </div>
               <button onClick={() => {
                 const headers = 'KPI,Valor\n';
@@ -175,7 +174,7 @@ export default function Dashboard() {
             </section>
 
             <section className="space-y-4">
-              <h4 className="text-xs font-black uppercase tracking-wider text-secondary flex items-center gap-2"><Building2 className="w-5 h-5 text-secondary" /> SALDOS REAIS POR CONTA</h4>
+              <h4 className="text-xs font-black uppercase tracking-wider text-secondary flex items-center gap-2"><Building2 className="w-5 h-5 text-secondary" /> SALDO POR CONTA</h4>
               <div ref={dragScrollAccounts.ref} {...dragScrollAccounts.props} className="flex gap-4 overflow-x-auto pb-2 scroll-smooth select-none">
                 {accountsBalances.map((acc, i) => (
                   <div key={acc.id} className="flex-shrink-0 w-64 bg-white dark:bg-surface p-4 border border-surface-border rounded-lg flex items-center justify-between group cursor-pointer hover:border-primary transition-colors">
