@@ -30,6 +30,9 @@ import { useEntidades } from '../hooks/useData';
 import { useUIStore } from '../store/uiStore';
 import { EntidadeNegocio } from '../types';
 import { supabase } from '@/integrations/supabase/client';
+import { useQuery } from '@tanstack/react-query';
+import Button from '../components/Button';
+import { WalletCards } from 'lucide-react';
 
 export default function CRM() {
 
@@ -46,7 +49,19 @@ export default function CRM() {
   const [profileTelefone, setProfileTelefone] = useState('');
   const [profileStatus, setProfileStatus] = useState<'ativo' | 'inativo' | 'bpi'>('ativo');
 
+  const { data: stats } = useQuery({
+    queryKey: ['dashboardStats'],
+    queryFn: async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return null;
+      const { data, error } = await supabase.rpc('get_dashboard_stats', { p_user_id: user.id });
+      if (error) throw error;
+      return data;
+    }
+  });
+
   const filtered = useMemo(() => {
+
     return entidades.filter(ent => {
       const matchesSearch = ent.nome_razao_social.toLowerCase().includes(searchTerm.toLowerCase()) || ent.documento.includes(searchTerm);
       const matchesTipo = tipoFilter === 'all' ? true : ent.tipo === tipoFilter;
@@ -105,12 +120,12 @@ export default function CRM() {
           <h1 className="text-2xl font-black uppercase tracking-tighter text-neutral-900">CRM de Entidades</h1>
           <p className="text-[10px] font-black uppercase tracking-widest text-neutral-400 mt-1">Gestão de Clientes, Fornecedores e Histórico de Relacionamento</p>
         </div>
-        <button 
+        <Button
           onClick={() => setModalOpen('isCadastroRapidoOpen', true)}
-          className="px-8 py-3 bg-primary text-white font-black text-[10px] uppercase tracking-widest rounded-xl hover:brightness-95 shadow-md flex items-center gap-2"
         >
-          <Plus className="w-4 h-4" /> Novo Cadastro
-        </button>
+          Novo Cadastro
+          <Plus className="w-4 h-4" />
+        </Button>
       </div>
 
       {/* Stats Cards */}
@@ -133,7 +148,7 @@ export default function CRM() {
           <div>
             <p className="text-[10px] font-black uppercase tracking-widest text-neutral-400 mb-1">Inadimplência</p>
             <p className="text-2xl font-black text-alert-red">
-              {entidades.length > 0 ? '4.2%' : '0%'}
+              {stats?.inadimplencia_rate || 0}%
             </p>
           </div>
           <div className="w-12 h-12 rounded-2xl bg-red-50 text-alert-red flex items-center justify-center"><AlertTriangle className="w-6 h-6" /></div>
@@ -319,10 +334,14 @@ export default function CRM() {
                 </div>
               </div>
 
-              <footer className="px-10 py-8 border-t border-neutral-100 bg-neutral-50 flex justify-end gap-3 shrink-0">
+              <footer className="px-10 py-8 border-t border-neutral-100 bg-neutral-50/50 flex justify-end gap-3 shrink-0">
                 <button type="button" onClick={() => setSelectedEntity(null)} className="px-6 py-2 font-black text-[10px] uppercase tracking-widest text-neutral-400 hover:text-neutral-900 transition-colors">Cancelar</button>
-                <button type="submit" className="px-10 py-3 bg-neutral-900 text-white font-black text-[10px] uppercase tracking-widest rounded-2xl shadow-xl hover:brightness-95 transition-all">Atualizar Cadastro</button>
+                <Button type="submit">
+                  Atualizar
+                  <CheckCircle2 className="w-4 h-4" />
+                </Button>
               </footer>
+
             </motion.form>
           </div>
         )}
@@ -380,8 +399,12 @@ export default function CRM() {
               </div>
               <footer className="px-10 py-8 border-t border-neutral-50 bg-neutral-50/50 flex justify-end gap-3">
                 <button type="button" onClick={() => setModalOpen('isCadastroRapidoOpen', false)} className="px-6 py-2 font-black text-[10px] uppercase tracking-widest text-neutral-500">Cancelar</button>
-                <button type="submit" className="px-10 py-3 bg-primary text-white font-black text-[10px] uppercase tracking-widest rounded-2xl shadow-lg hover:brightness-95 transition-all">Finalizar</button>
+                <Button type="submit">
+                  Finalizar
+                  <CheckCircle2 className="w-4 h-4" />
+                </Button>
               </footer>
+
             </motion.form>
           </div>
         )}

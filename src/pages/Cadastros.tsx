@@ -29,6 +29,7 @@ import { useContas, useCentrosCusto, useCategorias } from '../hooks/useData';
 import { useUIStore } from '../store/uiStore';
 import { useDragScroll } from '../hooks/useDragScroll';
 import MoneyInput from '../components/MoneyInput';
+import Button from '../components/Button';
 
 type SubTabType = 'contas' | 'centros' | 'categorias';
 
@@ -99,12 +100,12 @@ export default function Cadastros() {
           <h1 className="text-2xl font-black uppercase tracking-tighter text-neutral-900">Configurações de Estrutura</h1>
           <p className="text-[10px] font-black uppercase tracking-widest text-neutral-400 mt-1">Defina a espinha dorsal financeira do seu sistema</p>
         </div>
-        <button 
+        <Button
           onClick={() => activeSubTab === 'contas' ? setIsNewAccountOpen(true) : activeSubTab === 'centros' ? setIsNewCCOpen(true) : setIsNewCatOpen(true)}
-          className="px-8 py-3 bg-primary text-white font-black text-[10px] uppercase tracking-widest rounded-xl hover:brightness-95 shadow-md flex items-center gap-2"
         >
-          <Plus className="w-4 h-4" /> Novo Registro
-        </button>
+          Novo Registro
+          <Plus className="w-4 h-4" />
+        </Button>
       </div>
 
       <div ref={dragScrollTabs.ref} {...dragScrollTabs.props} className="flex border-b border-neutral-200 overflow-x-auto scrollbar-none whitespace-nowrap">
@@ -182,7 +183,14 @@ export default function Cadastros() {
                 <div className="space-y-2"><label className="text-[10px] font-black uppercase text-neutral-400 tracking-widest">Saldo Inicial (R$)</label><MoneyInput value={bankInitial} onChange={setBankInitial} className="w-full h-12 bg-neutral-50 border-2 border-neutral-100 rounded-2xl px-5 text-xs font-black focus:border-primary outline-none" placeholder="0,00" required /></div>
               </div>
 
-              <footer className="px-10 py-8 border-t border-neutral-50 bg-neutral-50/50 flex justify-end gap-3"><button type="button" onClick={() => setIsNewAccountOpen(false)} className="px-6 py-2 font-black text-[10px] uppercase tracking-widest text-neutral-500">Cancelar</button><button type="submit" className="px-10 py-3 bg-neutral-900 text-white font-black text-[10px] uppercase tracking-widest rounded-2xl shadow-xl">Salvar Conta</button></footer>
+              <footer className="px-10 py-8 border-t border-neutral-50 bg-neutral-50/50 flex justify-end gap-3">
+                <button type="button" onClick={() => setIsNewAccountOpen(false)} className="px-6 py-2 font-black text-[10px] uppercase tracking-widest text-neutral-500">Cancelar</button>
+                <Button type="submit">
+                  Salvar
+                  <CheckCircle2 className="w-4 h-4" />
+                </Button>
+              </footer>
+
             </motion.form>
           </div>
         )}
@@ -197,7 +205,14 @@ export default function Cadastros() {
                 <div className="space-y-2"><label className="text-[10px] font-black uppercase text-neutral-400 tracking-widest">Nome do Centro</label><input type="text" required value={ccName} onChange={(e) => setCCName(e.target.value)} className="w-full h-12 bg-neutral-50 border-2 border-neutral-100 rounded-2xl px-5 text-xs font-black focus:border-primary outline-none" /></div>
                 <div className="space-y-2"><label className="text-[10px] font-black uppercase text-neutral-400 tracking-widest">Descrição</label><textarea value={ccDesc} onChange={(e) => setCCDesc(e.target.value)} className="w-full p-5 bg-neutral-50 border-2 border-neutral-100 rounded-2xl text-xs font-black focus:border-primary outline-none resize-none" rows={3} /></div>
               </div>
-              <footer className="px-10 py-8 border-t border-neutral-50 bg-neutral-50/50 flex justify-end gap-3"><button type="button" onClick={() => setIsNewCCOpen(false)} className="px-6 py-2 font-black text-[10px] uppercase tracking-widest text-neutral-500">Cancelar</button><button type="submit" className="px-10 py-3 bg-neutral-900 text-white font-black text-[10px] uppercase tracking-widest rounded-2xl shadow-xl">Salvar Centro</button></footer>
+              <footer className="px-10 py-8 border-t border-neutral-50 bg-neutral-50/50 flex justify-end gap-3">
+                <button type="button" onClick={() => setIsNewCCOpen(false)} className="px-6 py-2 font-black text-[10px] uppercase tracking-widest text-neutral-500">Cancelar</button>
+                <Button type="submit">
+                  Salvar
+                  <CheckCircle2 className="w-4 h-4" />
+                </Button>
+              </footer>
+
             </motion.form>
           </div>
         )}
@@ -212,7 +227,14 @@ export default function Cadastros() {
                 <div className="space-y-2"><label className="text-[10px] font-black uppercase text-neutral-400 tracking-widest">Nome da Categoria</label><input type="text" required value={catName} onChange={(e) => setCatName(e.target.value)} className="w-full h-12 bg-neutral-50 border-2 border-neutral-100 rounded-2xl px-5 text-xs font-black focus:border-primary outline-none" /></div>
                 <div className="space-y-2"><label className="text-[10px] font-black uppercase text-neutral-400 tracking-widest">Fluxo</label><select value={catType} onChange={(e) => setCatType(e.target.value as any)} className="w-full h-12 bg-neutral-50 border-2 border-neutral-100 rounded-2xl px-5 text-xs font-black outline-none cursor-pointer appearance-none"><option value="entrada">Entrada / Receita</option><option value="saida">Saída / Despesa</option></select></div>
               </div>
-              <footer className="px-10 py-8 border-t border-neutral-50 bg-neutral-50/50 flex justify-end gap-3"><button type="button" onClick={() => setIsNewCatOpen(false)} className="px-6 py-2 font-black text-[10px] uppercase tracking-widest text-neutral-500">Cancelar</button><button type="submit" className="px-10 py-3 bg-neutral-900 text-white font-black text-[10px] uppercase tracking-widest rounded-2xl shadow-xl">Salvar Categoria</button></footer>
+              <footer className="px-10 py-8 border-t border-neutral-50 bg-neutral-50/50 flex justify-end gap-3">
+                <button type="button" onClick={() => setIsNewCatOpen(false)} className="px-6 py-2 font-black text-[10px] uppercase tracking-widest text-neutral-500">Cancelar</button>
+                <Button type="submit">
+                  Salvar
+                  <CheckCircle2 className="w-4 h-4" />
+                </Button>
+              </footer>
+
             </motion.form>
           </div>
         )}

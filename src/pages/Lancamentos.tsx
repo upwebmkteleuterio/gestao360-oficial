@@ -18,6 +18,8 @@ import {
 import { useLancamentos, useContas, useEntidades, useCategorias } from '../hooks/useData';
 import { useUIStore } from '../store/uiStore';
 import { LancamentoFinanceiro } from '../types';
+import { motion, AnimatePresence } from 'motion/react';
+import Button from '../components/Button';
 
 export default function Lancamentos() {
   // Filter States
@@ -243,26 +245,21 @@ export default function Lancamentos() {
           <p className="text-body-md text-on-surface-variant mt-1 font-medium">Gerencie e aprove operações financeiras com precisão.</p>
         </div>
         <div className="flex flex-wrap items-center gap-3">
-          <button 
+          <Button
             onClick={handleExportCSV}
-            className="px-6 py-2.5 bg-neutral-900 text-white font-bold hover:bg-neutral-800 rounded-lg text-xs transition-all shadow-sm flex items-center gap-2"
           >
-            <Download className="w-4 h-4" />
             Exportar CSV
-          </button>
-          <button 
+            <Download className="w-4 h-4" />
+          </Button>
+          <Button
             onClick={handleBatchApprove}
             disabled={selectedIds.length === 0 || isBatchApproving}
-            className={`px-6 py-2.5 font-bold text-xs rounded-lg transition-all shadow-sm flex items-center gap-2 ${
-              selectedIds.length > 0 
-                ? 'bg-primary-container text-on-primary-container hover:brightness-95 cursor-pointer' 
-                : 'bg-surface-container text-on-surface-variant/40 cursor-not-allowed opacity-60'
-            }`}
           >
+            Aprovar ({selectedIds.length})
             <CheckCircle className="w-4 h-4" />
-            Aprovar Selecionados ({selectedIds.length})
-          </button>
+          </Button>
         </div>
+
       </div>
 
       {/* Standardized Filters Bar (Matching Dashboard UI) */}
@@ -522,7 +519,7 @@ export default function Lancamentos() {
 
                       {/* Action trigger menu */}
                       <td className="py-3 px-4 text-right relative">
-                        <button 
+                        <button
                           type="button"
                           onClick={(e) => handleActionMenuToggle(item.id, e)}
                           className="text-secondary hover:text-primary transition-colors p-1.5 rounded-lg hover:bg-neutral-100"
@@ -531,8 +528,8 @@ export default function Lancamentos() {
                         </button>
 
                         {activeMenuId === item.id && (
-                          <div className="absolute right-12 top-2 bg-white border border-surface-border rounded-lg shadow-xl z-30 py-2 w-32 animate-fade-in text-left">
-                            <button 
+                          <div className="absolute right-12 bottom-full mb-1 bg-white border border-surface-border rounded-lg shadow-xl z-[100] py-2 w-32 animate-fade-in text-left">
+                            <button
                               type="button"
                               onClick={() => handleEditClick(item)}
                               className="w-full px-4 py-2 hover:bg-neutral-50 text-left text-xs text-on-background font-bold flex items-center gap-2"
@@ -540,7 +537,7 @@ export default function Lancamentos() {
                               <Edit3 className="w-4 h-4 text-primary" />
                               Editar
                             </button>
-                            <button 
+                            <button
                               type="button"
                               onClick={() => handleDeleteClick(item)}
                               className="w-full px-4 py-2 hover:bg-neutral-50 text-left text-xs text-alert-red font-bold flex items-center gap-2 border-t border-neutral-100"
@@ -551,6 +548,7 @@ export default function Lancamentos() {
                           </div>
                         )}
                       </td>
+
                     </tr>
                   );
                 })
