@@ -37,6 +37,7 @@ import { useUsuarios, useAuditoriaLogs } from '../hooks/useData';
 import { useUIStore } from '../store/uiStore';
 import { UserPerfil, AuditoriaLog } from '../types';
 import { useDragScroll } from '../hooks/useDragScroll';
+import { supabase } from '@/integrations/supabase/client';
 
 export default function Configuracoes() {
   const dragScrollTabs = useDragScroll();
