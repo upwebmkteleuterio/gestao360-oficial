@@ -1,18 +1,15 @@
-import React from 'react';
+import React, { ButtonHTMLAttributes } from 'react';
 import styled from 'styled-components';
 
-interface ButtonProps {
+interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
   children: React.ReactNode;
-  onClick?: () => void;
-  type?: 'button' | 'submit' | 'reset';
   className?: string;
-  disabled?: boolean;
 }
 
-const Button = ({ children, onClick, type = 'button', className, disabled }: ButtonProps) => {
+export default function Button({ children, className = '', ...props }: ButtonProps) {
   return (
     <StyledWrapper className={className}>
-      <button className="Btn" onClick={onClick} type={type} disabled={disabled}>
+      <button className="Btn" {...props}>
         {children}
       </button>
     </StyledWrapper>
@@ -21,63 +18,66 @@ const Button = ({ children, onClick, type = 'button', className, disabled }: But
 
 const StyledWrapper = styled.div`
   display: inline-block;
-
+  
   .Btn {
-    width: 140px;
-    height: 40px;
+    padding: 0 24px;
+    height: 42px;
     display: flex;
     align-items: center;
     justify-content: center;
-    background-color: rgb(15, 15, 15);
+    background-color: #0f0f0f;
     border: none;
     color: white;
-    font-weight: 600;
     font-size: 11px;
+    font-weight: 800;
     text-transform: uppercase;
-    letter-spacing: 0.05em;
-    gap: 8px;
+    letter-spacing: 0.12em;
+    gap: 10px;
     cursor: pointer;
-    box-shadow: 5px 5px 10px rgba(0, 0, 0, 0.103);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
     position: relative;
     overflow: hidden;
-    transition-duration: .3s;
-    border-radius: 4px;
+    transition: all .3s cubic-bezier(0.23, 1, 0.32, 1);
+    border-radius: 6px;
   }
 
   .Btn svg {
-    width: 14px;
-    fill: white;
+    width: 16px;
+    height: 16px;
+    transition: transform 0.3s ease;
   }
 
-  .Btn::before {
-    width: 140px;
-    height: 140px;
-    position: absolute;
-    content: "";
-    background-color: white;
-    border-radius: 50%;
-    left: -100%;
-    top: 0;
-    transition-duration: .3s;
-    mix-blend-mode: difference;
-  }
-
-  .Btn:hover::before {
-    transition-duration: .3s;
-    transform: translate(100%,-50%);
-    border-radius: 0;
-  }
-
-  .Btn:active {
-    transform: translate(2px,2px);
-    transition-duration: .3s;
+  .Btn:hover:not(:disabled) svg {
+    transform: translateX(2px);
   }
 
   .Btn:disabled {
-    opacity: 0.5;
+    opacity: 0.4;
     cursor: not-allowed;
     filter: grayscale(1);
   }
-`;
 
-export default Button;
+  .Btn::before {
+    width: 130%;
+    height: 100%;
+    position: absolute;
+    content: "";
+    background-color: white;
+    border-radius: 0 50% 50% 0;
+    left: -135%;
+    top: 0;
+    transition: all 0.4s cubic-bezier(0.23, 1, 0.32, 1);
+    mix-blend-mode: difference;
+    pointer-events: none;
+    z-index: 1;
+  }
+
+  .Btn:hover:not(:disabled)::before {
+    left: 0;
+    border-radius: 0;
+  }
+
+  .Btn:active:not(:disabled) {
+    transform: scale(0.97);
+  }
+`;

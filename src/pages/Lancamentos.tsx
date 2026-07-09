@@ -1,20 +1,24 @@
 import React, { useState, useMemo } from 'react';
-import { 
-  Search, 
-  ArrowUpRight, 
-  ArrowDownLeft, 
-  MoreVertical, 
-  Plus, 
-  Trash2, 
-  Edit3, 
-  CheckCircle, 
+import {
+  Search,
+  ArrowUpRight,
+  ArrowDownLeft,
+  MoreVertical,
+  Plus,
+  Trash2,
+  Edit3,
+  Check,
   Download,
   X,
   AlertOctagon,
   Loader2,
   Calendar,
-  Filter
+  Filter,
+  ChevronRight,
+  Eraser,
+  CheckCircle2
 } from 'lucide-react';
+
 import { useLancamentos, useContas, useEntidades, useCategorias } from '../hooks/useData';
 import { useUIStore } from '../store/uiStore';
 import { LancamentoFinanceiro } from '../types';
@@ -28,6 +32,9 @@ export default function Lancamentos() {
   const [endDate, setEndDate] = useState('');
   const [approvalStatus, setApprovalStatus] = useState('all');
   const [typeFilter, setTypeFilter] = useState<'all' | 'entrada' | 'saida'>('all');
+  const [isFilterPanelOpen, setIsFilterPanelOpen] = useState(false);
+
+  const hasActiveFilters = searchTerm !== '' || startDate !== '' || endDate !== '' || approvalStatus !== 'all' || typeFilter !== 'all';
 
   // Query Hooks with server-side filters
   const { 
@@ -246,139 +253,188 @@ export default function Lancamentos() {
         </div>
         <div className="flex flex-wrap items-center gap-3">
           <Button
-            onClick={handleExportCSV}
+            onClick={() => handleExportCSV()}
           >
             Exportar CSV
             <Download className="w-4 h-4" />
           </Button>
           <Button
-            onClick={handleBatchApprove}
+            onClick={() => handleBatchApprove()}
             disabled={selectedIds.length === 0 || isBatchApproving}
           >
             Aprovar ({selectedIds.length})
-            <CheckCircle className="w-4 h-4" />
+            <Check className="w-4 h-4" />
           </Button>
+
         </div>
 
       </div>
 
-      {/* Standardized Filters Bar (Matching Dashboard UI) */}
-      <div className="bg-white dark:bg-surface border border-surface-border p-5 rounded-xl shadow-sm flex flex-col gap-6">
-        <div className="flex flex-wrap items-end gap-6">
-          {/* Buscar por Entidade */}
-          <div className="flex-1 min-w-[280px] flex flex-col gap-2">
-            <label className="text-xs font-bold text-secondary uppercase tracking-wider">Buscar por Entidade</label>
-            <div className="relative group">
-              <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-secondary group-focus-within:text-primary transition-colors">
-                <Search className="w-5 h-5" />
-              </span>
-              <input 
-                type="text"
-                placeholder="Nome do Cliente ou Fornecedor"
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full h-12 pl-11 pr-4 bg-surface border border-surface-border text-sm font-semibold rounded-lg text-on-surface focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all placeholder:text-secondary/40"
-              />
-            </div>
-          </div>
-
-          {/* Período */}
-          <div className="flex flex-col gap-2">
-            <label className="text-xs font-bold text-secondary uppercase tracking-wider">Período de Vencimento</label>
-            <div className="flex items-center gap-3">
-              <div className="relative">
-                <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-secondary pointer-events-none" />
-                <input 
-                  type="date"
-                  value={startDate}
-                  onChange={(e) => setStartDate(e.target.value)}
-                  className="h-12 pl-10 pr-4 bg-surface border border-surface-border text-sm font-semibold rounded-lg text-on-surface focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all"
-                />
-              </div>
-              <span className="text-secondary font-black text-xs">ATÉ</span>
-              <div className="relative">
-                <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-secondary pointer-events-none" />
-                <input 
-                  type="date"
-                  value={endDate}
-                  onChange={(e) => setEndDate(e.target.value)}
-                  className="h-12 pl-10 pr-4 bg-surface border border-surface-border text-sm font-semibold rounded-lg text-on-surface focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all"
-                />
-              </div>
-            </div>
-          </div>
-
-          {/* Status de Aprovação */}
-          <div className="min-w-[200px] flex flex-col gap-2">
-            <label className="text-xs font-bold text-secondary uppercase tracking-wider">Status de Aprovação</label>
-            <div className="relative">
-              <Filter className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-secondary pointer-events-none" />
-              <select 
-                value={approvalStatus}
-                onChange={(e) => setApprovalStatus(e.target.value)}
-                className="w-full h-12 pl-10 pr-4 bg-surface border border-surface-border text-sm font-bold rounded-lg text-on-surface appearance-none focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all cursor-pointer"
-              >
-                <option value="all">Todos os Status</option>
-                <option value="pendente_digital">Pendente Digital</option>
-                <option value="digital">Digital (Aprovado Gerente)</option>
-                <option value="confirmado_master">Confirmado Master</option>
-              </select>
-              <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-secondary">
-                <ArrowDownLeft className="w-4 h-4 rotate-[225deg]" />
-              </div>
-            </div>
-          </div>
+      {/* Unified Search & Filters Bar */}
+      <div className="bg-white dark:bg-surface border border-surface-border p-4 rounded-xl shadow-sm flex items-center gap-4">
+        <div className="flex-1 relative group">
+          <Search className="w-5 h-5 absolute left-3.5 top-1/2 -translate-y-1/2 text-secondary group-focus-within:text-primary transition-colors" />
+          <input
+            type="text"
+            placeholder="Buscar por entidade, documento ou observação..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="w-full h-11 pl-11 pr-4 bg-surface border border-surface-border text-sm font-semibold rounded-lg text-on-surface focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all placeholder:text-secondary/40"
+          />
         </div>
 
-        <div className="flex flex-wrap items-center justify-between gap-4 pt-4 border-t border-surface-border/50">
-          <div className="flex flex-col gap-2">
-            <label className="text-xs font-bold text-secondary uppercase tracking-wider">Tipo de Movimentação</label>
-            <div className="flex bg-surface-container border border-surface-border rounded-lg p-1 h-12 w-fit">
-              <button 
-                type="button"
-                onClick={() => setTypeFilter('all')}
-                className={`px-6 text-xs font-black rounded-md transition-all uppercase tracking-tighter ${
-                  typeFilter === 'all' 
-                    ? 'bg-white dark:bg-surface text-on-background shadow-sm' 
-                    : 'text-secondary hover:text-on-surface'
-                }`}
-              >
-                Todos
-              </button>
-              <button 
-                type="button"
-                onClick={() => setTypeFilter('entrada')}
-                className={`px-6 text-xs font-black rounded-md transition-all uppercase tracking-tighter ${
-                  typeFilter === 'entrada' 
-                    ? 'bg-white dark:bg-surface text-bank-truth-green shadow-sm' 
-                    : 'text-secondary hover:text-on-surface'
-                }`}
-              >
-                Entradas
-              </button>
-              <button 
-                type="button"
-                onClick={() => setTypeFilter('saida')}
-                className={`px-6 text-xs font-black rounded-md transition-all uppercase tracking-tighter ${
-                  typeFilter === 'saida' 
-                    ? 'bg-white dark:bg-surface text-alert-red shadow-sm' 
-                    : 'text-secondary hover:text-on-surface'
-                }`}
-              >
-                Saídas
-              </button>
-            </div>
-          </div>
+        <div className="relative">
+          {hasActiveFilters && (
+            <button
+              onClick={clearFilters}
+              className="absolute -top-3 -right-2 z-10 flex items-center gap-1 px-2 py-1 bg-alert-red text-white rounded-full text-[8px] font-black uppercase tracking-tighter shadow-lg hover:scale-105 transition-all"
+              title="Limpar todos os filtros"
+            >
+              <Eraser className="w-2 h-2" />
+              Limpar
+            </button>
+          )}
 
-          <button 
-            type="button"
-            onClick={clearFilters}
-            className="px-6 h-12 border-2 border-neutral-200 text-secondary text-xs font-bold uppercase tracking-widest rounded-lg hover:bg-neutral-50 hover:border-neutral-300 transition-all"
+          <button
+            onClick={() => setIsFilterPanelOpen(true)}
+            className={`flex items-center gap-2 px-4 h-11 rounded-lg text-xs font-bold transition-all border ${
+              isFilterPanelOpen || hasActiveFilters
+                ? 'bg-primary text-white border-primary shadow-md'
+                : 'bg-white text-secondary border-surface-border hover:bg-neutral-50'
+            }`}
           >
-            Limpar Filtros
+            <Filter className="w-4 h-4" />
+            Filtros Avançados
+            {hasActiveFilters && (
+              <span className="w-2 h-2 bg-white rounded-full ml-1"></span>
+            )}
           </button>
         </div>
       </div>
+
+      {/* Filter Slide Panel */}
+      <AnimatePresence>
+        {isFilterPanelOpen && (
+          <div className="fixed inset-0 z-[200] flex justify-end overflow-hidden">
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setIsFilterPanelOpen(false)}
+              className="absolute inset-0 bg-black/40 backdrop-blur-xs"
+            />
+            <motion.div
+              initial={{ x: '100%' }}
+              animate={{ x: 0 }}
+              exit={{ x: '100%' }}
+              transition={{ type: 'spring', damping: 25, stiffness: 200 }}
+              className="w-full md:w-[400px] h-full bg-white shadow-2xl flex flex-col relative z-20"
+            >
+              <header className="px-6 py-5 border-b border-surface-border flex items-center justify-between bg-neutral-50/50">
+                <div className="flex items-center gap-2">
+                  <Filter className="w-5 h-5 text-primary" />
+                  <h2 className="text-sm font-black uppercase tracking-widest text-on-surface">Filtros Avançados</h2>
+                </div>
+                <button
+                  onClick={() => setIsFilterPanelOpen(false)}
+                  className="p-2 hover:bg-neutral-200 rounded-lg transition-colors"
+                >
+                  <X className="w-5 h-5 text-secondary" />
+                </button>
+              </header>
+
+              <div className="flex-1 overflow-y-auto p-6 space-y-8">
+                {/* Período de Vencimento */}
+                <div className="space-y-3">
+                  <label className="text-[10px] font-black uppercase tracking-[0.2em] text-secondary flex items-center gap-2">
+                    <Calendar className="w-4 h-4" /> Período de Vencimento
+                  </label>
+                  <div className="space-y-4">
+                    <div className="space-y-1.5">
+                      <span className="text-[9px] font-bold text-secondary/60 uppercase">De:</span>
+                      <input
+                        type="date"
+                        value={startDate}
+                        onChange={(e) => setStartDate(e.target.value)}
+                        className="w-full h-11 px-4 bg-neutral-50 border border-surface-border text-xs font-bold rounded-lg text-on-surface focus:border-primary outline-none"
+                      />
+                    </div>
+                    <div className="space-y-1.5">
+                      <span className="text-[9px] font-bold text-secondary/60 uppercase">Até:</span>
+                      <input
+                        type="date"
+                        value={endDate}
+                        onChange={(e) => setEndDate(e.target.value)}
+                        className="w-full h-11 px-4 bg-neutral-50 border border-surface-border text-xs font-bold rounded-lg text-on-surface focus:border-primary outline-none"
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                {/* Status de Aprovação */}
+                <div className="space-y-3">
+                  <label className="text-[10px] font-black uppercase tracking-[0.2em] text-secondary flex items-center gap-2">
+                    <CheckCircle2 className="w-4 h-4" /> Status de Aprovação
+                  </label>
+                  <div className="grid grid-cols-1 gap-2">
+                    {['all', 'pendente_digital', 'digital', 'confirmado_master'].map(status => (
+                      <button
+                        key={status}
+                        onClick={() => setApprovalStatus(status)}
+                        className={`px-4 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest border-2 transition-all text-left flex items-center justify-between ${
+                          approvalStatus === status
+                            ? 'border-primary bg-primary/5 text-primary'
+                            : 'border-neutral-100 bg-neutral-50 text-secondary hover:border-neutral-200'
+                        }`}
+                      >
+                        {status === 'all' ? 'Todos os Status' : status.replace('_', ' ')}
+                        {approvalStatus === status && <div className="w-2 h-2 bg-primary rounded-full" />}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Tipo de Movimentação */}
+                <div className="space-y-3">
+                  <label className="text-[10px] font-black uppercase tracking-[0.2em] text-secondary flex items-center gap-2">
+                    <ArrowUpRight className="w-4 h-4" /> Tipo de Movimentação
+                  </label>
+                  <div className="flex bg-neutral-100 border border-neutral-200 rounded-xl p-1 w-full">
+                    {['all', 'entrada', 'saida'].map(type => (
+                      <button
+                        key={type}
+                        onClick={() => setTypeFilter(type as any)}
+                        className={`flex-1 py-2.5 text-[10px] font-black rounded-lg transition-all uppercase tracking-widest ${
+                          typeFilter === type
+                            ? 'bg-white text-on-background shadow-sm'
+                            : 'text-secondary hover:text-on-surface'
+                        }`}
+                      >
+                        {type === 'all' ? 'Todos' : type === 'entrada' ? 'Entradas' : 'Saídas'}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              </div>
+
+              <footer className="p-6 border-t border-surface-border bg-neutral-50/50 flex flex-col gap-3">
+                <button
+                  onClick={() => setIsFilterPanelOpen(false)}
+                  className="w-full h-12 bg-neutral-900 text-white font-black text-xs uppercase tracking-[0.2em] rounded-xl hover:bg-black transition-all shadow-lg active:scale-[0.98]"
+                >
+                  Aplicar Filtros
+                </button>
+                <button
+                  onClick={() => { clearFilters(); setIsFilterPanelOpen(false); }}
+                  className="w-full h-12 border-2 border-neutral-200 text-secondary font-black text-xs uppercase tracking-[0.2em] rounded-xl hover:bg-neutral-50 transition-all"
+                >
+                  Limpar Tudo
+                </button>
+              </footer>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
 
       {/* List Table Data */}
       <div className="bg-white dark:bg-surface border border-surface-border rounded-xl shadow-sm overflow-hidden">

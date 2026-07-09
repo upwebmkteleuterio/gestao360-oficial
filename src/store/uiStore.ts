@@ -21,8 +21,10 @@ interface UIState {
   isTransferenciaBancariaOpen: boolean;
   isNovoUsuarioOpen: boolean;
   isLegacyImportOpen: boolean;
+  isSidebarCollapsed: boolean;
 
   // Selected item contexts for modals
+
   selectedLancamentoIdForModal: string | null;
   selectedRecorrenciaAction: 'single' | 'all' | null;
   selectedTransacaoForConciliationId: string | null;
@@ -74,6 +76,7 @@ interface UIState {
   setLancamentoFormDraft: (draft: Partial<UIState['lancamentoFormDraft']>) => void;
   setEntidadeFormDraft: (draft: Partial<UIState['entidadeFormDraft']>) => void;
   setScrollPosition: (key: string, position: number) => void;
+  setSidebarCollapsed: (collapsed: boolean) => void;
   resetAllDrafts: () => void;
 }
 
@@ -116,8 +119,10 @@ export const useUIStore = create<UIState>()(
       isTransferenciaBancariaOpen: false,
       isNovoUsuarioOpen: false,
       isLegacyImportOpen: false,
+      isSidebarCollapsed: false,
 
       selectedLancamentoIdForModal: null,
+
       selectedRecorrenciaAction: null,
       selectedTransacaoForConciliationId: null,
       selectedLancamentoForConciliationId: null,
@@ -155,7 +160,10 @@ export const useUIStore = create<UIState>()(
         scrollPositions: { ...state.scrollPositions, [key]: position }
       })),
 
+      setSidebarCollapsed: (isSidebarCollapsed) => set({ isSidebarCollapsed }),
+
       resetAllDrafts: () => set({
+
         lancamentoFormDraft: {
           tipo: 'entrada',
           valor_previsto: '',

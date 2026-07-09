@@ -126,6 +126,7 @@ export default function CRM() {
           Novo Cadastro
           <Plus className="w-4 h-4" />
         </Button>
+
       </div>
 
       {/* Stats Cards */}
