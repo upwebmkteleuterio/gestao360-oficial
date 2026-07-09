@@ -30,7 +30,7 @@ export const lancamentosService = {
         query = query.eq('tipo', filters.type);
       }
       if (filters.searchTerm) {
-        query = query.ilike('entidades_negocio.nome_razao_social', `%${filters.searchTerm}%`);
+        query = query.or(`entidades_negocio.nome_razao_social.ilike.%${filters.searchTerm}%,entidades_negocio.documento.ilike.%${filters.searchTerm}%,observacoes.ilike.%${filters.searchTerm}%`);
       }
     }
 

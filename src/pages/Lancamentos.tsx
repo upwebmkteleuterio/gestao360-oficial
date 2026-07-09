@@ -16,7 +16,8 @@ import {
   Filter,
   ChevronRight,
   Eraser,
-  CheckCircle2
+  CheckCircle2,
+  Clock
 } from 'lucide-react';
 
 import { useLancamentos, useContas, useEntidades, useCategorias } from '../hooks/useData';
@@ -28,13 +29,37 @@ import Button from '../components/Button';
 export default function Lancamentos() {
   // Filter States
   const [searchTerm, setSearchTerm] = useState('');
-  const [startDate, setStartDate] = useState('');
-  const [endDate, setEndDate] = useState('');
+  
+  // Set default filter to last 30 days
+  const [startDate, setStartDate] = useState(() => {
+    const d = new Date();
+    d.setDate(d.getDate() - 30);
+    return d.toISOString().split('T')[0];
+  });
+  const [endDate, setEndDate] = useState(() => {
+    return new Date().toISOString().split('T')[0];
+  });
+  
   const [approvalStatus, setApprovalStatus] = useState('all');
   const [typeFilter, setTypeFilter] = useState<'all' | 'entrada' | 'saida'>('all');
   const [isFilterPanelOpen, setIsFilterPanelOpen] = useState(false);
 
-  const hasActiveFilters = searchTerm !== '' || startDate !== '' || endDate !== '' || approvalStatus !== 'all' || typeFilter !== 'all';
+  const hasActiveFilters = searchTerm !== '' || approvalStatus !== 'all' || typeFilter !== 'all';
+
+  // Quick select for periods
+  const handleQuickPeriod = (days: number | 'este-mes') => {
+    const end = new Date();
+    const start = new Date();
+    
+    if (days === 'este-mes') {
+      start.setDate(1);
+    } else {
+      start.setDate(end.getDate() - days);
+    }
+    
+    setStartDate(start.toISOString().split('T')[0]);
+    setEndDate(end.toISOString().split('T')[0]);
+  };
 
   // Query Hooks with server-side filters
   const { 
@@ -94,17 +119,57 @@ export default function Lancamentos() {
   };
 
   // Pagination logic
-  const paginatedLancamentos = useMemo(() => {
-    const startIdx = (currentPage - 1) * itemsPerPage;
-    return lancamentos.slice(startIdx, startIdx + itemsPerPage);
-  }, [lancamentos, currentPage]);
+  const groupedLancamentos = useMemo(() => {
+    const groups: { date: string, items: LancamentoFinanceiro[] }[] = [];
+    
+    // Sort all by created_at desc (already handled in service)
+    // But here we need to group them by data_vencimento for the visual separators
+    // Let's preserve the main order but group consecutive items of the same date
+    lancamentos.forEach(item => {
+      const date = item.data_vencimento;
+      const lastGroup = groups[groups.length - 1];
+      if (lastGroup && lastGroup.date === date) {
+        lastGroup.items.push(item);
+      } else {
+        groups.push({ date, items: [item] });
+      }
+    });
+    
+    return groups;
+  }, [lancamentos]);
+
+  const paginatedGroups = useMemo(() => {
+    const flatList: (string | LancamentoFinanceiro)[] = [];
+    groupedLancamentos.forEach(group => {
+      flatList.push(group.date);
+      group.items.forEach(item => flatList.push(item));
+    });
+
+    const startIdx = (currentPage - 1) * itemsPerPage * 2; // Rough estimate since titles aren't items
+    // Actually pagination is tricky with groups. Let's paginate the raw list and group the result.
+    const start = (currentPage - 1) * itemsPerPage;
+    const slice = lancamentos.slice(start, start + itemsPerPage);
+    
+    const result: { date: string, items: LancamentoFinanceiro[] }[] = [];
+    slice.forEach(item => {
+      const date = item.data_vencimento;
+      const lastGroup = result[result.length - 1];
+      if (lastGroup && lastGroup.date === date) {
+        lastGroup.items.push(item);
+      } else {
+        result.push({ date, items: [item] });
+      }
+    });
+    return result;
+  }, [lancamentos, currentPage, itemsPerPage]);
 
   const totalPages = Math.max(Math.ceil(lancamentos.length / itemsPerPage), 1);
 
   // Checkbox Handlers
   const handleSelectAll = (checked: boolean) => {
+    const currentPageItems = paginatedGroups.flatMap(g => g.items);
     if (checked) {
-      setSelectedIds(paginatedLancamentos.map(l => l.id));
+      setSelectedIds(currentPageItems.map(l => l.id));
     } else {
       setSelectedIds([]);
     }
@@ -343,6 +408,19 @@ export default function Lancamentos() {
               </header>
 
               <div className="flex-1 overflow-y-auto p-6 space-y-8">
+                {/* Atalhos de Período */}
+                <div className="space-y-3">
+                  <label className="text-[10px] font-black uppercase tracking-[0.2em] text-secondary flex items-center gap-2">
+                    <Clock className="w-4 h-4" /> Atalhos de Período
+                  </label>
+                  <div className="grid grid-cols-2 gap-2">
+                    <button onClick={() => handleQuickPeriod(15)} className="px-3 py-2 bg-neutral-50 hover:bg-neutral-100 border border-neutral-200 rounded-lg text-[10px] font-bold uppercase">Últimos 15 dias</button>
+                    <button onClick={() => handleQuickPeriod(30)} className="px-3 py-2 bg-neutral-50 hover:bg-neutral-100 border border-neutral-200 rounded-lg text-[10px] font-bold uppercase">Últimos 30 dias</button>
+                    <button onClick={() => handleQuickPeriod('este-mes')} className="px-3 py-2 bg-neutral-50 hover:bg-neutral-100 border border-neutral-200 rounded-lg text-[10px] font-bold uppercase">Este Mês</button>
+                    <button onClick={() => { setStartDate(''); setEndDate(''); }} className="px-3 py-2 bg-neutral-50 hover:bg-neutral-100 border border-neutral-200 rounded-lg text-[10px] font-bold uppercase">Todo o período</button>
+                  </div>
+                </div>
+
                 {/* Período de Vencimento */}
                 <div className="space-y-3">
                   <label className="text-[10px] font-black uppercase tracking-[0.2em] text-secondary flex items-center gap-2">
@@ -442,10 +520,10 @@ export default function Lancamentos() {
             <thead>
               <tr className="bg-surface-container-low text-on-surface border-b border-surface-border select-none">
                 <th className="py-4 px-4 w-12 text-center">
-                  <input 
+                  <input
                     type="checkbox"
                     className="rounded border-surface-border text-primary focus:ring-primary cursor-pointer w-4 h-4 align-middle"
-                    checked={paginatedLancamentos.length > 0 && paginatedLancamentos.every(l => selectedIds.includes(l.id))}
+                    checked={paginatedGroups.length > 0 && paginatedGroups.flatMap(g => g.items).every(l => selectedIds.includes(l.id))}
                     onChange={(e) => handleSelectAll(e.target.checked)}
                   />
                 </th>
@@ -470,7 +548,7 @@ export default function Lancamentos() {
                     </div>
                   </td>
                 </tr>
-              ) : paginatedLancamentos.length === 0 ? (
+              ) : lancamentos.length === 0 ? (
                 <tr>
                   <td colSpan={10} className="py-20 text-center">
                     <div className="flex flex-col items-center gap-2 opacity-40">
@@ -480,133 +558,149 @@ export default function Lancamentos() {
                   </td>
                 </tr>
               ) : (
-                paginatedLancamentos.map(item => {
-                  const isChecked = selectedIds.includes(item.id);
-                  return (
-                    <tr 
-                      key={item.id} 
-                      className={`border-b border-surface-border hover:bg-neutral-50/50 transition-colors group cursor-default ${
-                        isChecked ? 'bg-primary/5' : ''
-                      }`}
-                    >
-                      {/* Checkbox cell */}
-                      <td className="py-3 px-4 text-center">
-                        <input 
-                          type="checkbox"
-                          className="rounded border-surface-border text-primary focus:ring-primary cursor-pointer w-4 h-4 align-middle"
-                          checked={isChecked}
-                          onChange={(e) => handleSelectOne(item.id, e.target.checked)}
-                        />
-                      </td>
-
-                      {/* Direction Icon */}
-                      <td className="py-3 px-4">
-                        <div className={`flex justify-center w-8 h-8 rounded-lg items-center ${
-                          item.tipo === 'entrada' ? 'bg-bank-truth-green/10 text-bank-truth-green' : 'bg-alert-red/10 text-alert-red'
-                        }`}>
-                          {item.tipo === 'entrada' ? (
-                            <ArrowUpRight className="w-4 h-4" />
-                          ) : (
-                            <ArrowDownLeft className="w-4 h-4" />
-                          )}
+                paginatedGroups.map((group) => (
+                  <React.Fragment key={group.date}>
+                    {/* Date Separator Row */}
+                    <tr className="bg-neutral-50/80 border-y border-surface-border/50">
+                      <td colSpan={10} className="py-2 px-4">
+                        <div className="flex items-center gap-3">
+                          <div className="h-px flex-1 bg-surface-border/30"></div>
+                          <span className="text-[10px] font-black uppercase tracking-[0.2em] text-secondary bg-white px-3 py-1 rounded-full border border-surface-border shadow-xs">
+                            {group.date.split('-').reverse().join(' / ')}
+                          </span>
+                          <div className="h-px flex-1 bg-surface-border/30"></div>
                         </div>
                       </td>
-
-                      {/* Due date */}
-                      <td className="py-3 px-4 font-mono font-bold text-secondary">
-                        {item.data_vencimento.split('-').reverse().join('/')}
-                      </td>
-
-                      {/* Entity Name */}
-                      <td className="py-3 px-4 font-black text-on-background max-w-[200px] truncate" title={getEntidadeName(item.entidade_id)}>
-                        {getEntidadeName(item.entidade_id)}
-                      </td>
-
-                      {/* Recurrency indicator */}
-                      <td className="py-3 px-4 text-center">
-                        {item.recorrencia_id ? (
-                          <span 
-                            className="inline-flex bg-neutral-100 text-neutral-600 font-black text-[9px] px-2 py-0.5 rounded border border-neutral-200 uppercase"
-                            title={`Parcela ${item.numero_parcela || 1} de recorrência`}
-                          >
-                            Rec. p.{item.numero_parcela || 1}
-                          </span>
-                        ) : (
-                          <span className="text-secondary/20">-</span>
-                        )}
-                      </td>
-
-                      {/* Category */}
-                      <td className="py-3 px-4 text-secondary font-semibold truncate max-w-[140px]" title={getCategoriaName(item.categoria_id)}>
-                        {getCategoriaName(item.categoria_id)}
-                      </td>
-
-                      {/* Bank account */}
-                      <td className="py-3 px-4 text-secondary font-bold">
-                        {getContaName(item.conta_bancaria_id)}
-                      </td>
-
-                      {/* Monetary Value */}
-                      <td className={`py-3 px-4 font-mono font-black text-right text-sm ${
-                        item.tipo === 'saida' ? 'text-alert-red' : 'text-bank-truth-green'
-                      }`}>
-                        {valueFormatter(item)}
-                      </td>
-
-                      {/* Workflow state */}
-                      <td className="py-3 px-4 text-center whitespace-nowrap">
-                        {item.status_aprovacao === 'pendente_digital' && (
-                          <span className="inline-flex items-center px-2.5 py-0.5 rounded bg-neutral-100 text-neutral-600 font-bold border border-neutral-200 text-[9px] uppercase tracking-tighter">
-                            Pendente Digital
-                          </span>
-                        )}
-                        {item.status_aprovacao === 'digital' && (
-                          <span className="inline-flex items-center px-2.5 py-0.5 rounded bg-pending-amber/10 text-pending-amber font-bold border border-pending-amber/30 text-[9px] uppercase tracking-tighter">
-                            Digital
-                          </span>
-                        )}
-                        {item.status_aprovacao === 'confirmado_master' && (
-                          <span className="inline-flex items-center px-2.5 py-0.5 rounded bg-neutral-900 text-white font-black text-[9px] uppercase tracking-tighter">
-                            Confirmado Master
-                          </span>
-                        )}
-                      </td>
-
-                      {/* Action trigger menu */}
-                      <td className="py-3 px-4 text-right relative">
-                        <button
-                          type="button"
-                          onClick={(e) => handleActionMenuToggle(item.id, e)}
-                          className="text-secondary hover:text-primary transition-colors p-1.5 rounded-lg hover:bg-neutral-100"
-                        >
-                          <MoreVertical className="w-5 h-5" />
-                        </button>
-
-                        {activeMenuId === item.id && (
-                          <div className="absolute right-12 bottom-full mb-1 bg-white border border-surface-border rounded-lg shadow-xl z-[100] py-2 w-32 animate-fade-in text-left">
-                            <button
-                              type="button"
-                              onClick={() => handleEditClick(item)}
-                              className="w-full px-4 py-2 hover:bg-neutral-50 text-left text-xs text-on-background font-bold flex items-center gap-2"
-                            >
-                              <Edit3 className="w-4 h-4 text-primary" />
-                              Editar
-                            </button>
-                            <button
-                              type="button"
-                              onClick={() => handleDeleteClick(item)}
-                              className="w-full px-4 py-2 hover:bg-neutral-50 text-left text-xs text-alert-red font-bold flex items-center gap-2 border-t border-neutral-100"
-                            >
-                              <Trash2 className="w-4 h-4" />
-                              Excluir
-                            </button>
-                          </div>
-                        )}
-                      </td>
-
                     </tr>
-                  );
-                })
+                    
+                    {group.items.map(item => {
+                      const isChecked = selectedIds.includes(item.id);
+                      return (
+                        <tr
+                          key={item.id}
+                          className={`border-b border-surface-border hover:bg-neutral-50/50 transition-colors group cursor-default ${
+                            isChecked ? 'bg-primary/5' : ''
+                          }`}
+                        >
+                          {/* Checkbox cell */}
+                          <td className="py-3 px-4 text-center">
+                            <input
+                              type="checkbox"
+                              className="rounded border-surface-border text-primary focus:ring-primary cursor-pointer w-4 h-4 align-middle"
+                              checked={isChecked}
+                              onChange={(e) => handleSelectOne(item.id, e.target.checked)}
+                            />
+                          </td>
+
+                          {/* Direction Icon */}
+                          <td className="py-3 px-4">
+                            <div className={`flex justify-center w-8 h-8 rounded-lg items-center ${
+                              item.tipo === 'entrada' ? 'bg-bank-truth-green/10 text-bank-truth-green' : 'bg-alert-red/10 text-alert-red'
+                            }`}>
+                              {item.tipo === 'entrada' ? (
+                                <ArrowUpRight className="w-4 h-4" />
+                              ) : (
+                                <ArrowDownLeft className="w-4 h-4" />
+                              )}
+                            </div>
+                          </td>
+
+                          {/* Due date (redundant but kept for structure) */}
+                          <td className="py-3 px-4 font-mono font-bold text-secondary">
+                            {item.data_vencimento.split('-').reverse().join('/')}
+                          </td>
+
+                          {/* Entity Name */}
+                          <td className="py-3 px-4 font-black text-on-background max-w-[200px] truncate" title={getEntidadeName(item.entidade_id)}>
+                            {getEntidadeName(item.entidade_id)}
+                          </td>
+
+                          {/* Recurrency indicator */}
+                          <td className="py-3 px-4 text-center">
+                            {item.recorrencia_id ? (
+                              <span
+                                className="inline-flex bg-neutral-100 text-neutral-600 font-black text-[9px] px-2 py-0.5 rounded border border-neutral-200 uppercase"
+                                title={`Parcela ${item.numero_parcela || 1} de recorrência`}
+                              >
+                                Rec. p.{item.numero_parcela || 1}
+                              </span>
+                            ) : (
+                              <span className="text-secondary/20">-</span>
+                            )}
+                          </td>
+
+                          {/* Category */}
+                          <td className="py-3 px-4 text-secondary font-semibold truncate max-w-[140px]" title={getCategoriaName(item.categoria_id)}>
+                            {getCategoriaName(item.categoria_id)}
+                          </td>
+
+                          {/* Bank account */}
+                          <td className="py-3 px-4 text-secondary font-bold">
+                            {getContaName(item.conta_bancaria_id)}
+                          </td>
+
+                          {/* Monetary Value */}
+                          <td className={`py-3 px-4 font-mono font-black text-right text-sm ${
+                            item.tipo === 'saida' ? 'text-alert-red' : 'text-bank-truth-green'
+                          }`}>
+                            {valueFormatter(item)}
+                          </td>
+
+                          {/* Workflow state */}
+                          <td className="py-3 px-4 text-center whitespace-nowrap">
+                            {item.status_aprovacao === 'pendente_digital' && (
+                              <span className="inline-flex items-center px-2.5 py-0.5 rounded bg-neutral-100 text-neutral-600 font-bold border border-neutral-200 text-[9px] uppercase tracking-tighter">
+                                Pendente Digital
+                              </span>
+                            )}
+                            {item.status_aprovacao === 'digital' && (
+                              <span className="inline-flex items-center px-2.5 py-0.5 rounded bg-pending-amber/10 text-pending-amber font-bold border border-pending-amber/30 text-[9px] uppercase tracking-tighter">
+                                Digital
+                              </span>
+                            )}
+                            {item.status_aprovacao === 'confirmado_master' && (
+                              <span className="inline-flex items-center px-2.5 py-0.5 rounded bg-neutral-900 text-white font-black text-[9px] uppercase tracking-tighter">
+                                Confirmado Master
+                              </span>
+                            )}
+                          </td>
+
+                          {/* Action trigger menu */}
+                          <td className="py-3 px-4 text-right relative">
+                            <button
+                              type="button"
+                              onClick={(e) => handleActionMenuToggle(item.id, e)}
+                              className="text-secondary hover:text-primary transition-colors p-1.5 rounded-lg hover:bg-neutral-100"
+                            >
+                              <MoreVertical className="w-5 h-5" />
+                            </button>
+
+                            {activeMenuId === item.id && (
+                              <div className="absolute right-12 bottom-full mb-1 bg-white border border-surface-border rounded-lg shadow-xl z-[100] py-2 w-32 animate-fade-in text-left">
+                                <button
+                                  type="button"
+                                  onClick={() => handleEditClick(item)}
+                                  className="w-full px-4 py-2 hover:bg-neutral-50 text-left text-xs text-on-background font-bold flex items-center gap-2"
+                                >
+                                  <Edit3 className="w-4 h-4 text-primary" />
+                                  Editar
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => handleDeleteClick(item)}
+                                  className="w-full px-4 py-2 hover:bg-neutral-50 text-left text-xs text-alert-red font-bold flex items-center gap-2 border-t border-neutral-100"
+                                >
+                                  <Trash2 className="w-4 h-4" />
+                                  Excluir
+                                </button>
+                              </div>
+                            )}
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </React.Fragment>
+                ))
               )}
             </tbody>
           </table>
