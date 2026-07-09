@@ -11,7 +11,9 @@ import {
   Download,
   X,
   AlertOctagon,
-  Loader2
+  Loader2,
+  Calendar,
+  Filter
 } from 'lucide-react';
 import { useLancamentos, useContas, useEntidades, useCategorias } from '../hooks/useData';
 import { useUIStore } from '../store/uiStore';
@@ -26,10 +28,10 @@ export default function Lancamentos() {
   const [typeFilter, setTypeFilter] = useState<'all' | 'entrada' | 'saida'>('all');
 
   // Query Hooks with server-side filters
-  const {
-    data: lancamentos = [],
-    updateLancamento,
-    deleteLancamento,
+  const { 
+    data: lancamentos = [], 
+    updateLancamento, 
+    deleteLancamento, 
     batchApprove,
     isUpdating,
     isDeleting,
@@ -40,12 +42,20 @@ export default function Lancamentos() {
     startDate,
     endDate,
     approvalStatus,
-    type: typeFilter
+    type: typeFilter === 'all' ? undefined : typeFilter
   });
   
   const { data: contas = [] } = useContas();
   const { data: entidades = [] } = useEntidades();
   const { data: categorias = [] } = useCategorias();
+
+  // Zustand Store
+  const { 
+    setModalOpen,
+    setSelectedLancamentoIdForModal,
+    setLancamentoFormDraft,
+    setSelectedRecorrenciaAction
+  } = useUIStore();
 
   // Checkbox Selection State for Batch Actions
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
@@ -111,7 +121,7 @@ export default function Lancamentos() {
     }
   };
 
-  // Export CSV simulation
+  // Export CSV logic
   const handleExportCSV = () => {
     const headers = 'ID,Tipo,Vencimento,Emissao,Entidade,Categoria,Conta,Valor,StatusAproc,StatusPag\n';
     const csvContent = lancamentos.map(l => {
@@ -141,11 +151,9 @@ export default function Lancamentos() {
   const handleEditClick = (item: LancamentoFinanceiro) => {
     setActiveMenuId(null);
     if (item.recorrencia_id) {
-      // Dispatches recurrent modifier interceptor popup
       setInterceptorTarget(item);
       setInterceptorType('edit');
     } else {
-      // Create draft and open Slide Panel
       setLancamentoFormDraft({
         tipo: item.tipo,
         valor_previsto: item.valor_previsto.toString(),
@@ -167,7 +175,6 @@ export default function Lancamentos() {
   const handleDeleteClick = (item: LancamentoFinanceiro) => {
     setActiveMenuId(null);
     if (item.recorrencia_id) {
-      // Dispatches recurrent modifier interceptor popup
       setInterceptorTarget(item);
       setInterceptorType('delete');
     } else {
@@ -193,7 +200,6 @@ export default function Lancamentos() {
         alert('Erro ao deletar: ' + err.message);
       }
     } else if (interceptorType === 'edit') {
-      // Save parcel selector action to Zustand so saving in slide panel knows how to modify
       setSelectedRecorrenciaAction(mode);
       
       setLancamentoFormDraft({
@@ -233,143 +239,157 @@ export default function Lancamentos() {
       {/* Header */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
-          <h1 className="text-headline-lg font-bold tracking-tight text-on-surface">Gestão de Lançamentos</h1>
-          <p className="text-body-md text-on-surface-variant mt-1">Gerencie e aprove operações financeiras com precisão.</p>
+          <h1 className="text-headline-lg font-bold tracking-tight text-on-surface uppercase">Gestão de Lançamentos</h1>
+          <p className="text-body-md text-on-surface-variant mt-1 font-medium">Gerencie e aprove operações financeiras com precisão.</p>
         </div>
         <div className="flex flex-wrap items-center gap-3">
           <button 
             onClick={handleExportCSV}
-            className="px-4 py-2 bg-on-background text-surface-container-lowest font-semibold hover:bg-secondary border border-transparent rounded text-xs transition-colors shadow-sm flex items-center gap-1.5"
+            className="px-6 py-2.5 bg-neutral-900 text-white font-bold hover:bg-neutral-800 rounded-lg text-xs transition-all shadow-sm flex items-center gap-2"
           >
-            <Download className="w-3.5 h-3.5" />
+            <Download className="w-4 h-4" />
             Exportar CSV
           </button>
           <button 
             onClick={handleBatchApprove}
             disabled={selectedIds.length === 0 || isBatchApproving}
-            className={`px-4 py-2 font-semibold text-xs rounded transition-all shadow-sm flex items-center gap-1.5 ${
+            className={`px-6 py-2.5 font-bold text-xs rounded-lg transition-all shadow-sm flex items-center gap-2 ${
               selectedIds.length > 0 
-                ? 'bg-primary-container text-on-primary-fixed hover:bg-primary-fixed-dim cursor-pointer' 
+                ? 'bg-primary-container text-on-primary-container hover:brightness-95 cursor-pointer' 
                 : 'bg-surface-container text-on-surface-variant/40 cursor-not-allowed opacity-60'
             }`}
           >
-            <CheckCircle className="w-3.5 h-3.5" />
+            <CheckCircle className="w-4 h-4" />
             Aprovar Selecionados ({selectedIds.length})
           </button>
         </div>
       </div>
 
-      {/* Filters Bar */}
-      <div className="bg-surface border border-surface-border p-5 rounded-xl shadow-sm flex flex-col md:flex-row flex-wrap md:items-end gap-4">
-        {/* Buscar por Entidade */}
-        <div className="flex-1 min-w-[210px] space-y-1.5">
-          <label className="block text-xs font-semibold text-on-surface-variant">Buscar por Entidade</label>
-          <div className="relative">
-            <span className="absolute left-3 top-2.5 text-on-surface-variant">
-              <Search className="w-4 h-4" />
-            </span>
-            <input 
-              type="text"
-              placeholder="Nome do Cliente ou Fornecedor"
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full pl-9 pr-3 py-1.5 bg-surface-container-lowest border border-surface-border text-xs rounded text-on-surface focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary placeholder:text-on-surface-variant/40"
-            />
+      {/* Standardized Filters Bar (Matching Dashboard UI) */}
+      <div className="bg-white dark:bg-surface border border-surface-border p-5 rounded-xl shadow-sm flex flex-col gap-6">
+        <div className="flex flex-wrap items-end gap-6">
+          {/* Buscar por Entidade */}
+          <div className="flex-1 min-w-[280px] flex flex-col gap-2">
+            <label className="text-xs font-bold text-secondary uppercase tracking-wider">Buscar por Entidade</label>
+            <div className="relative group">
+              <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-secondary group-focus-within:text-primary transition-colors">
+                <Search className="w-5 h-5" />
+              </span>
+              <input 
+                type="text"
+                placeholder="Nome do Cliente ou Fornecedor"
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="w-full h-12 pl-11 pr-4 bg-surface border border-surface-border text-sm font-semibold rounded-lg text-on-surface focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all placeholder:text-secondary/40"
+              />
+            </div>
+          </div>
+
+          {/* Período */}
+          <div className="flex flex-col gap-2">
+            <label className="text-xs font-bold text-secondary uppercase tracking-wider">Período de Vencimento</label>
+            <div className="flex items-center gap-3">
+              <div className="relative">
+                <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-secondary pointer-events-none" />
+                <input 
+                  type="date"
+                  value={startDate}
+                  onChange={(e) => setStartDate(e.target.value)}
+                  className="h-12 pl-10 pr-4 bg-surface border border-surface-border text-sm font-semibold rounded-lg text-on-surface focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all"
+                />
+              </div>
+              <span className="text-secondary font-black text-xs">ATÉ</span>
+              <div className="relative">
+                <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-secondary pointer-events-none" />
+                <input 
+                  type="date"
+                  value={endDate}
+                  onChange={(e) => setEndDate(e.target.value)}
+                  className="h-12 pl-10 pr-4 bg-surface border border-surface-border text-sm font-semibold rounded-lg text-on-surface focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all"
+                />
+              </div>
+            </div>
+          </div>
+
+          {/* Status de Aprovação */}
+          <div className="min-w-[200px] flex flex-col gap-2">
+            <label className="text-xs font-bold text-secondary uppercase tracking-wider">Status de Aprovação</label>
+            <div className="relative">
+              <Filter className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-secondary pointer-events-none" />
+              <select 
+                value={approvalStatus}
+                onChange={(e) => setApprovalStatus(e.target.value)}
+                className="w-full h-12 pl-10 pr-4 bg-surface border border-surface-border text-sm font-bold rounded-lg text-on-surface appearance-none focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all cursor-pointer"
+              >
+                <option value="all">Todos os Status</option>
+                <option value="pendente_digital">Pendente Digital</option>
+                <option value="digital">Digital (Aprovado Gerente)</option>
+                <option value="confirmado_master">Confirmado Master</option>
+              </select>
+              <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-secondary">
+                <ArrowDownLeft className="w-4 h-4 rotate-[225deg]" />
+              </div>
+            </div>
           </div>
         </div>
 
-        {/* Período */}
-        <div className="space-y-1.5">
-          <label className="block text-xs font-semibold text-on-surface-variant">Período de Vencimento</label>
-          <div className="flex items-center gap-2">
-            <input 
-              type="date"
-              value={startDate}
-              onChange={(e) => setStartDate(e.target.value)}
-              className="bg-surface-container-lowest border border-surface-border text-xs rounded px-3 py-1.5 text-on-surface focus:outline-none focus:ring-1 focus:ring-primary"
-            />
-            <span className="text-on-surface-variant text-xs font-medium">até</span>
-            <input 
-              type="date"
-              value={endDate}
-              onChange={(e) => setEndDate(e.target.value)}
-              className="bg-surface-container-lowest border border-surface-border text-xs rounded px-3 py-1.5 text-on-surface focus:outline-none focus:ring-1 focus:ring-primary"
-            />
+        <div className="flex flex-wrap items-center justify-between gap-4 pt-4 border-t border-surface-border/50">
+          <div className="flex flex-col gap-2">
+            <label className="text-xs font-bold text-secondary uppercase tracking-wider">Tipo de Movimentação</label>
+            <div className="flex bg-surface-container border border-surface-border rounded-lg p-1 h-12 w-fit">
+              <button 
+                type="button"
+                onClick={() => setTypeFilter('all')}
+                className={`px-6 text-xs font-black rounded-md transition-all uppercase tracking-tighter ${
+                  typeFilter === 'all' 
+                    ? 'bg-white dark:bg-surface text-on-background shadow-sm' 
+                    : 'text-secondary hover:text-on-surface'
+                }`}
+              >
+                Todos
+              </button>
+              <button 
+                type="button"
+                onClick={() => setTypeFilter('entrada')}
+                className={`px-6 text-xs font-black rounded-md transition-all uppercase tracking-tighter ${
+                  typeFilter === 'entrada' 
+                    ? 'bg-white dark:bg-surface text-bank-truth-green shadow-sm' 
+                    : 'text-secondary hover:text-on-surface'
+                }`}
+              >
+                Entradas
+              </button>
+              <button 
+                type="button"
+                onClick={() => setTypeFilter('saida')}
+                className={`px-6 text-xs font-black rounded-md transition-all uppercase tracking-tighter ${
+                  typeFilter === 'saida' 
+                    ? 'bg-white dark:bg-surface text-alert-red shadow-sm' 
+                    : 'text-secondary hover:text-on-surface'
+                }`}
+              >
+                Saídas
+              </button>
+            </div>
           </div>
-        </div>
 
-        {/* Status de Aprovação */}
-        <div className="min-w-[150px] space-y-1.5">
-          <label className="block text-xs font-semibold text-on-surface-variant">Status de Aprovação</label>
-          <select 
-            value={approvalStatus}
-            onChange={(e) => setApprovalStatus(e.target.value)}
-            className="w-full bg-surface-container-lowest border border-surface-border text-xs rounded px-3 py-2 text-on-surface font-semibold focus:outline-none focus:ring-1 focus:ring-primary"
+          <button 
+            type="button"
+            onClick={clearFilters}
+            className="px-6 h-12 border-2 border-neutral-200 text-secondary text-xs font-bold uppercase tracking-widest rounded-lg hover:bg-neutral-50 hover:border-neutral-300 transition-all"
           >
-            <option value="all">Todos os Status</option>
-            <option value="pendente_digital">Pendente Digital</option>
-            <option value="digital">Digital (Aprovado Gerente)</option>
-            <option value="confirmado_master">Confirmado Master</option>
-          </select>
+            Limpar Filtros
+          </button>
         </div>
-
-        {/* Tipo Segment */}
-        <div className="space-y-1.5">
-          <label className="block text-xs font-semibold text-on-surface-variant">Tipo</label>
-          <div className="flex bg-surface-container border border-surface-border rounded p-0.5 h-9">
-            <button 
-              type="button"
-              onClick={() => setTypeFilter('all')}
-              className={`px-4 text-xs font-bold rounded-sm transition-all ${
-                typeFilter === 'all' 
-                  ? 'bg-surface-container-lowest text-on-background shadow-xs' 
-                  : 'text-on-surface-variant hover:text-on-surface'
-              }`}
-            >
-              Todos
-            </button>
-            <button 
-              type="button"
-              onClick={() => setTypeFilter('entrada')}
-              className={`px-4 text-xs font-bold rounded-sm transition-all ${
-                typeFilter === 'entrada' 
-                  ? 'bg-surface-container-lowest text-bank-truth-green shadow-xs' 
-                  : 'text-on-surface-variant hover:text-on-surface'
-              }`}
-            >
-              Entradas
-            </button>
-            <button 
-              type="button"
-              onClick={() => setTypeFilter('saida')}
-              className={`px-4 text-xs font-bold rounded-sm transition-all ${
-                typeFilter === 'saida' 
-                  ? 'bg-surface-container-lowest text-alert-red shadow-xs' 
-                  : 'text-on-surface-variant hover:text-on-surface'
-              }`}
-            >
-              Saídas
-            </button>
-          </div>
-        </div>
-
-        {/* Limpar */}
-        <button 
-          type="button"
-          onClick={clearFilters}
-          className="px-4 py-2 border border-surface-border text-on-surface text-xs font-semibold font-sans rounded hover:bg-surface-container-low transition-colors h-9"
-        >
-          Limpar
-        </button>
       </div>
 
       {/* List Table Data */}
-      <div className="bg-surface-container-lowest border border-surface-border rounded-xl shadow-sm overflow-hidden">
+      <div className="bg-white dark:bg-surface border border-surface-border rounded-xl shadow-sm overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full text-left border-collapse">
             <thead>
               <tr className="bg-surface-container-low text-on-surface border-b border-surface-border select-none">
-                <th className="py-3 px-4 w-12 text-center">
+                <th className="py-4 px-4 w-12 text-center">
                   <input 
                     type="checkbox"
                     className="rounded border-surface-border text-primary focus:ring-primary cursor-pointer w-4 h-4 align-middle"
@@ -377,31 +397,34 @@ export default function Lancamentos() {
                     onChange={(e) => handleSelectAll(e.target.checked)}
                   />
                 </th>
-                <th className="py-3 px-4 text-xs font-bold uppercase tracking-wider text-on-surface">Tipo</th>
-                <th className="py-3 px-4 text-xs font-bold uppercase tracking-wider text-on-surface">Vencimento</th>
-                <th className="py-3 px-4 text-xs font-bold uppercase tracking-wider text-on-surface">Entidade</th>
-                <th className="py-3 px-4 text-xs font-bold uppercase tracking-wider text-on-surface text-center">Recorrência</th>
-                <th className="py-3 px-4 text-xs font-bold uppercase tracking-wider text-on-surface">Categoria</th>
-                <th className="py-3 px-4 text-xs font-bold uppercase tracking-wider text-on-surface">Conta</th>
-                <th className="py-3 px-4 text-xs font-bold uppercase tracking-wider text-on-surface text-right">Valor (R$)</th>
-                <th className="py-3 px-4 text-xs font-bold uppercase tracking-wider text-on-surface text-center">Status</th>
-                <th className="py-3 px-4 w-14"></th>
+                <th className="py-4 px-4 text-[10px] font-black uppercase tracking-wider text-secondary">Tipo</th>
+                <th className="py-4 px-4 text-[10px] font-black uppercase tracking-wider text-secondary">Vencimento</th>
+                <th className="py-4 px-4 text-[10px] font-black uppercase tracking-wider text-secondary">Entidade</th>
+                <th className="py-4 px-4 text-[10px] font-black uppercase tracking-wider text-secondary text-center">Recorrência</th>
+                <th className="py-4 px-4 text-[10px] font-black uppercase tracking-wider text-secondary">Categoria</th>
+                <th className="py-4 px-4 text-[10px] font-black uppercase tracking-wider text-secondary">Conta</th>
+                <th className="py-4 px-4 text-[10px] font-black uppercase tracking-wider text-secondary text-right">Valor (R$)</th>
+                <th className="py-4 px-4 text-[10px] font-black uppercase tracking-wider text-secondary text-center">Status</th>
+                <th className="py-4 px-4 w-14"></th>
               </tr>
             </thead>
             <tbody className="text-xs text-on-surface">
               {isLoading ? (
                 <tr>
-                  <td colSpan={10} className="py-12 text-center">
-                    <div className="flex flex-col items-center gap-2">
-                      <Loader2 className="w-6 h-6 text-primary animate-spin" />
-                      <span className="text-on-surface-variant font-medium">Carregando lançamentos...</span>
+                  <td colSpan={10} className="py-20 text-center">
+                    <div className="flex flex-col items-center gap-3">
+                      <Loader2 className="w-8 h-8 text-primary animate-spin" />
+                      <span className="text-secondary font-bold uppercase tracking-widest text-[10px]">Carregando Lançamentos...</span>
                     </div>
                   </td>
                 </tr>
               ) : paginatedLancamentos.length === 0 ? (
                 <tr>
-                  <td colSpan={10} className="py-12 text-center text-on-surface-variant font-medium">
-                    Nenhum lançamento corresponde aos filtros configurados.
+                  <td colSpan={10} className="py-20 text-center">
+                    <div className="flex flex-col items-center gap-2 opacity-40">
+                      <AlertOctagon className="w-10 h-10 text-secondary" />
+                      <p className="text-secondary font-bold uppercase tracking-widest text-[10px]">Nenhum lançamento encontrado</p>
+                    </div>
                   </td>
                 </tr>
               ) : (
@@ -410,12 +433,12 @@ export default function Lancamentos() {
                   return (
                     <tr 
                       key={item.id} 
-                      className={`border-b border-surface-border hover:bg-primary/5 transition-colors group cursor-default ${
+                      className={`border-b border-surface-border hover:bg-neutral-50/50 transition-colors group cursor-default ${
                         isChecked ? 'bg-primary/5' : ''
                       }`}
                     >
                       {/* Checkbox cell */}
-                      <td className="py-2.5 px-4 text-center">
+                      <td className="py-3 px-4 text-center">
                         <input 
                           type="checkbox"
                           className="rounded border-surface-border text-primary focus:ring-primary cursor-pointer w-4 h-4 align-middle"
@@ -424,9 +447,9 @@ export default function Lancamentos() {
                         />
                       </td>
 
-                      {/* Direction Icon (entrada versus saida) */}
-                      <td className="py-2.5 px-4">
-                        <div className={`flex justify-center w-7 h-7 rounded-full items-center ${
+                      {/* Direction Icon */}
+                      <td className="py-3 px-4">
+                        <div className={`flex justify-center w-8 h-8 rounded-lg items-center ${
                           item.tipo === 'entrada' ? 'bg-bank-truth-green/10 text-bank-truth-green' : 'bg-alert-red/10 text-alert-red'
                         }`}>
                           {item.tipo === 'entrada' ? (
@@ -438,91 +461,91 @@ export default function Lancamentos() {
                       </td>
 
                       {/* Due date */}
-                      <td className="py-2.5 px-4 font-mono font-medium whitespace-nowrap">
+                      <td className="py-3 px-4 font-mono font-bold text-secondary">
                         {item.data_vencimento.split('-').reverse().join('/')}
                       </td>
 
                       {/* Entity Name */}
-                      <td className="py-2.5 px-4 font-bold text-on-background max-w-[180px] truncate" title={getEntidadeName(item.entidade_id)}>
+                      <td className="py-3 px-4 font-black text-on-background max-w-[200px] truncate" title={getEntidadeName(item.entidade_id)}>
                         {getEntidadeName(item.entidade_id)}
                       </td>
 
-                      {/* Recurrency indicator block */}
-                      <td className="py-2.5 px-4 text-center">
+                      {/* Recurrency indicator */}
+                      <td className="py-3 px-4 text-center">
                         {item.recorrencia_id ? (
                           <span 
-                            className="inline-flex bg-surface-container text-on-surface-variant font-bold text-[10px] px-2 py-0.5 rounded border border-surface-border"
+                            className="inline-flex bg-neutral-100 text-neutral-600 font-black text-[9px] px-2 py-0.5 rounded border border-neutral-200 uppercase"
                             title={`Parcela ${item.numero_parcela || 1} de recorrência`}
                           >
                             Rec. p.{item.numero_parcela || 1}
                           </span>
                         ) : (
-                          <span className="text-on-surface-variant/40">-</span>
+                          <span className="text-secondary/20">-</span>
                         )}
                       </td>
 
                       {/* Category */}
-                      <td className="py-2.5 px-4 text-on-surface-variant truncate max-w-[140px]" title={getCategoriaName(item.categoria_id)}>
+                      <td className="py-3 px-4 text-secondary font-semibold truncate max-w-[140px]" title={getCategoriaName(item.categoria_id)}>
                         {getCategoriaName(item.categoria_id)}
                       </td>
 
-                      {/* Bank account forecast */}
-                      <td className="py-2.5 px-4 text-on-surface-variant whitespace-nowrap">
+                      {/* Bank account */}
+                      <td className="py-3 px-4 text-secondary font-bold">
                         {getContaName(item.conta_bancaria_id)}
                       </td>
 
                       {/* Monetary Value */}
-                      <td className={`py-2.5 px-4 font-mono font-bold text-right text-sm ${
+                      <td className={`py-3 px-4 font-mono font-black text-right text-sm ${
                         item.tipo === 'saida' ? 'text-alert-red' : 'text-bank-truth-green'
                       }`}>
                         {valueFormatter(item)}
                       </td>
 
-                      {/* Workflow state display */}
-                      <td className="py-2.5 px-4 text-center whitespace-nowrap">
+                      {/* Workflow state */}
+                      <td className="py-3 px-4 text-center whitespace-nowrap">
                         {item.status_aprovacao === 'pendente_digital' && (
-                          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full bg-surface-container text-on-surface-variant font-semibold border border-surface-border text-[10px]">
+                          <span className="inline-flex items-center px-2.5 py-0.5 rounded bg-neutral-100 text-neutral-600 font-bold border border-neutral-200 text-[9px] uppercase tracking-tighter">
                             Pendente Digital
                           </span>
                         )}
                         {item.status_aprovacao === 'digital' && (
-                          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full bg-pending-amber/20 text-pending-amber font-semibold border border-pending-amber/30 text-[10px]">
+                          <span className="inline-flex items-center px-2.5 py-0.5 rounded bg-pending-amber/10 text-pending-amber font-bold border border-pending-amber/30 text-[9px] uppercase tracking-tighter">
                             Digital
                           </span>
                         )}
                         {item.status_aprovacao === 'confirmado_master' && (
-                          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full bg-on-background text-primary-container font-extrabold text-[10px]">
+                          <span className="inline-flex items-center px-2.5 py-0.5 rounded bg-neutral-900 text-white font-black text-[9px] uppercase tracking-tighter">
                             Confirmado Master
                           </span>
                         )}
                       </td>
 
-                      {/* Action trigger menu dot */}
-                      <td className="py-2.5 px-4 text-right relative">
+                      {/* Action trigger menu */}
+                      <td className="py-3 px-4 text-right relative">
                         <button 
                           type="button"
                           onClick={(e) => handleActionMenuToggle(item.id, e)}
-                          className="text-on-surface-variant hover:text-primary transition-colors p-1 rounded-full hover:bg-surface-container"
+                          className="text-secondary hover:text-primary transition-colors p-1.5 rounded-lg hover:bg-neutral-100"
                         >
-                          <MoreVertical className="w-4 h-4" />
+                          <MoreVertical className="w-5 h-5" />
                         </button>
 
                         {activeMenuId === item.id && (
-                          <div className="absolute right-12 top-2 bg-surface-container-lowest border border-surface-border rounded-lg shadow-lg z-30 py-1.5 w-28 animate-fade-in text-left">
+                          <div className="absolute right-12 top-2 bg-white border border-surface-border rounded-lg shadow-xl z-30 py-2 w-32 animate-fade-in text-left">
                             <button 
                               type="button"
                               onClick={() => handleEditClick(item)}
-                              className="w-full px-3 py-1.5 hover:bg-surface-container text-left text-xs text-on-background font-semibold flex items-center gap-1.5"
+                              className="w-full px-4 py-2 hover:bg-neutral-50 text-left text-xs text-on-background font-bold flex items-center gap-2"
                             >
-                              <Edit3 className="w-3.5 h-3.5 text-primary" />
+                              <Edit3 className="w-4 h-4 text-primary" />
                               Editar
                             </button>
                             <button 
                               type="button"
                               onClick={() => handleDeleteClick(item)}
-                              className="w-full px-3 py-1.5 hover:bg-surface-container text-left text-xs text-alert-red font-semibold flex items-center gap-1.5"
+                              className="w-full px-4 py-2 hover:bg-neutral-50 text-left text-xs text-alert-red font-bold flex items-center gap-2 border-t border-neutral-100"
                             >
-                              <Trash2 className="w-3.5 h-3.5" />
+                              <Trash2 className="w-4 h-4" />
                               Excluir
                             </button>
                           </div>
@@ -537,41 +560,43 @@ export default function Lancamentos() {
         </div>
 
         {/* Pagination bar */}
-        <div className="bg-surface px-4 py-3 border-t border-surface-border flex items-center justify-between">
-          <span className="text-on-surface-variant font-medium text-xs">
+        <div className="bg-surface px-6 py-4 border-t border-surface-border flex items-center justify-between">
+          <span className="text-secondary font-bold text-[10px] uppercase tracking-widest">
             Mostrando {(currentPage - 1) * itemsPerPage + 1} a {Math.min(currentPage * itemsPerPage, lancamentos.length)} de {lancamentos.length} registros
           </span>
 
-          <div className="flex items-center gap-1">
+          <div className="flex items-center gap-2">
             <button 
               type="button"
               disabled={currentPage === 1}
               onClick={() => setCurrentPage(prev => prev - 1)}
-              className="px-2 py-1 flex items-center justify-center rounded border border-surface-border text-on-surface-variant hover:bg-surface-container disabled:opacity-50 text-xs gap-0.5"
+              className="h-10 px-4 flex items-center justify-center rounded-lg border border-surface-border text-secondary font-bold hover:bg-neutral-50 disabled:opacity-50 text-xs gap-1"
             >
               Anterior
             </button>
             
-            {Array.from({ length: totalPages }, (_, i) => i + 1).map(pageNum => (
-              <button 
-                key={pageNum}
-                type="button"
-                onClick={() => setCurrentPage(pageNum)}
-                className={`w-7 h-7 flex items-center justify-center rounded text-xs font-semibold ${
-                  currentPage === pageNum 
-                    ? 'bg-primary-container text-on-primary-container font-extrabold' 
-                    : 'border border-surface-border text-on-surface-variant hover:bg-surface-container'
-                }`}
-              >
-                {pageNum}
-              </button>
-            ))}
+            <div className="flex items-center gap-1">
+              {Array.from({ length: totalPages }, (_, i) => i + 1).map(pageNum => (
+                <button 
+                  key={pageNum}
+                  type="button"
+                  onClick={() => setCurrentPage(pageNum)}
+                  className={`w-10 h-10 flex items-center justify-center rounded-lg text-xs font-bold transition-all ${
+                    currentPage === pageNum 
+                      ? 'bg-primary-container text-on-primary-container font-black shadow-sm' 
+                      : 'border border-surface-border text-secondary hover:bg-neutral-50'
+                  }`}
+                >
+                  {pageNum}
+                </button>
+              ))}
+            </div>
 
             <button 
               type="button"
               disabled={currentPage === totalPages}
               onClick={() => setCurrentPage(prev => prev + 1)}
-              className="px-2 py-1 flex items-center justify-center rounded border border-surface-border text-on-surface-variant hover:bg-surface-container disabled:opacity-50 text-xs gap-0.5"
+              className="h-10 px-4 flex items-center justify-center rounded-lg border border-surface-border text-secondary font-bold hover:bg-neutral-50 disabled:opacity-50 text-xs gap-1"
             >
               Próximo
             </button>
@@ -579,43 +604,40 @@ export default function Lancamentos() {
         </div>
       </div>
 
-      {/* ========================================== */}
-      {/* MODAL INTERCEPTOR DE RECORRÊNCIA (Tela 2.3) */}
-      {/* ========================================== */}
+      {/* Recurrency Interceptor Modal */}
       {interceptorTarget && (
-        <div className="fixed inset-0 bg-black/40 backdrop-blur-xs z-50 flex items-center justify-center p-4 animate-fade-in">
-          <div className="bg-surface w-full max-w-[420px] rounded-xl flex flex-col shadow-xl relative overflow-hidden border border-surface-border animate-slide-in">
-            {/* Top warning amber bar */}
-            <div className="h-1.5 w-full bg-pending-amber absolute top-0 left-0"></div>
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4 animate-fade-in">
+          <div className="bg-white w-full max-w-[440px] rounded-2xl flex flex-col shadow-2xl relative overflow-hidden border border-surface-border animate-slide-in">
+            <div className="h-2 w-full bg-pending-amber"></div>
             
-            <div className="p-6 flex flex-col items-center text-center pt-8">
-              <div className="w-16 h-16 rounded-full bg-pending-amber flex items-center justify-center mb-6 border-4 border-surface shadow-sm text-on-background">
-                <AlertOctagon className="w-8 h-8 shrink-0" />
+            <div className="p-8 flex flex-col items-center text-center">
+              <div className="w-20 h-20 rounded-full bg-pending-amber/10 flex items-center justify-center mb-6 border-4 border-pending-amber/20 text-pending-amber">
+                <AlertOctagon className="w-10 h-10 shrink-0" />
               </div>
               
-              <h2 className="text-headline-sm text-on-surface font-bold leading-tight select-none">
+              <h2 className="text-2xl text-on-surface font-black tracking-tight leading-tight select-none">
                 Aviso de Recorrência
               </h2>
               
-              <p className="text-body-md text-on-surface-variant mb-6 mt-2">
+              <p className="text-sm text-secondary font-medium mb-8 mt-3">
                 Este lançamento faz parte de uma série recorrente.<br />
-                <span className="mt-2 inline-block bg-surface-container py-1.5 px-3 rounded-lg border border-surface-border font-bold text-on-background text-sm">
+                <span className="mt-3 inline-block bg-neutral-100 py-2 px-4 rounded-lg border border-neutral-200 font-black text-on-background text-xs uppercase tracking-widest">
                   Parcela {interceptorTarget.numero_parcela || 1} de recorrente
                 </span>
               </p>
 
-              <div className="w-full flex flex-col gap-3">
+              <div className="w-full flex flex-col gap-4">
                 <button 
                   type="button"
                   onClick={() => executeInterceptorAction('all')}
-                  className="w-full bg-primary-container text-on-primary-fixed font-bold py-3 px-4 rounded-lg flex justify-center items-center gap-1.5 hover:bg-primary-fixed-dim transition-colors cursor-pointer"
+                  className="w-full bg-primary-container text-on-primary-container font-black py-4 px-6 rounded-xl flex justify-center items-center gap-2 hover:brightness-95 transition-all shadow-md active:scale-[0.98]"
                 >
                   Alterar esta e as futuras
                 </button>
                 <button 
                   type="button"
                   onClick={() => executeInterceptorAction('single')}
-                  className="w-full border-2 border-on-surface text-on-surface bg-transparent font-bold py-2.5 px-4 rounded-lg flex justify-center items-center gap-1.5 hover:bg-surface-container transition-colors cursor-pointer"
+                  className="w-full border-2 border-neutral-200 text-secondary font-black py-3.5 px-6 rounded-xl flex justify-center items-center gap-2 hover:bg-neutral-50 transition-all active:scale-[0.98]"
                 >
                   Alterar apenas esta parcela
                 </button>
@@ -625,9 +647,9 @@ export default function Lancamentos() {
             <button 
               type="button"
               onClick={() => { setInterceptorTarget(null); setInterceptorType(null); }}
-              className="absolute top-4 right-4 text-on-surface-variant hover:text-on-surface"
+              className="absolute top-6 right-6 text-secondary hover:text-on-surface transition-colors p-1"
             >
-              <X className="w-5 h-5" />
+              <X className="w-6 h-6" />
             </button>
           </div>
         </div>
