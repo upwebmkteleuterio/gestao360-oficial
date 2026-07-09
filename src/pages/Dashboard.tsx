@@ -1,8 +1,8 @@
 import React, { useState, useMemo } from 'react';
-import { 
-  TrendingUp, 
-  TrendingDown, 
-  CheckCircle2, 
+import {
+  TrendingUp,
+  TrendingDown,
+  CheckCircle2,
   Calendar,
   Filter,
   Download,
@@ -11,7 +11,11 @@ import {
   LineChart,
   Landmark,
   Shield,
-  Clock
+  Clock,
+  RefreshCw,
+  Eye,
+  User,
+  X
 } from 'lucide-react';
 import { useLancamentos, useContas, useCentrosCusto, useAuditoriaLogs, useEntidades } from '../hooks/useData';
 import { useUIStore } from '../store/uiStore';
@@ -31,8 +35,11 @@ export default function Dashboard() {
   const { data: lancamentos = [], isLoading: loadingLancamentos } = useLancamentos();
   const { data: contas = [], isLoading: loadingContas } = useContas();
   const { data: centrosCusto = [] } = useCentrosCusto();
-  const { data: auditoriaLogs = [] } = useAuditoriaLogs();
+  const { data: auditoriaLogs = [], refetch: refetchAudit, isFetching: fetchingAudit } = useAuditoriaLogs();
   const { data: entidades = [] } = useEntidades();
+
+  // Detail modal state for audit
+  const [selectedAuditLog, setSelectedAuditLog] = useState<any | null>(null);
 
   const { data: stats, isLoading: loadingStats } = useQuery({
     queryKey: ['dashboardStats'],
@@ -243,21 +250,113 @@ export default function Dashboard() {
         )}
 
         {currentTab === 'audit' && (
-          <section className="bg-white dark:bg-surface p-6 rounded-xl border border-surface-border shadow-sm animate-fade-in">
+          <section className="bg-white dark:bg-surface p-6 rounded-xl border border-surface-border shadow-sm animate-fade-in relative">
+            <div className="flex justify-between items-center mb-6">
+              <h4 className="text-sm font-bold uppercase tracking-wider text-on-surface">Rastro de Auditoria</h4>
+              <button
+                onClick={() => refetchAudit()}
+                disabled={fetchingAudit}
+                className="flex items-center gap-2 px-4 py-2 bg-neutral-100 hover:bg-neutral-200 text-neutral-600 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all disabled:opacity-50"
+              >
+                <RefreshCw className={`w-3 h-3 ${fetchingAudit ? 'animate-spin' : ''}`} />
+                Atualizar Dados
+              </button>
+            </div>
             <div className="overflow-x-auto">
               <table className="w-full text-left border-collapse">
-                <thead><tr className="bg-neutral-50 text-neutral-400 border-b border-neutral-100 text-[9px] font-black uppercase tracking-widest"><th className="py-4 px-8">Hora</th><th className="py-4 px-8">Ação</th><th className="py-4 px-8">Módulo</th></tr></thead>
+                <thead>
+                  <tr className="bg-neutral-50 text-neutral-400 border-b border-neutral-100 text-[9px] font-black uppercase tracking-widest">
+                    <th className="py-4 px-8">Data/Hora</th>
+                    <th className="py-4 px-8">Usuário</th>
+                    <th className="py-4 px-8">Ação Realizada</th>
+                    <th className="py-4 px-8">Módulo</th>
+                    <th className="py-4 px-8 text-right">Detalhes</th>
+                  </tr>
+                </thead>
                 <tbody className="text-[11px] font-bold">
-                  {auditoriaLogs.slice(0, 10).map(log => (
-                    <tr key={log.id} className="border-b border-neutral-50">
-                      <td className="py-4 px-8 font-mono">{new Date(log.data_hora).toLocaleTimeString()}</td>
-                      <td className="py-4 px-8"><span className="px-2 py-1 bg-blue-50 text-blue-600 rounded text-[9px] uppercase font-black">{log.acao}</span></td>
-                      <td className="py-4 px-8 uppercase text-neutral-400">{log.tabela_afetada}</td>
+                  {auditoriaLogs.length === 0 ? (
+                    <tr>
+                      <td colSpan={5} className="py-20 text-center text-secondary opacity-40 uppercase tracking-widest text-[10px]">Nenhum log registrado ainda</td>
                     </tr>
-                  ))}
+                  ) : (
+                    auditoriaLogs.slice(0, 20).map(log => (
+                      <tr key={log.id} className="border-b border-neutral-50 hover:bg-neutral-50/50 transition-colors">
+                        <td className="py-4 px-8 font-mono text-secondary">
+                          {new Date(log.data_hora).toLocaleDateString()} {new Date(log.data_hora).toLocaleTimeString()}
+                        </td>
+                        <td className="py-4 px-8">
+                          <div className="flex flex-col">
+                            <span className="text-on-surface uppercase">{log.profiles?.nome || 'Sistema'}</span>
+                            <span className="text-[9px] text-secondary font-medium">{log.profiles?.email || 'automático'}</span>
+                          </div>
+                        </td>
+                        <td className="py-4 px-8">
+                          <span className={`px-2 py-1 rounded text-[9px] uppercase font-black ${
+                            log.acao.includes('Aprovação') ? 'bg-bank-truth-green/10 text-bank-truth-green' :
+                            log.acao.includes('Exclusão') ? 'bg-alert-red/10 text-alert-red' :
+                            log.acao.includes('Novo') ? 'bg-blue-50 text-blue-600' : 'bg-neutral-100 text-neutral-600'
+                          }`}>
+                            {log.acao}
+                          </span>
+                        </td>
+                        <td className="py-4 px-8 uppercase text-secondary/60 text-[10px]">{log.tabela_afetada.replace('_', ' ')}</td>
+                        <td className="py-4 px-8 text-right">
+                          <button
+                            onClick={() => setSelectedAuditLog(log)}
+                            className="p-2 text-secondary hover:text-primary transition-colors"
+                          >
+                            <Eye className="w-4 h-4" />
+                          </button>
+                        </td>
+                      </tr>
+                    ))
+                  )}
                 </tbody>
               </table>
             </div>
+
+            {/* Simple Detail Modal */}
+            {selectedAuditLog && (
+              <div className="fixed inset-0 z-[300] flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm animate-fade-in">
+                <div className="bg-white w-full max-w-lg rounded-2xl shadow-2xl overflow-hidden border border-surface-border">
+                  <header className="px-6 py-4 border-b border-surface-border flex justify-between items-center bg-neutral-50">
+                    <h3 className="text-xs font-black uppercase tracking-widest">Detalhes da Auditoria</h3>
+                    <button onClick={() => setSelectedAuditLog(null)} className="p-2 hover:bg-neutral-200 rounded-lg"><X className="w-5 h-5" /></button>
+                  </header>
+                  <div className="p-6 space-y-4">
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="space-y-1">
+                        <p className="text-[9px] font-black text-secondary uppercase">Ação</p>
+                        <p className="text-xs font-bold">{selectedAuditLog.acao}</p>
+                      </div>
+                      <div className="space-y-1">
+                        <p className="text-[9px] font-black text-secondary uppercase">Horário</p>
+                        <p className="text-xs font-bold">{new Date(selectedAuditLog.data_hora).toLocaleString()}</p>
+                      </div>
+                    </div>
+                    <div className="space-y-1">
+                      <p className="text-[9px] font-black text-secondary uppercase">Usuário Responsável</p>
+                      <div className="flex items-center gap-2 p-2 bg-neutral-50 rounded-lg border border-neutral-100">
+                        <User className="w-4 h-4 text-secondary" />
+                        <span className="text-xs font-bold">{selectedAuditLog.profiles?.nome} ({selectedAuditLog.profiles?.email})</span>
+                      </div>
+                    </div>
+                    <div className="space-y-2">
+                      <p className="text-[9px] font-black text-secondary uppercase">Alterações Detectadas</p>
+                      <div className="p-4 bg-neutral-900 rounded-xl font-mono text-[10px] text-emerald-400 overflow-x-auto max-h-48 scrollbar-thin">
+                        <pre>{JSON.stringify({
+                          de: selectedAuditLog.dados_anteriores,
+                          para: selectedAuditLog.dados_novos
+                        }, null, 2)}</pre>
+                      </div>
+                    </div>
+                  </div>
+                  <footer className="px-6 py-4 border-t border-surface-border bg-neutral-50 flex justify-end">
+                    <button onClick={() => setSelectedAuditLog(null)} className="px-6 py-2 bg-neutral-900 text-white text-[10px] font-black uppercase tracking-widest rounded-lg">Fechar</button>
+                  </footer>
+                </div>
+              </div>
+            )}
           </section>
         )}
       </div>

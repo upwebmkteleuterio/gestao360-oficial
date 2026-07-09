@@ -2,13 +2,13 @@ import { supabase } from '@/integrations/supabase/client';
 import { AuditoriaLog } from '../types';
 
 export const auditoriaService = {
-  getAll: async (): Promise<AuditoriaLog[]> => {
+  getAll: async (): Promise<any[]> => {
     const { data, error } = await supabase
       .from('auditoria_logs')
-      .select('*')
+      .select('*, profiles(nome, email)')
       .order('data_hora', { ascending: false });
     
     if (error) throw error;
-    return data as AuditoriaLog[];
+    return data;
   }
 };
