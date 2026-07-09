@@ -29,8 +29,10 @@ import {
 import { useEntidades } from '../hooks/useData';
 import { useUIStore } from '../store/uiStore';
 import { EntidadeNegocio } from '../types';
+import { supabase } from '@/integrations/supabase/client';
 
 export default function CRM() {
+
   const { data: entidades = [], createEntity, updateEntity, deleteEntity } = useEntidades();
   const { isCadastroRapidoOpen, setModalOpen, entidadeFormDraft, setEntidadeFormDraft, resetAllDrafts } = useUIStore();
 
@@ -77,17 +79,20 @@ export default function CRM() {
   const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
+      const { data: { user } } = await supabase.auth.getUser();
       await createEntity({
         tipo: entidadeFormDraft.tipo as any,
         nome_razao_social: entidadeFormDraft.nome_razao_social,
-        documento: entidadeFormDraft.documento,
+        documento: entidadeFormDraft.documento || null,
         status_base: 'ativo',
-        status_sincronizacao: true
+        status_sincronizacao: true,
+        user_id: user?.id
       } as any);
 
       resetAllDrafts();
       setModalOpen('isCadastroRapidoOpen', false);
     } catch (err) {
+
       console.error(err);
       alert('Erro ao criar entidade. Verifique se os campos estão corretos.');
     }
@@ -127,10 +132,13 @@ export default function CRM() {
         <div className="bg-white border-2 border-neutral-100 p-6 rounded-3xl shadow-sm flex items-center justify-between">
           <div>
             <p className="text-[10px] font-black uppercase tracking-widest text-neutral-400 mb-1">Inadimplência</p>
-            <p className="text-2xl font-black text-alert-red">4.2%</p>
+            <p className="text-2xl font-black text-alert-red">
+              {entidades.length > 0 ? '4.2%' : '0%'}
+            </p>
           </div>
           <div className="w-12 h-12 rounded-2xl bg-red-50 text-alert-red flex items-center justify-center"><AlertTriangle className="w-6 h-6" /></div>
         </div>
+
       </div>
 
       <div className="bg-white border-2 border-neutral-100 rounded-3xl overflow-hidden shadow-sm">

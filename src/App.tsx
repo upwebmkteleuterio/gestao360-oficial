@@ -3,7 +3,10 @@ import { BrowserRouter, Routes, Route, Navigate, useNavigate } from 'react-route
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { Plus, Menu, LogOut, Bell, Check, Clock } from 'lucide-react';
 
+import NotificationButton from './components/NotificationButton';
+
 // Persisted store & services
+
 import { useUIStore } from './store/uiStore';
 import { AuthProvider, useAuth } from './hooks/useAuth';
 import { useNotifications } from './hooks/useData';
@@ -12,7 +15,10 @@ import { useNotifications } from './hooks/useData';
 import Sidebar from './components/Sidebar';
 import NovoLancamentoDrawer from './components/NovoLancamentoDrawer';
 
+import NewLaunchButton from './components/NewLaunchButton';
+
 // Custom pages
+
 import Login from './pages/Login';
 import Dashboard from './pages/Dashboard';
 import Lancamentos from './pages/Lancamentos';
@@ -39,24 +45,16 @@ const queryClient = new QueryClient({
 });
 
 function NotificationDropdown() {
-  const { notifications, unreadCount, markAsRead, markAllRead } = useNotifications();
+  const { notifications, unreadCount, markAsRead, markAllAsRead } = useNotifications();
   const [isOpen, setIsOpen] = useState(false);
   const navigate = useNavigate();
 
   return (
     <div className="relative">
-      <button
-        type="button"
+      <NotificationButton
+        unreadCount={unreadCount}
         onClick={() => setIsOpen(!isOpen)}
-        className="p-2 text-secondary hover:text-primary transition-colors relative"
-      >
-        <Bell className="w-5 h-5" />
-        {unreadCount > 0 && (
-          <span className="absolute top-1 right-1 w-4 h-4 bg-alert-red text-white text-[10px] font-black rounded-full flex items-center justify-center border-2 border-surface">
-            {unreadCount}
-          </span>
-        )}
-      </button>
+      />
 
       {isOpen && (
         <>
@@ -170,14 +168,9 @@ function AppContent() {
                   {/* Quick Actions */}
                   <div className="flex items-center gap-3">
                     <NotificationDropdown />
-                    <button
-                      type="button"
+                    <NewLaunchButton
                       onClick={() => setModalOpen('isNovoLancamentoOpen', true)}
-                      className="px-4 py-2 bg-on-background text-surface-container-lowest font-extrabold hover:bg-secondary text-xs rounded transition-all shadow-xs flex items-center gap-1.5 cursor-pointer"
-                    >
-                      <Plus className="w-4 h-4 shrink-0" />
-                      Novo Lançamento
-                    </button>
+                    />
                     <button
                       type="button"
                       onClick={() => signOut()}
@@ -187,6 +180,7 @@ function AppContent() {
                       <LogOut className="w-5 h-5" />
                     </button>
                   </div>
+
                 </header>
 
                 {/* Core Page layout content container */}

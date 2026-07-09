@@ -120,10 +120,10 @@ export default function NovoLancamentoDrawer() {
       valor_previsto: val,
       data_emissao: lancamentoFormDraft.data_emissao,
       data_vencimento: lancamentoFormDraft.data_vencimento,
-      entidade_id: lancamentoFormDraft.entidade_id,
-      centro_custo_id: lancamentoFormDraft.centro_custo_id,
-      categoria_id: lancamentoFormDraft.categoria_id,
-      conta_bancaria_id: lancamentoFormDraft.conta_bancaria_id,
+      entidade_id: lancamentoFormDraft.entidade_id || null,
+      centro_custo_id: lancamentoFormDraft.centro_custo_id || null,
+      categoria_id: lancamentoFormDraft.categoria_id || null,
+      conta_bancaria_id: lancamentoFormDraft.conta_bancaria_id || null,
       status_pagamento: 'aberto' as const,
       status_aprovacao: 'pendente_digital' as const,
       observacoes: lancamentoFormDraft.observacoes
@@ -272,14 +272,15 @@ export default function NovoLancamentoDrawer() {
                 <div className="flex flex-col gap-2">
                   <div className="flex justify-between items-center">
                     <label className="text-xs font-black text-secondary uppercase tracking-widest">Entidade / Destinatário <span className="text-alert-red">*</span></label>
-                    <button 
-                      type="button" 
+                    <button
+                      type="button"
                       onClick={() => setModalOpen('isCadastroRapidoOpen', true)}
-                      className="text-[10px] font-black text-primary hover:underline uppercase tracking-widest flex items-center gap-1"
+                      className="text-[10px] font-black text-primary hover:underline uppercase tracking-widest flex items-center gap-1 z-50 relative"
                     >
                       <Plus className="w-3.5 h-3.5" /> Cadastro Rápido
                     </button>
                   </div>
+
                   <select 
                     value={lancamentoFormDraft.entidade_id}
                     onChange={(e) => setLancamentoFormDraft({ entidade_id: e.target.value })}
