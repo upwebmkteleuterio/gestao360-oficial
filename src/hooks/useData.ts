@@ -188,9 +188,17 @@ export function useContas() {
     }
   });
 
+  const deleteMutation = useMutation({
+    mutationFn: contasService.delete,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['contas'] });
+    }
+  });
+
   return {
     ...query,
     createAccount: createMutation.mutateAsync,
+    deleteAccount: deleteMutation.mutateAsync,
     isCreating: createMutation.isPending
   };
 }

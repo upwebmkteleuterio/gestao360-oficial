@@ -35,7 +35,7 @@ type SubTabType = 'contas' | 'centros' | 'categorias';
 
 export default function Cadastros() {
   const dragScrollTabs = useDragScroll();
-  const { data: contas = [], createAccount } = useContas();
+  const { data: contas = [], createAccount, deleteAccount } = useContas();
   const { data: centrosCusto = [], createCC, deleteCC } = useCentrosCusto();
   const { data: categorias = [], createCategory, deleteCategory } = useCategorias();
 
@@ -132,6 +132,18 @@ export default function Cadastros() {
     }
   };
 
+  const handleDeleteAccount = async (id: string) => {
+    try {
+      await deleteAccount(id);
+    } catch (err: any) {
+      if (err?.code === '23503') {
+        alert('Esta conta bancária não pode ser excluída pois já possui movimentações ou conciliações vinculadas. Recomendamos inativá-la no painel administrativo para preservar o histórico financeiro.');
+      } else {
+        alert('Erro ao excluir conta bancária.');
+      }
+    }
+  };
+
   return (
 
     <div className="space-y-6">
@@ -158,7 +170,7 @@ export default function Cadastros() {
         {activeSubTab === 'contas' && (
           <div className="overflow-x-auto">
             <table className="w-full text-left border-collapse">
-              <thead><tr className="bg-neutral-50 text-neutral-400 border-b border-neutral-100 text-[9px] font-black uppercase tracking-widest"><th className="py-4 px-8">Instituição / Nome</th><th className="py-4 px-8">Data de Abertura</th><th className="py-4 px-8 text-right">Saldo Inicial</th><th className="py-4 px-8 text-center">Status</th></tr></thead>
+              <thead><tr className="bg-neutral-50 text-neutral-400 border-b border-neutral-100 text-[9px] font-black uppercase tracking-widest"><th className="py-4 px-8">Instituição / Nome</th><th className="py-4 px-8">Data de Abertura</th><th className="py-4 px-8 text-right">Saldo Inicial</th><th className="py-4 px-8 text-center">Status</th><th className="py-4 px-8 text-right">Ações</th></tr></thead>
               <tbody className="text-[11px] font-bold">
                 {paginatedData.length === 0 ? <tr><td colSpan={4} className="py-20 text-center opacity-40 uppercase tracking-widest">Nenhuma conta encontrada</td></tr> :
                 (paginatedData as any[]).map(c => (
@@ -167,6 +179,7 @@ export default function Cadastros() {
                     <td className="py-4 px-8 font-mono text-neutral-500">{new Date(c.data_abertura).toLocaleDateString()}</td>
                     <td className="py-4 px-8 text-right font-mono text-bank-truth-green">{valueFormatter(c.saldo_inicial)}</td>
                     <td className="py-4 px-8 text-center"><span className="rounded-lg bg-emerald-50 text-bank-truth-green px-3 py-1.5 uppercase font-black text-[9px] tracking-widest">Operacional</span></td>
+                    <td className="py-4 px-8 text-right"><button onClick={() => handleDeleteAccount(c.id)} className="p-2 hover:bg-red-50 text-neutral-300 hover:text-alert-red rounded-xl transition-all"><Trash2 className="w-4 h-4" /></button></td>
                   </tr>
                 ))}
               </tbody>

@@ -56,6 +56,24 @@ export default function CRM() {
   const [profileTelefone, setProfileTelefone] = useState('');
   const [profileStatus, setProfileStatus] = useState<'ativo' | 'inativo' | 'bpi'>('ativo');
 
+  const maskCpfCnpj = (value: string) => {
+    const v = value.replace(/\D/g, '');
+    if (v.length <= 11) {
+      return v.replace(/(\d{3})(\d{3})(\d{3})(\d{1,2})/, '$1.$2.$3-$4');
+    } else {
+      return v.replace(/(\d{2})(\d{3})(\d{3})(\d{4})(\d{1,2})/, '$1.$2.$3/$4-$5').slice(0, 18);
+    }
+  };
+
+  const maskPhone = (value: string) => {
+    const v = value.replace(/\D/g, '');
+    if (v.length <= 10) {
+      return v.replace(/(\d{2})(\d{4})(\d{4})/, '($1) $2-$3');
+    } else {
+      return v.replace(/(\d{2})(\d{5})(\d{4})/, '($1) $2-$3').slice(0, 15);
+    }
+  };
+
   const { data: stats } = useQuery({
     queryKey: ['dashboardStats'],
     queryFn: async () => {
@@ -326,7 +344,7 @@ export default function CRM() {
                     </div>
                     <div className="space-y-2">
                       <label className="text-[10px] font-black uppercase text-neutral-400 tracking-widest">CPF / CNPJ</label>
-                      <input type="text" value={profileDocumento} onChange={(e) => setProfileDocumento(e.target.value)} className="w-full h-12 bg-neutral-50 border-2 border-neutral-100 rounded-2xl px-5 text-xs font-black outline-none focus:border-primary transition-all font-mono" />
+                      <input type="text" value={profileDocumento} onChange={(e) => setProfileDocumento(maskCpfCnpj(e.target.value))} className="w-full h-12 bg-neutral-50 border-2 border-neutral-100 rounded-2xl px-5 text-xs font-black outline-none focus:border-primary transition-all font-mono" placeholder="000.000.000-00" />
                     </div>
                     <div className="grid grid-cols-2 gap-4">
 
@@ -336,7 +354,7 @@ export default function CRM() {
                       </div>
                       <div className="space-y-2">
                         <label className="text-[10px] font-black uppercase text-neutral-400 tracking-widest">Telefone</label>
-                        <input type="text" value={profileTelefone} onChange={(e) => setProfileTelefone(e.target.value)} className="w-full h-12 bg-neutral-50 border-2 border-neutral-100 rounded-2xl px-5 text-xs font-black outline-none focus:border-primary transition-all" />
+                        <input type="text" value={profileTelefone} onChange={(e) => setProfileTelefone(maskPhone(e.target.value))} className="w-full h-12 bg-neutral-50 border-2 border-neutral-100 rounded-2xl px-5 text-xs font-black outline-none focus:border-primary transition-all" placeholder="(00) 00000-0000" />
                       </div>
                     </div>
                     <div className="space-y-2">
