@@ -5,7 +5,6 @@ import { Plus, Menu, LogOut, Bell, Check, Clock } from 'lucide-react';
 
 // Persisted store & services
 import { useUIStore } from './store/uiStore';
-import { initializeDatabase } from './services/db';
 import { AuthProvider, useAuth } from './hooks/useAuth';
 import { useNotifications } from './hooks/useData';
 
@@ -137,11 +136,6 @@ function AppContent() {
   const { setModalOpen } = useUIStore();
   const { signOut, session } = useAuth();
   const [isMobileSidebarOpen, setMobileSidebarOpen] = useState(false);
-
-  // Run Local Database Seeding on entry
-  useEffect(() => {
-    initializeDatabase();
-  }, []);
 
   return (
     <Routes>

@@ -3,7 +3,6 @@ import {
   TrendingUp, 
   TrendingDown, 
   CheckCircle2, 
-  Bell,
   Calendar,
   Filter,
   Download,
@@ -22,6 +21,9 @@ export default function Dashboard() {
   const dragScrollAccounts = useDragScroll();
   const dragScrollTabs = useDragScroll();
 
+  // Dashboard Sub-Tabs State (Local for page context)
+  const [currentTab, setCurrentTab] = useState<'general' | 'cashflow' | 'audit'>('general');
+
   // Advanced Filter States
   const [showAdvancedFilters, setShowAdvancedFilters] = useState(false);
   const [selectedAccountId, setSelectedAccountId] = useState<string | null>(null);
@@ -36,18 +38,12 @@ export default function Dashboard() {
     costCenterId: selectedCCId || undefined
   });
   
-  const { activeTab, setActiveTab, setModalOpen } = useUIStore();
+  const { setModalOpen } = useUIStore();
 
   // Seletor de Período State
   const [periodFilter, setPeriodFilter] = useState<'all' | 'este-mes' | '2023-10' | '2026-06' | '90-dias'>('all');
   const [customStart, setCustomStart] = useState('');
   const [customEnd, setCustomEnd] = useState('');
-
-  // Normalizing activeTab for dashboard scope
-  const currentView = useMemo(() => {
-    if (!activeTab || activeTab === 'dashboard' || activeTab === 'general') return 'general';
-    return activeTab as string;
-  }, [activeTab]);
 
   // Filtering lancamentos based on selected period
   const filteredLancamentos = useMemo(() => {
@@ -160,9 +156,9 @@ export default function Dashboard() {
             <nav ref={dragScrollTabs.ref} {...dragScrollTabs.props} className="flex gap-4 sm:gap-6 select-none overflow-x-auto scrollbar-none whitespace-nowrap scroll-smooth pb-0.5" style={{ cursor: 'grab', userSelect: 'none' }}>
               <button 
                 type="button" 
-                onClick={() => { setPeriodFilter('all'); setActiveTab('dashboard'); }}
+                onClick={() => { setPeriodFilter('all'); setCurrentTab('general'); }}
                 className={`text-xs font-bold pb-1 sm:pb-2 pt-1 sm:pt-2 transition-colors border-b-2 shrink-0 whitespace-nowrap ${
-                  currentView === 'general'
+                  currentTab === 'general'
                     ? 'text-primary border-primary' 
                     : 'text-secondary hover:text-primary border-transparent'
                 }`}
@@ -171,9 +167,9 @@ export default function Dashboard() {
               </button>
               <button 
                 type="button" 
-                onClick={() => { setActiveTab('cashflow' as any); }}
+                onClick={() => { setCurrentTab('cashflow'); }}
                 className={`text-xs font-bold pb-1 sm:pb-2 pt-1 sm:pt-2 transition-colors border-b-2 shrink-0 whitespace-nowrap ${
-                  currentView === 'cashflow'
+                  currentTab === 'cashflow'
                     ? 'text-primary border-primary' 
                     : 'text-secondary hover:text-primary border-transparent'
                 }`}
@@ -182,9 +178,9 @@ export default function Dashboard() {
               </button>
               <button 
                 type="button" 
-                onClick={() => { setActiveTab('audit' as any); }}
+                onClick={() => { setCurrentTab('audit'); }}
                 className={`text-xs font-bold pb-1 sm:pb-2 pt-1 sm:pt-2 transition-colors border-b-2 shrink-0 whitespace-nowrap ${
-                  currentView === 'audit'
+                  currentTab === 'audit'
                     ? 'text-primary border-primary' 
                     : 'text-secondary hover:text-primary border-transparent'
                 }`}
@@ -195,7 +191,7 @@ export default function Dashboard() {
           </div>
         </div>
 
-        {currentView === 'general' && (
+        {currentTab === 'general' && (
           <>
             <section className="flex flex-wrap items-center justify-between gap-4 bg-white dark:bg-surface p-4 rounded-lg border border-surface-border shadow-sm animate-fade-in">
               <div className="flex flex-wrap items-center gap-4 w-full md:w-auto">
@@ -512,7 +508,7 @@ export default function Dashboard() {
           </>
         )}
 
-        {currentView === 'cashflow' && (
+        {currentTab === 'cashflow' && (
           <section className="bg-white dark:bg-surface p-6 rounded-xl border border-surface-border shadow-sm animate-fade-in">
             <div className="flex items-center justify-between mb-6">
               <h4 className="text-sm font-bold uppercase tracking-wider text-on-surface flex items-center gap-2">
@@ -560,7 +556,7 @@ export default function Dashboard() {
           </section>
         )}
 
-        {currentView === 'audit' && (
+        {currentTab === 'audit' && (
           <section className="bg-white dark:bg-surface p-6 rounded-xl border border-surface-border shadow-sm animate-fade-in">
             <div className="flex items-center justify-between mb-6">
               <h4 className="text-sm font-bold uppercase tracking-wider text-on-surface flex items-center gap-2">

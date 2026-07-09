@@ -14,6 +14,7 @@ import {
 } from 'lucide-react';
 import { useUIStore, TabType } from '../store/uiStore';
 import { useUsuarios } from '../hooks/useData';
+import { useAuth } from '../hooks/useAuth';
 
 interface SidebarProps {
   isOpen: boolean;
@@ -21,20 +22,15 @@ interface SidebarProps {
 }
 
 export default function Sidebar({ isOpen, onClose }: SidebarProps) {
-  const { 
-    theme, 
-    setTheme, 
-    activeTab, 
-    setActiveTab, 
-    currentUserId,
-    setCurrentUserId
+  const {
+    theme,
+    setTheme,
+    setActiveTab,
   } = useUIStore();
 
-  const { data: usuarios = [] } = useUsuarios();
+  const { user, role } = useAuth();
   const location = useLocation();
   const navigate = useNavigate();
-
-  const activeUserProfile = usuarios.find(u => u.id === currentUserId);
 
   // Sync theme with HTML document class
   useEffect(() => {
@@ -127,17 +123,17 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
       {/* Footer controls: Switch Active User and toggle Dark mode */}
       <div className="p-4 border-t border-surface-border bg-surface-container-low space-y-4">
         {/* User profile preview */}
-        {activeUserProfile && (
+        {user && (
           <div className="p-2.5 rounded-lg border border-surface-border bg-surface flex items-center gap-2.5 shadow-xs">
             <div className="w-8 h-8 rounded-full bg-primary/20 text-primary flex items-center justify-center text-center">
               <ShieldCheck className="w-4 h-4" />
             </div>
             <div className="min-w-0 flex-1">
-              <span className="font-bold text-xs text-on-background truncate block" title={activeUserProfile.nome}>
-                {activeUserProfile.nome}
+              <span className="font-bold text-xs text-on-background truncate block" title={user.email}>
+                {user.user_metadata?.nome || user.email}
               </span>
               <span className="text-[10px] capital font-bold text-on-surface-variant uppercase tracking-wider block">
-                {activeUserProfile.perfil}
+                {role || 'Colaborador'}
               </span>
             </div>
           </div>

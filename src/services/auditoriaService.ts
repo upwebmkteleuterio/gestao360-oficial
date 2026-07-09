@@ -1,8 +1,14 @@
-import { db } from './db';
+import { supabase } from '@/integrations/supabase/client';
 import { AuditoriaLog } from '../types';
 
 export const auditoriaService = {
   getAll: async (): Promise<AuditoriaLog[]> => {
-    return db.auditoriaLogs.getAll();
+    const { data, error } = await supabase
+      .from('auditoria_logs')
+      .select('*')
+      .order('data_hora', { ascending: false });
+    
+    if (error) throw error;
+    return data as AuditoriaLog[];
   }
 };
