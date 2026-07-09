@@ -41,6 +41,10 @@ export default function Cadastros() {
 
   const [activeSubTab, setActiveSubTab] = useState<SubTabType>('contas');
   
+  // Pagination
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 50;
+
   // Modals visibility
   const [isNewAccountOpen, setIsNewAccountOpen] = useState(false);
   const [isNewCCOpen, setIsNewCCOpen] = useState(false);
@@ -93,6 +97,17 @@ export default function Cadastros() {
     } catch (err) { alert('Erro ao criar categoria'); }
   };
 
+  const paginatedData = useMemo(() => {
+    const data = activeSubTab === 'contas' ? contas : activeSubTab === 'centros' ? centrosCusto : categorias;
+    const start = (currentPage - 1) * itemsPerPage;
+    return data.slice(start, start + itemsPerPage);
+  }, [activeSubTab, contas, centrosCusto, categorias, currentPage, itemsPerPage]);
+
+  const totalPages = useMemo(() => {
+    const data = activeSubTab === 'contas' ? contas : activeSubTab === 'centros' ? centrosCusto : categorias;
+    return Math.max(Math.ceil(data.length / itemsPerPage), 1);
+  }, [activeSubTab, contas, centrosCusto, categorias, itemsPerPage]);
+
   return (
     <div className="space-y-6">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
@@ -120,8 +135,8 @@ export default function Cadastros() {
             <table className="w-full text-left border-collapse">
               <thead><tr className="bg-neutral-50 text-neutral-400 border-b border-neutral-100 text-[9px] font-black uppercase tracking-widest"><th className="py-4 px-8">Instituição / Nome</th><th className="py-4 px-8">Data de Abertura</th><th className="py-4 px-8 text-right">Saldo Inicial</th><th className="py-4 px-8 text-center">Status</th></tr></thead>
               <tbody className="text-[11px] font-bold">
-                {contas.length === 0 ? <tr><td colSpan={4} className="py-20 text-center opacity-40 uppercase tracking-widest">Nenhuma conta encontrada</td></tr> : 
-                contas.map(c => (
+                {paginatedData.length === 0 ? <tr><td colSpan={4} className="py-20 text-center opacity-40 uppercase tracking-widest">Nenhuma conta encontrada</td></tr> :
+                (paginatedData as any[]).map(c => (
                   <tr key={c.id} className="border-b border-neutral-50 hover:bg-neutral-50/50 transition-all">
                     <td className="py-4 px-8"><div className="flex items-center gap-4"><div className="w-10 h-10 rounded-2xl bg-primary/10 text-primary flex items-center justify-center font-black uppercase shadow-sm"><Coins className="w-5 h-5" /></div><p className="text-neutral-900 font-black uppercase tracking-tighter">{c.nome_banco || c.nome}</p></div></td>
                     <td className="py-4 px-8 font-mono text-neutral-500">{new Date(c.data_abertura).toLocaleDateString()}</td>
@@ -139,8 +154,8 @@ export default function Cadastros() {
             <table className="w-full text-left border-collapse">
               <thead><tr className="bg-neutral-50 text-neutral-400 border-b border-neutral-100 text-[9px] font-black uppercase tracking-widest"><th className="py-4 px-8">Nome do Centro</th><th className="py-4 px-8">Descrição / Finalidade</th><th className="py-4 px-8 text-right">Ações</th></tr></thead>
               <tbody className="text-[11px] font-bold">
-                {centrosCusto.length === 0 ? <tr><td colSpan={3} className="py-20 text-center opacity-40 uppercase tracking-widest">Nenhum centro encontrado</td></tr> : 
-                centrosCusto.map(cc => (
+                {paginatedData.length === 0 ? <tr><td colSpan={3} className="py-20 text-center opacity-40 uppercase tracking-widest">Nenhum centro encontrado</td></tr> :
+                (paginatedData as any[]).map(cc => (
                   <tr key={cc.id} className="border-b border-neutral-50 hover:bg-neutral-50/50 transition-all">
                     <td className="py-4 px-8 font-black uppercase tracking-tighter text-neutral-900">{cc.nome}</td>
                     <td className="py-4 px-8 text-neutral-500">{cc.descricao || 'Sem descrição'}</td>
@@ -157,8 +172,8 @@ export default function Cadastros() {
             <table className="w-full text-left border-collapse">
               <thead><tr className="bg-neutral-50 text-neutral-400 border-b border-neutral-100 text-[9px] font-black uppercase tracking-widest"><th className="py-4 px-8">Classificador</th><th className="py-4 px-8 text-center">Tipo de Fluxo</th><th className="py-4 px-8 text-right">Ações</th></tr></thead>
               <tbody className="text-[11px] font-bold">
-                {categorias.length === 0 ? <tr><td colSpan={3} className="py-20 text-center opacity-40 uppercase tracking-widest">Nenhuma categoria encontrada</td></tr> : 
-                categorias.map(cat => (
+                {paginatedData.length === 0 ? <tr><td colSpan={3} className="py-20 text-center opacity-40 uppercase tracking-widest">Nenhuma categoria encontrada</td></tr> :
+                (paginatedData as any[]).map(cat => (
                   <tr key={cat.id} className="border-b border-neutral-50 hover:bg-neutral-50/50 transition-all">
                     <td className="py-4 px-8 font-black uppercase tracking-tighter text-neutral-900">{cat.nome}</td>
                     <td className="py-4 px-8 text-center"><span className={`rounded-lg px-3 py-1.5 uppercase font-black text-[9px] tracking-widest ${cat.tipo === 'entrada' ? 'bg-emerald-50 text-bank-truth-green' : 'bg-red-50 text-alert-red'}`}>{cat.tipo}</span></td>
@@ -169,6 +184,45 @@ export default function Cadastros() {
             </table>
           </div>
         )}
+
+        {/* Pagination bar */}
+        <div className="bg-neutral-50/50 px-8 py-4 border-t border-neutral-100 flex items-center justify-between">
+          <span className="text-neutral-400 font-bold text-[9px] uppercase tracking-widest">
+            Exibindo registros da página {currentPage}
+          </span>
+
+          <div className="flex items-center gap-2">
+            <button
+              disabled={currentPage === 1}
+              onClick={() => setCurrentPage(prev => prev - 1)}
+              className="h-10 px-4 rounded-xl border-2 border-neutral-100 text-neutral-500 font-bold hover:bg-neutral-50 disabled:opacity-50 text-[10px] uppercase tracking-widest transition-all"
+            >
+              Anterior
+            </button>
+            <div className="flex gap-1">
+              {Array.from({ length: totalPages }, (_, i) => i + 1).map(pageNum => (
+                <button
+                  key={pageNum}
+                  onClick={() => setCurrentPage(pageNum)}
+                  className={`w-10 h-10 rounded-xl text-[10px] font-black transition-all ${
+                    currentPage === pageNum
+                      ? 'bg-neutral-900 text-white shadow-md'
+                      : 'border-2 border-neutral-100 text-neutral-400 hover:bg-neutral-50'
+                  }`}
+                >
+                  {pageNum}
+                </button>
+              ))}
+            </div>
+            <button
+              disabled={currentPage === totalPages}
+              onClick={() => setCurrentPage(prev => prev + 1)}
+              className="h-10 px-4 rounded-xl border-2 border-neutral-100 text-neutral-500 font-bold hover:bg-neutral-50 disabled:opacity-50 text-[10px] uppercase tracking-widest transition-all"
+            >
+              Próximo
+            </button>
+          </div>
+        </div>
       </div>
 
       <AnimatePresence>

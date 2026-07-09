@@ -231,6 +231,15 @@ export default function Dashboard() {
 
         {currentTab === 'cashflow' && (
           <section className="bg-white dark:bg-surface p-6 rounded-xl border border-surface-border shadow-sm animate-fade-in">
+             <div className="flex justify-between items-center mb-6">
+              <h4 className="text-sm font-bold uppercase tracking-wider text-on-surface">Histórico Recente de Fluxo</h4>
+              <button
+                onClick={() => { setActiveTab('lancamentos'); window.scrollTo(0, 0); }}
+                className="text-xs font-black text-primary hover:underline uppercase tracking-widest"
+              >
+                Ver Tudo →
+              </button>
+            </div>
              <div className="overflow-x-auto">
               <table className="w-full text-left border-collapse">
                 <thead><tr className="bg-neutral-50 text-neutral-400 border-b border-neutral-100 text-[9px] font-black uppercase tracking-widest"><th className="py-4 px-8">Data</th><th className="py-4 px-8">Descrição</th><th className="py-4 px-8">Entidade</th><th className="py-4 px-8 text-right">Valor</th></tr></thead>

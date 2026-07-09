@@ -17,8 +17,14 @@ export default function Relatorios() {
 
   // State filters
   const [reportType, setReportType] = useState<string>('dre-cc');
-  const [startDate, setStartDate] = useState<string>('');
-  const [endDate, setEndDate] = useState<string>('');
+  const [startDate, setStartDate] = useState<string>(() => {
+    const now = new Date();
+    return new Date(now.getFullYear(), now.getMonth(), 1).toISOString().split('T')[0];
+  });
+  const [endDate, setEndDate] = useState<string>(() => {
+    const now = new Date();
+    return new Date(now.getFullYear(), now.getMonth() + 1, 0).toISOString().split('T')[0];
+  });
   const [costCenterId, setCostCenterId] = useState<string>('all');
   
   // Slide panel state

@@ -43,6 +43,10 @@ export default function CRM() {
   const [tipoFilter, setTipoFilter] = useState<'all' | 'cliente' | 'fornecedor'>('all');
   const [selectedEntity, setSelectedEntity] = useState<EntidadeNegocio | null>(null);
 
+  // Pagination
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 50;
+
   // Form states for profile
   const [profileNome, setProfileNome] = useState('');
   const [profileEmail, setProfileEmail] = useState('');
@@ -68,6 +72,13 @@ export default function CRM() {
       return matchesSearch && matchesTipo;
     });
   }, [entidades, searchTerm, tipoFilter]);
+
+  const paginated = useMemo(() => {
+    const start = (currentPage - 1) * itemsPerPage;
+    return filtered.slice(start, start + itemsPerPage);
+  }, [filtered, currentPage, itemsPerPage]);
+
+  const totalPages = Math.max(Math.ceil(filtered.length / itemsPerPage), 1);
 
   const handleOpenProfile = (ent: EntidadeNegocio) => {
     setSelectedEntity(ent);
@@ -194,12 +205,12 @@ export default function CRM() {
               </tr>
             </thead>
             <tbody className="text-[11px] font-bold">
-              {filtered.length === 0 ? (
+              {paginated.length === 0 ? (
                 <tr><td colSpan={5} className="py-20 text-center opacity-40 uppercase tracking-widest font-black text-xs">Nenhum registro encontrado</td></tr>
               ) : (
-                filtered.map(ent => (
-                  <tr 
-                    key={ent.id} 
+                paginated.map(ent => (
+                  <tr
+                    key={ent.id}
                     onClick={() => handleOpenProfile(ent)}
                     className="border-b border-neutral-50 hover:bg-neutral-50/50 transition-all cursor-pointer group"
                   >
@@ -227,7 +238,7 @@ export default function CRM() {
                       </span>
                     </td>
                     <td className="py-4 px-8 text-right">
-                      <button 
+                      <button
                         onClick={(e) => { e.stopPropagation(); deleteEntity(ent.id); }}
                         className="p-2 hover:bg-red-50 text-neutral-300 hover:text-alert-red rounded-xl transition-all"
                       >
@@ -239,6 +250,45 @@ export default function CRM() {
               )}
             </tbody>
           </table>
+        </div>
+
+        {/* Pagination bar */}
+        <div className="bg-neutral-50/50 px-8 py-4 border-t border-neutral-100 flex items-center justify-between">
+          <span className="text-neutral-400 font-bold text-[9px] uppercase tracking-widest">
+            Exibindo {Math.min(filtered.length, itemsPerPage)} de {filtered.length} entidades
+          </span>
+
+          <div className="flex items-center gap-2">
+            <button
+              disabled={currentPage === 1}
+              onClick={() => setCurrentPage(prev => prev - 1)}
+              className="h-10 px-4 rounded-xl border-2 border-neutral-100 text-neutral-500 font-bold hover:bg-neutral-50 disabled:opacity-50 text-[10px] uppercase tracking-widest transition-all"
+            >
+              Anterior
+            </button>
+            <div className="flex gap-1">
+              {Array.from({ length: totalPages }, (_, i) => i + 1).map(pageNum => (
+                <button
+                  key={pageNum}
+                  onClick={() => setCurrentPage(pageNum)}
+                  className={`w-10 h-10 rounded-xl text-[10px] font-black transition-all ${
+                    currentPage === pageNum
+                      ? 'bg-neutral-900 text-white shadow-md'
+                      : 'border-2 border-neutral-100 text-neutral-400 hover:bg-neutral-50'
+                  }`}
+                >
+                  {pageNum}
+                </button>
+              ))}
+            </div>
+            <button
+              disabled={currentPage === totalPages}
+              onClick={() => setCurrentPage(prev => prev + 1)}
+              className="h-10 px-4 rounded-xl border-2 border-neutral-100 text-neutral-500 font-bold hover:bg-neutral-50 disabled:opacity-50 text-[10px] uppercase tracking-widest transition-all"
+            >
+              Próximo
+            </button>
+          </div>
         </div>
       </div>
 

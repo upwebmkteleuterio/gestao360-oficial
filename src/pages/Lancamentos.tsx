@@ -115,7 +115,7 @@ export default function Lancamentos() {
 
   // Pagination
   const [currentPage, setCurrentPage] = useState(1);
-  const itemsPerPage = 8;
+  const itemsPerPage = 50;
 
   // Resolve Names
   const getEntidadeName = (id: string) => {

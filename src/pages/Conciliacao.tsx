@@ -62,6 +62,15 @@ export default function Conciliacao() {
 
   const [selectedContaId, setSelectedContaId] = useState<string>('conta_itau');
   const [erpSearch, setErpSearch] = useState('');
+
+  // Period filtering
+  const [periodFilter, setPeriodFilter] = useState<'month' | 'custom'>('month');
+  const [selectedMonth, setSelectedMonth] = useState(() => {
+    const now = new Date();
+    return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+  });
+  const [customStartDate, setCustomStartDate] = useState('');
+  const [customEndDate, setCustomEndDate] = useState('');
   
   // CSV Import Temp States
   const [csvContentText, setCsvContentText] = useState('');
@@ -76,7 +85,17 @@ export default function Conciliacao() {
   // Resolved list of bank statement records
   const bankStatements = useMemo(() => {
     return transacoes
-      .filter(tx => tx.conta_bancaria_id === selectedContaId)
+      .filter(tx => {
+        if (tx.conta_bancaria_id !== selectedContaId) return false;
+        
+        if (periodFilter === 'month') {
+          return tx.data_transacao.startsWith(selectedMonth);
+        } else {
+          const start = customStartDate || '0000-00-00';
+          const end = customEndDate || '9999-99-99';
+          return tx.data_transacao >= start && tx.data_transacao <= end;
+        }
+      })
       .map(tx => {
         const con = conciliacoes.find(c => c.transacao_banco_id === tx.id);
         const matchedLaunch = con ? lancamentos.find(l => l.id === con.lancamento_id) : null;
@@ -86,15 +105,26 @@ export default function Conciliacao() {
           matchedLaunch
         };
       });
-  }, [transacoes, selectedContaId, conciliacoes, lancamentos]);
+  }, [transacoes, selectedContaId, conciliacoes, lancamentos, periodFilter, selectedMonth, customStartDate, customEndDate]);
 
   // Available forecasts
   const availableLaunches = useMemo(() => {
     const activeTx = transacoes.find(t => t.id === selectedTransacaoForConciliationId);
     
     let filtered = lancamentos.filter(l => {
+      if (l.conta_bancaria_id !== selectedContaId) return false;
+      
       const isMatched = conciliacoes.some(con => con.lancamento_id === l.id);
       if (isMatched) return false;
+
+      // Date filtering for ERP list
+      if (periodFilter === 'month') {
+        if (!l.data_vencimento.startsWith(selectedMonth)) return false;
+      } else {
+        const start = customStartDate || '0000-00-00';
+        const end = customEndDate || '9999-99-99';
+        if (l.data_vencimento < start || l.data_vencimento > end) return false;
+      }
 
       if (erpSearch.trim() !== '') {
         const entName = entidades.find(e => e.id === l.entidade_id)?.nome_razao_social || '';
@@ -386,6 +416,37 @@ export default function Conciliacao() {
         </div>
 
         <div className="flex flex-wrap items-center gap-4">
+          {/* Period Selector */}
+          <div className="flex bg-neutral-100 p-1 rounded-xl border border-neutral-200 h-12 items-center">
+            <button
+              onClick={() => setPeriodFilter('month')}
+              className={`px-4 h-full font-black text-[10px] uppercase tracking-widest rounded-lg transition-all ${periodFilter === 'month' ? 'bg-white text-neutral-900 shadow-sm' : 'text-neutral-500 hover:text-neutral-900'}`}
+            >
+              Por Mês
+            </button>
+            <button
+              onClick={() => setPeriodFilter('custom')}
+              className={`px-4 h-full font-black text-[10px] uppercase tracking-widest rounded-lg transition-all ${periodFilter === 'custom' ? 'bg-white text-neutral-900 shadow-sm' : 'text-neutral-500 hover:text-neutral-900'}`}
+            >
+              Período
+            </button>
+          </div>
+
+          {periodFilter === 'month' ? (
+            <input
+              type="month"
+              value={selectedMonth}
+              onChange={(e) => setSelectedMonth(e.target.value)}
+              className="h-12 px-4 bg-white border-2 border-neutral-100 rounded-xl text-xs font-bold focus:border-primary outline-none"
+            />
+          ) : (
+            <div className="flex items-center gap-2">
+              <input type="date" value={customStartDate} onChange={(e) => setCustomStartDate(e.target.value)} className="h-12 px-3 bg-white border-2 border-neutral-100 rounded-xl text-[10px] font-bold outline-none w-32" />
+              <span className="text-neutral-300 font-black">/</span>
+              <input type="date" value={customEndDate} onChange={(e) => setCustomEndDate(e.target.value)} className="h-12 px-3 bg-white border-2 border-neutral-100 rounded-xl text-[10px] font-bold outline-none w-32" />
+            </div>
+          )}
+
           <div className="flex bg-neutral-100 p-1 rounded-xl border border-neutral-200 h-12 items-center">
             {contas.map(c => (
               <button 

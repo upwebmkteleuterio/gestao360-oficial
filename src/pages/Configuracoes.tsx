@@ -121,8 +121,8 @@ export default function Configuracoes() {
   }, [usuarios, teamSearch]);
 
   const paginatedUsers = useMemo(() => {
-    const start = (teamPage - 1) * 4;
-    return filteredUsers.slice(start, start + 4);
+    const start = (teamPage - 1) * 50;
+    return filteredUsers.slice(start, start + 50);
   }, [filteredUsers, teamPage]);
 
   const finalAuditLogs = useMemo(() => {
@@ -150,8 +150,8 @@ export default function Configuracoes() {
   }, [auditLogs, usuarios, auditSearchAction, auditStartDate, auditEndDate]);
 
   const paginatedAuditLogs = useMemo(() => {
-    const start = (auditPage - 1) * 5;
-    return finalAuditLogs.slice(start, start + 5);
+    const start = (auditPage - 1) * 50;
+    return finalAuditLogs.slice(start, start + 50);
   }, [finalAuditLogs, auditPage]);
 
   const handleInviteSubmit = async (e: React.FormEvent) => {
