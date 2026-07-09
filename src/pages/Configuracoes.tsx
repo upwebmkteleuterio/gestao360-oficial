@@ -133,7 +133,7 @@ export default function Configuracoes() {
       return {
         ...log,
         usuario_nome: user?.nome || 'Sistema',
-        usuario_avatar_letter: user ? user.nome.split(' ').map((n: string) => n[0]).join('').substring(0, 2) : 'SY',
+        usuario_avatar_letter: user && user.nome ? user.nome.split(' ').map((n: string) => n[0]).join('').substring(0, 2) : 'SY',
         usuario_avatar_color: 'bg-slate-500',
         acao_label: log.acao === 'INSERT' ? 'Novo Registro' : log.acao === 'UPDATE' ? 'Atualização' : 'Exclusão',
         acao_badge_color: log.acao === 'INSERT' ? 'bg-green-100 text-green-800' : log.acao === 'UPDATE' ? 'bg-blue-100 text-blue-800' : 'bg-red-100 text-red-800',
