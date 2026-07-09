@@ -6,6 +6,7 @@ import { centrosCustoService } from '../services/centrosCustoService';
 import { categoriasService } from '../services/categoriasService';
 import { contasService } from '../services/contasService';
 import { lancamentosService } from '../services/lancamentosService';
+import { recorrenciasService } from '../services/recorrenciasService';
 import { conciliacoesService } from '../services/conciliacoesService';
 import { usuariosService } from '../services/usuariosService';
 import { auditoriaService } from '../services/auditoriaService';
@@ -237,6 +238,29 @@ export function useLancamentos(filters?: any) {
     isUpdating: updateMutation.isPending,
     isDeleting: deleteMutation.isPending,
     isBatchApproving: batchApproveMutation.isPending
+  };
+}
+
+export function useRecorrencias() {
+  const queryClient = useQueryClient();
+
+  const query = useQuery({
+    queryKey: ['recorrencias'],
+    queryFn: recorrenciasService.getAll
+  });
+
+  const stopMutation = useMutation({
+    mutationFn: recorrenciasService.stopRecorrencia,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['recorrencias'] });
+      queryClient.invalidateQueries({ queryKey: ['lancamentos'] });
+    }
+  });
+
+  return {
+    ...query,
+    stopRecorrencia: stopMutation.mutateAsync,
+    isStopping: stopMutation.isPending
   };
 }
 

@@ -23,6 +23,7 @@ import Login from './pages/Login';
 import Dashboard from './pages/Dashboard';
 import Lancamentos from './pages/Lancamentos';
 import Conciliacao from './pages/Conciliacao';
+import Recorrencias from './pages/Recorrencias';
 import CRM from './pages/CRM';
 import Cadastros from './pages/Cadastros';
 import Relatorios from './pages/Relatorios';
@@ -200,6 +201,7 @@ function AppContent() {
                       <Route path="/dashboard" element={<Dashboard />} />
                       <Route path="/lancamentos" element={<Lancamentos />} />
                       <Route path="/conciliacao" element={<Conciliacao />} />
+                      <Route path="/recorrencias" element={<Recorrencias />} />
                       <Route path="/crm" element={<CRM />} />
                       <Route path="/cadastros" element={<Cadastros />} />
                       <Route path="/relatorios" element={<Relatorios />} />

@@ -1,16 +1,17 @@
 import React, { useEffect } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { 
-  BarChart3, 
-  Coins, 
-  Settings, 
-  LayoutDashboard, 
-  FileSpreadsheet, 
+import {
+  BarChart3,
+  Coins,
+  Settings,
+  LayoutDashboard,
+  FileSpreadsheet,
   UserSquare2,
   Moon,
   Sun,
   ShieldCheck,
-  X
+  X,
+  Repeat
 } from 'lucide-react';
 import { useUIStore, TabType } from '../store/uiStore';
 import { useAuth } from '../hooks/useAuth';
@@ -50,6 +51,7 @@ export default function Sidebar({ isOpen, onClose, isCollapsed }: SidebarProps) 
     { id: 'dashboard' as TabType, label: 'Painel Geral', icon: LayoutDashboard, path: '/dashboard' },
     { id: 'lancamentos' as TabType, label: 'Lançamentos', icon: Coins, path: '/lancamentos' },
     { id: 'conciliacao' as TabType, label: 'Conciliação Bancária', icon: FileSpreadsheet, path: '/conciliacao' },
+    { id: 'recorrencias' as TabType, label: 'Gestão de Recorrências', icon: Repeat, path: '/recorrencias' },
     { id: 'crm' as TabType, label: 'CRM & Entidades', icon: UserSquare2, path: '/crm' },
     { id: 'cadastros' as TabType, label: 'Estrutura & Cadastros', icon: ShieldCheck, path: '/cadastros' },
     { id: 'relatorios' as TabType, label: 'Relatórios Analíticos', icon: BarChart3, path: '/relatorios' },

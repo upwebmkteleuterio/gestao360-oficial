@@ -30,10 +30,13 @@ export default function Lancamentos() {
   // Filter States
   const [searchTerm, setSearchTerm] = useState('');
   
-  // Set default filter to last 30 days
+  // Track active shortcut
+  const [activeShortcut, setActiveShortcut] = useState<number | 'este-mes' | null>(15);
+
+  // Set default filter to last 15 days
   const [startDate, setStartDate] = useState(() => {
     const d = new Date();
-    d.setDate(d.getDate() - 30);
+    d.setDate(d.getDate() - 15);
     return d.toISOString().split('T')[0];
   });
   const [endDate, setEndDate] = useState(() => {
@@ -54,11 +57,20 @@ export default function Lancamentos() {
     if (days === 'este-mes') {
       start.setDate(1);
     } else {
-      start.setDate(end.getDate() - days);
+      start.setDate(end.getDate() - (days as number));
     }
     
     setStartDate(start.toISOString().split('T')[0]);
     setEndDate(end.toISOString().split('T')[0]);
+    setActiveShortcut(days);
+  };
+
+  const clearFiltersShortcut = () => {
+    setSearchTerm('');
+    handleQuickPeriod(15);
+    setApprovalStatus('all');
+    setTypeFilter('all');
+    setSelectedIds([]);
   };
 
   // Query Hooks with server-side filters
@@ -295,8 +307,7 @@ export default function Lancamentos() {
 
   const clearFilters = () => {
     setSearchTerm('');
-    setStartDate('');
-    setEndDate('');
+    handleQuickPeriod(15);
     setApprovalStatus('all');
     setTypeFilter('all');
     setSelectedIds([]);
@@ -350,7 +361,7 @@ export default function Lancamentos() {
         <div className="flex items-center gap-2 relative">
           {hasActiveFilters && (
             <button
-              onClick={clearFilters}
+              onClick={clearFiltersShortcut}
               className="absolute -top-7 right-0 flex items-center gap-1.5 px-2.5 py-1 bg-neutral-900 text-white rounded-full text-[9px] font-black uppercase tracking-widest shadow-lg hover:bg-black transition-all animate-bounce"
             >
               <Eraser className="w-3 h-3" />
@@ -414,10 +425,38 @@ export default function Lancamentos() {
                     <Clock className="w-4 h-4" /> Atalhos de Período
                   </label>
                   <div className="grid grid-cols-2 gap-2">
-                    <button onClick={() => handleQuickPeriod(15)} className="px-3 py-2 bg-neutral-50 hover:bg-neutral-100 border border-neutral-200 rounded-lg text-[10px] font-bold uppercase">Últimos 15 dias</button>
-                    <button onClick={() => handleQuickPeriod(30)} className="px-3 py-2 bg-neutral-50 hover:bg-neutral-100 border border-neutral-200 rounded-lg text-[10px] font-bold uppercase">Últimos 30 dias</button>
-                    <button onClick={() => handleQuickPeriod('este-mes')} className="px-3 py-2 bg-neutral-50 hover:bg-neutral-100 border border-neutral-200 rounded-lg text-[10px] font-bold uppercase">Este Mês</button>
-                    <button onClick={() => { setStartDate(''); setEndDate(''); }} className="px-3 py-2 bg-neutral-50 hover:bg-neutral-100 border border-neutral-200 rounded-lg text-[10px] font-bold uppercase">Todo o período</button>
+                    <button
+                      onClick={() => handleQuickPeriod(15)}
+                      className={`px-3 py-2 border rounded-lg text-[10px] font-bold uppercase transition-all ${
+                        activeShortcut === 15 ? 'bg-neutral-900 text-white border-neutral-900 shadow-md' : 'bg-neutral-50 hover:bg-neutral-100 border-neutral-200 text-secondary'
+                      }`}
+                    >
+                      Últimos 15 dias
+                    </button>
+                    <button
+                      onClick={() => handleQuickPeriod(30)}
+                      className={`px-3 py-2 border rounded-lg text-[10px] font-bold uppercase transition-all ${
+                        activeShortcut === 30 ? 'bg-neutral-900 text-white border-neutral-900 shadow-md' : 'bg-neutral-50 hover:bg-neutral-100 border-neutral-200 text-secondary'
+                      }`}
+                    >
+                      Últimos 30 dias
+                    </button>
+                    <button
+                      onClick={() => handleQuickPeriod(60)}
+                      className={`px-3 py-2 border rounded-lg text-[10px] font-bold uppercase transition-all ${
+                        activeShortcut === 60 ? 'bg-neutral-900 text-white border-neutral-900 shadow-md' : 'bg-neutral-50 hover:bg-neutral-100 border-neutral-200 text-secondary'
+                      }`}
+                    >
+                      Últimos 60 dias
+                    </button>
+                    <button
+                      onClick={() => handleQuickPeriod('este-mes')}
+                      className={`px-3 py-2 border rounded-lg text-[10px] font-bold uppercase transition-all ${
+                        activeShortcut === 'este-mes' ? 'bg-neutral-900 text-white border-neutral-900 shadow-md' : 'bg-neutral-50 hover:bg-neutral-100 border-neutral-200 text-secondary'
+                      }`}
+                    >
+                      Este Mês
+                    </button>
                   </div>
                 </div>
 
@@ -502,7 +541,7 @@ export default function Lancamentos() {
                   Aplicar Filtros
                 </button>
                 <button
-                  onClick={() => { clearFilters(); setIsFilterPanelOpen(false); }}
+                  onClick={() => { clearFiltersShortcut(); setIsFilterPanelOpen(false); }}
                   className="w-full h-12 border-2 border-neutral-200 text-secondary font-black text-xs uppercase tracking-[0.2em] rounded-xl hover:bg-neutral-50 transition-all"
                 >
                   Limpar Tudo

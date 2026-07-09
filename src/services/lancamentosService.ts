@@ -14,6 +14,7 @@ export const lancamentosService = {
     let query = supabase
       .from('lancamentos_financeiros')
       .select('*, entidades_negocio!inner(nome_razao_social)')
+      .order('data_vencimento', { ascending: false })
       .order('created_at', { ascending: false });
 
     if (filters) {
@@ -44,6 +45,51 @@ export const lancamentosService = {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) throw new Error('Usuário não autenticado');
 
+    if (recorrencia) {
+      // 1. Create Recurrence Record
+      const { data: recData, error: recError } = await supabase
+        .from('recorrencias')
+        .insert([{
+          user_id: user.id,
+          periodicidade: recorrencia.periodicidade,
+          quantidade_total_parcelas: recorrencia.quantidade_total_parcelas,
+          data_inicio: item.data_vencimento
+        }])
+        .select()
+        .single();
+
+      if (recError) throw recError;
+
+      // 2. Generate Installments
+      const installments = [];
+      let currentDate = new Date(item.data_vencimento + 'T00:00:00');
+
+      for (let i = 1; i <= recorrencia.quantidade_total_parcelas; i++) {
+        installments.push({
+          ...item,
+          user_id: user.id,
+          usuario_criador_id: user.id,
+          recorrencia_id: recData.id,
+          numero_parcela: i,
+          data_vencimento: currentDate.toISOString().split('T')[0]
+        });
+
+        // Advance date based on periodicity
+        if (recorrencia.periodicidade === 'diario') currentDate.setDate(currentDate.getDate() + 1);
+        else if (recorrencia.periodicidade === 'semanal') currentDate.setDate(currentDate.getDate() + 7);
+        else if (recorrencia.periodicidade === 'mensal') currentDate.setMonth(currentDate.getMonth() + 1);
+        else if (recorrencia.periodicidade === 'anual') currentDate.setFullYear(currentDate.getFullYear() + 1);
+      }
+
+      const { data: createdItems, error: itemsError } = await supabase
+        .from('lancamentos_financeiros')
+        .insert(installments)
+        .select();
+
+      if (itemsError) throw itemsError;
+      return createdItems[0] as LancamentoFinanceiro;
+    }
+
     const { data, error } = await supabase
       .from('lancamentos_financeiros')
       .insert([{ 
@@ -59,6 +105,26 @@ export const lancamentosService = {
   },
 
   update: async (id: string, data: any, mode: 'single' | 'all' = 'single'): Promise<LancamentoFinanceiro> => {
+    if (mode === 'all') {
+      const { data: current } = await supabase
+        .from('lancamentos_financeiros')
+        .select('recorrencia_id, data_vencimento')
+        .eq('id', id)
+        .single();
+
+      if (current?.recorrencia_id) {
+        // Update this and all future installments of the same recurrence
+        const { error } = await supabase
+          .from('lancamentos_financeiros')
+          .update(data)
+          .eq('recorrencia_id', current.recorrencia_id)
+          .gte('data_vencimento', current.data_vencimento);
+        
+        if (error) throw error;
+        return { id } as any;
+      }
+    }
+
     const { data: updatedData, error } = await supabase
       .from('lancamentos_financeiros')
       .update(data)
@@ -71,6 +137,25 @@ export const lancamentosService = {
   },
 
   delete: async (id: string, mode: 'single' | 'all' = 'single'): Promise<boolean> => {
+    if (mode === 'all') {
+      const { data: current } = await supabase
+        .from('lancamentos_financeiros')
+        .select('recorrencia_id, data_vencimento')
+        .eq('id', id)
+        .single();
+
+      if (current?.recorrencia_id) {
+        const { error } = await supabase
+          .from('lancamentos_financeiros')
+          .delete()
+          .eq('recorrencia_id', current.recorrencia_id)
+          .gte('data_vencimento', current.data_vencimento);
+        
+        if (error) throw error;
+        return true;
+      }
+    }
+
     const { error } = await supabase
       .from('lancamentos_financeiros')
       .delete()
