@@ -263,7 +263,6 @@ export default function Lancamentos() {
             disabled={selectedIds.length === 0 || isBatchApproving}
           >
             Aprovar ({selectedIds.length})
-            <Check className="w-4 h-4" />
           </Button>
 
         </div>
@@ -283,15 +282,14 @@ export default function Lancamentos() {
           />
         </div>
 
-        <div className="relative">
+        <div className="flex items-center gap-2 relative">
           {hasActiveFilters && (
             <button
               onClick={clearFilters}
-              className="absolute -top-3 -right-2 z-10 flex items-center gap-1 px-2 py-1 bg-alert-red text-white rounded-full text-[8px] font-black uppercase tracking-tighter shadow-lg hover:scale-105 transition-all"
-              title="Limpar todos os filtros"
+              className="absolute -top-7 right-0 flex items-center gap-1.5 px-2.5 py-1 bg-neutral-900 text-white rounded-full text-[9px] font-black uppercase tracking-widest shadow-lg hover:bg-black transition-all animate-bounce"
             >
-              <Eraser className="w-2 h-2" />
-              Limpar
+              <Eraser className="w-3 h-3" />
+              Limpar Filtros
             </button>
           )}
 
@@ -306,10 +304,11 @@ export default function Lancamentos() {
             <Filter className="w-4 h-4" />
             Filtros Avançados
             {hasActiveFilters && (
-              <span className="w-2 h-2 bg-white rounded-full ml-1"></span>
+              <span className="w-2 h-2 bg-white rounded-full ml-1 animate-pulse"></span>
             )}
           </button>
         </div>
+
       </div>
 
       {/* Filter Slide Panel */}

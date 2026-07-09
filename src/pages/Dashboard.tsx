@@ -53,6 +53,19 @@ export default function Dashboard() {
 
   const filteredLancamentos = useMemo(() => {
     return lancamentos.filter(item => {
+      if (periodFilter === 'este-mes') {
+        const now = new Date();
+        const yearMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+        return item.data_vencimento.startsWith(yearMonth);
+      }
+      if (periodFilter === '90-dias') {
+        const now = new Date();
+        const ninetyDaysAgo = new Date();
+        ninetyDaysAgo.setDate(now.getDate() - 90);
+        const dateStr = item.data_vencimento;
+        const launchDate = new Date(dateStr);
+        return launchDate >= ninetyDaysAgo && launchDate <= now;
+      }
       if (periodFilter === '2023-10') return item.data_vencimento.startsWith('2023-10');
       if (periodFilter === '2026-06') return item.data_vencimento.startsWith('2026-06');
       if (customStart && customEnd) return item.data_vencimento >= customStart && item.data_vencimento <= customEnd;
@@ -82,11 +95,13 @@ export default function Dashboard() {
 
   const accountsBalances = useMemo(() => {
     return contas.map(account => {
-      const accLaunches = filteredLancamentos.filter(l => l.conta_bancaria_id === account.id);
-      const consolidatedChange = accLaunches.filter(l => l.status_pagamento === 'pago').reduce((acc, item) => item.tipo === 'entrada' ? acc + item.valor_previsto : acc - item.valor_previsto, 0);
+      const accLaunches = lancamentos.filter(l => l.conta_bancaria_id === account.id);
+      const consolidatedChange = accLaunches
+        .filter(l => l.status_pagamento === 'pago' || l.status_aprovacao === 'confirmado_master')
+        .reduce((acc, item) => item.tipo === 'entrada' ? acc + item.valor_previsto : acc - item.valor_previsto, 0);
       return { ...account, consolidated: (account.saldo_inicial || 0) + consolidatedChange };
     });
-  }, [contas, filteredLancamentos]);
+  }, [contas, lancamentos]);
 
   const costCenterBreakdown = useMemo(() => {
     return centrosCusto.map(cc => {
