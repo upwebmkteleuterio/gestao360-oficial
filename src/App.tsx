@@ -51,11 +51,20 @@ function NotificationDropdown() {
   const [isOpen, setIsOpen] = useState(false);
   const navigate = useNavigate();
 
+  // Mark all as read immediately when opening the dropdown
+  const handleToggle = () => {
+    const nextState = !isOpen;
+    setIsOpen(nextState);
+    if (nextState && unreadCount > 0) {
+      markAllAsRead();
+    }
+  };
+
   return (
     <div className="relative">
       <NotificationButton
         unreadCount={unreadCount}
-        onClick={() => setIsOpen(!isOpen)}
+        onClick={handleToggle}
       />
 
       {isOpen && (

@@ -35,8 +35,9 @@ import Button from '../components/Button';
 import { WalletCards } from 'lucide-react';
 
 export default function CRM() {
-
+  const { role } = useAuth();
   const { data: entidades = [], createEntity, updateEntity, deleteEntity } = useEntidades();
+
   const { isCadastroRapidoOpen, setModalOpen, entidadeFormDraft, setEntidadeFormDraft, resetAllDrafts } = useUIStore();
 
   const [searchTerm, setSearchTerm] = useState('');
@@ -221,13 +222,16 @@ export default function CRM() {
                       </span>
                     </td>
                     <td className="py-4 px-8 text-right">
-                      <button
-                        onClick={(e) => { e.stopPropagation(); deleteEntity(ent.id); }}
-                        className="p-2 hover:bg-red-50 text-neutral-300 hover:text-alert-red rounded-xl transition-all"
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </button>
+                      {role === 'master' && (
+                        <button
+                          onClick={(e) => { e.stopPropagation(); deleteEntity(ent.id); }}
+                          className="p-2 hover:bg-red-50 text-neutral-300 hover:text-alert-red rounded-xl transition-all"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      )}
                     </td>
+
                   </tr>
                 ))
               )}

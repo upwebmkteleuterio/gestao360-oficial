@@ -27,7 +27,9 @@ import { motion, AnimatePresence } from 'motion/react';
 import Button from '../components/Button';
 
 export default function Lancamentos() {
+  const { role } = useAuth();
   // Filter States
+
   const [searchTerm, setSearchTerm] = useState('');
   
   // Track active shortcut
@@ -310,12 +312,14 @@ export default function Lancamentos() {
             Exportar CSV
             <Download className="w-4 h-4" />
           </Button>
-          <Button
-            onClick={() => handleBatchApprove()}
-            disabled={selectedIds.length === 0 || isBatchApproving}
-          >
-            Aprovar ({selectedIds.length})
-          </Button>
+          {role === 'master' && (
+            <Button
+              onClick={() => handleBatchApprove()}
+              disabled={selectedIds.length === 0 || isBatchApproving}
+            >
+              Aprovar ({selectedIds.length})
+            </Button>
+          )}
 
         </div>
 
@@ -700,15 +704,18 @@ export default function Lancamentos() {
                                   <Edit3 className="w-4 h-4 text-primary" />
                                   Editar
                                 </button>
-                                <button
-                                  type="button"
-                                  onClick={() => handleDeleteClick(item)}
-                                  className="w-full px-4 py-2 hover:bg-neutral-50 text-left text-xs text-alert-red font-bold flex items-center gap-2 border-t border-neutral-100"
-                                >
-                                  <Trash2 className="w-4 h-4" />
-                                  Excluir
-                                </button>
+                                {role === 'master' && (
+                                  <button
+                                    type="button"
+                                    onClick={() => handleDeleteClick(item)}
+                                    className="w-full px-4 py-2 hover:bg-neutral-50 text-left text-xs text-alert-red font-bold flex items-center gap-2 border-t border-neutral-100"
+                                  >
+                                    <Trash2 className="w-4 h-4" />
+                                    Excluir
+                                  </button>
+                                )}
                               </div>
+
                             )}
                           </td>
                         </tr>
