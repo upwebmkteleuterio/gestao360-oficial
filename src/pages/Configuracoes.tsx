@@ -162,9 +162,9 @@ export default function Configuracoes() {
     if (!newUserNome || !newUserEmail || !newUserPassword) return;
 
     try {
-      const { session } = await supabase.auth.getSession();
+      const { data: { session } } = await supabase.auth.getSession();
       const token = session?.access_token;
-      
+
       if (!token) throw new Error('Token de autenticação não encontrado.');
 
       const response = await fetch('https://rfjolkadxfixxagpidws.supabase.co/functions/v1/create-user', {
