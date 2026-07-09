@@ -236,7 +236,8 @@ export default function Configuracoes() {
       <div className="bg-neutral-50 border border-neutral-200 p-4 rounded-xl flex flex-col md:flex-row justify-between items-center gap-4">
         <div className="space-y-1">
           <span className="text-[10px] font-black uppercase text-primary tracking-widest block">Simulador de Hierarquia</span>
-          <p className="text-xs font-bold text-neutral-500">Usuário ativo: <span className="text-neutral-900">{activeUserProfile?.nome || 'Sistema'} ({activeUserProfile?.perfil.toUpperCase()})</span></p>
+          <p className="text-xs font-bold text-neutral-500">Usuário ativo: <span className="text-neutral-900">{activeUserProfile?.nome || 'Sistema'} ({activeUserProfile?.perfil?.toUpperCase() || 'MASTER'})</span></p>
+
         </div>
         <select value={currentUserId} onChange={(e) => { setCurrentUserId(e.target.value); setTeamPage(1); }} className="bg-white border-2 border-neutral-200 text-xs font-black rounded-lg px-4 py-2 appearance-none cursor-pointer focus:border-primary outline-none">
           {usuarios.map(u => <option key={u.id} value={u.id}>{u.nome} ({u.perfil})</option>)}
