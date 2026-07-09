@@ -58,6 +58,8 @@ export default function Configuracoes() {
 
   const [newUserNome, setNewUserNome] = useState('');
   const [newUserEmail, setNewUserEmail] = useState('');
+  const [newUserPassword, setNewUserPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const [newUserPerfil, setNewUserPerfil] = useState<UserPerfil>('colaborador');
 
   const [toasts, setToasts] = useState<Array<{ id: number; message: string; type: 'success' | 'error' | 'warning' | 'info' }>>([]);
@@ -156,19 +158,44 @@ export default function Configuracoes() {
 
   const handleInviteSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!newUserNome || !newUserEmail) return;
+    if (!newUserNome || !newUserEmail || !newUserPassword) return;
 
     try {
-      await inviteUser({
-        nome: newUserNome,
-        email: newUserEmail,
-        perfil: newUserPerfil,
-        status: true
+      const { session } = await supabase.auth.getSession();
+      const token = session?.access_token;
+      
+      if (!token) throw new Error('Token de autenticação não encontrado.');
+
+      const response = await fetch('https://rfjolkadxfixxagpidws.supabase.co/functions/v1/create-user', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          email: newUserEmail,
+          password: newUserPassword,
+          nome: newUserNome,
+          role: newUserPerfil,
+          telefone: ''
+        })
       });
+
+      const result = await response.json();
+
+      if (!response.ok) {
+        throw new Error(result.error || 'Erro desconhecido ao criar usuário.');
+      }
+
       setNewUserNome('');
       setNewUserEmail('');
+      setNewUserPassword('');
+      setShowPassword(false);
       setModalOpen('isNovoUsuarioOpen', false);
-      showToast('Usuário convidado!', 'success');
+      showToast('Usuário cadastrado com sucesso!', 'success');
+      
+      // Recarregar a lista se necessário (opcional, pode depender do polling)
+      window.location.reload();
     } catch (err: any) {
       showToast('Erro: ' + err.message, 'error');
     }
@@ -297,9 +324,18 @@ export default function Configuracoes() {
               <div className="p-10 space-y-6">
                 <div className="space-y-2"><label className="text-[10px] font-black uppercase text-neutral-400 tracking-widest">Nome Completo</label><input type="text" required placeholder="João da Silva" value={newUserNome} onChange={(e) => setNewUserNome(e.target.value)} className="w-full h-12 bg-neutral-50 border-2 border-neutral-100 rounded-2xl px-5 text-xs font-black focus:border-primary outline-none transition-all" /></div>
                 <div className="space-y-2"><label className="text-[10px] font-black uppercase text-neutral-400 tracking-widest">E-mail Corporativo</label><input type="email" required placeholder="joao@empresa.com" value={newUserEmail} onChange={(e) => setNewUserEmail(e.target.value)} className="w-full h-12 bg-neutral-50 border-2 border-neutral-100 rounded-2xl px-5 text-xs font-black focus:border-primary outline-none transition-all" /></div>
+                <div className="space-y-2"><label className="text-[10px] font-black uppercase text-neutral-400 tracking-widest">Senha Provisória</label>
+                  <div className="relative">
+                    <input type={showPassword ? 'text' : 'password'} required placeholder="Mínimo 6 caracteres" value={newUserPassword} onChange={(e) => setNewUserPassword(e.target.value)} className="w-full h-12 bg-neutral-50 border-2 border-neutral-100 rounded-2xl pl-5 pr-12 text-xs font-black focus:border-primary outline-none transition-all" />
+                    <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-4 top-1/2 -translate-y-1/2 text-neutral-400 hover:text-neutral-900 transition-colors">
+                      <Eye className="w-5 h-5" />
+                    </button>
+                  </div>
+                </div>
                 <div className="space-y-2"><label className="text-[10px] font-black uppercase text-neutral-400 tracking-widest">Cargo e Acesso</label><select value={newUserPerfil} onChange={(e) => setNewUserPerfil(e.target.value as any)} className="w-full h-12 bg-neutral-50 border-2 border-neutral-100 rounded-2xl px-5 text-xs font-black focus:border-primary outline-none appearance-none cursor-pointer"><option value="colaborador">Colaborador</option><option value="gerente">Gerente</option><option value="master">Master Admin</option></select></div>
               </div>
-              <footer className="px-10 py-8 border-t border-neutral-50 bg-neutral-50/50 flex justify-end gap-3"><button type="button" onClick={() => setModalOpen('isNovoUsuarioOpen', false)} className="px-6 py-2 font-black text-[10px] uppercase tracking-widest text-neutral-500">Voltar</button><button type="submit" disabled={isInviting} className="px-8 py-3 bg-neutral-900 text-white font-black text-[10px] uppercase tracking-widest rounded-2xl shadow-lg hover:bg-neutral-800 transition-all">{isInviting ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Disparar Convite'}</button></footer>
+              <footer className="px-10 py-8 border-t border-neutral-50 bg-neutral-50/50 flex justify-end gap-3"><button type="button" onClick={() => setModalOpen('isNovoUsuarioOpen', false)} className="px-6 py-2 font-black text-[10px] uppercase tracking-widest text-neutral-500">Voltar</button><button type="submit" className="px-8 py-3 bg-neutral-900 text-white font-black text-[10px] uppercase tracking-widest rounded-2xl shadow-lg hover:bg-neutral-800 transition-all">Criar Usuário</button></footer>
+
             </motion.form>
           </div>
         )}

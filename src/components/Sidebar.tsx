@@ -48,27 +48,27 @@ export default function Sidebar({ isOpen, onClose, isCollapsed }: SidebarProps) 
   };
 
   const navItems = [
-    { id: 'dashboard' as TabType, label: 'Painel Geral', icon: LayoutDashboard, path: '/dashboard' },
-    { id: 'lancamentos' as TabType, label: 'Lançamentos', icon: Coins, path: '/lancamentos' },
-    { id: 'conciliacao' as TabType, label: 'Conciliação Bancária', icon: FileSpreadsheet, path: '/conciliacao' },
-    { id: 'recorrencias' as TabType, label: 'Gestão de Recorrências', icon: Repeat, path: '/recorrencias' },
-    { id: 'crm' as TabType, label: 'CRM & Entidades', icon: UserSquare2, path: '/crm' },
-    { id: 'cadastros' as TabType, label: 'Estrutura & Cadastros', icon: ShieldCheck, path: '/cadastros' },
-    { id: 'relatorios' as TabType, label: 'Relatórios Analíticos', icon: BarChart3, path: '/relatorios' },
-    { id: 'configuracoes' as TabType, label: 'Configurações', icon: Settings, path: '/configuracoes' }
+    { id: 'dashboard' as TabType, label: 'Painel Geral', icon: LayoutDashboard, path: '/dashboard', roles: ['master', 'gerente', 'colaborador'] },
+    { id: 'lancamentos' as TabType, label: 'Lançamentos', icon: Coins, path: '/lancamentos', roles: ['master', 'gerente', 'colaborador'] },
+    { id: 'conciliacao' as TabType, label: 'Conciliação Bancária', icon: FileSpreadsheet, path: '/conciliacao', roles: ['master', 'gerente'] },
+    { id: 'recorrencias' as TabType, label: 'Gestão de Recorrências', icon: Repeat, path: '/recorrencias', roles: ['master', 'gerente'] },
+    { id: 'crm' as TabType, label: 'CRM & Entidades', icon: UserSquare2, path: '/crm', roles: ['master', 'gerente', 'colaborador'] },
+    { id: 'cadastros' as TabType, label: 'Estrutura & Cadastros', icon: ShieldCheck, path: '/cadastros', roles: ['master', 'gerente'] },
+    { id: 'relatorios' as TabType, label: 'Relatórios Analíticos', icon: BarChart3, path: '/relatorios', roles: ['master', 'gerente'] },
+    { id: 'configuracoes' as TabType, label: 'Configurações', icon: Settings, path: '/configuracoes', roles: ['master'] }
   ];
 
   return (
     <>
       {/* Mobile Backdrop Overlay */}
       {isOpen && (
-        <div 
+        <div
           onClick={onClose}
           className="fixed inset-0 bg-neutral-900/40 backdrop-blur-xs z-45 lg:hidden"
         />
       )}
 
-      <aside 
+      <aside
         className={`bg-surface border-r border-surface-border flex flex-col h-screen lg:shrink-0 lg:sticky lg:top-0 focus-none select-none print:hidden z-50 transition-all duration-300
           fixed inset-y-0 left-0 lg:static lg:translate-x-0
           ${isCollapsed ? 'lg:w-20' : 'lg:w-64'}
@@ -102,8 +102,9 @@ export default function Sidebar({ isOpen, onClose, isCollapsed }: SidebarProps) 
 
         {/* Navigation list */}
         <nav className="flex-1 p-4 space-y-1.5 overflow-y-auto">
-          {navItems.map(item => {
+          {navItems.filter(item => item.roles.includes(role)).map(item => {
             const isActive = location.pathname.startsWith(item.path);
+
             const Icon = item.icon;
             return (
               <button

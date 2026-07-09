@@ -201,16 +201,20 @@ function AppContent() {
                       <Route path="/" element={<Navigate to="/dashboard" replace />} />
                       <Route path="/dashboard" element={<Dashboard />} />
                       <Route path="/lancamentos" element={<Lancamentos />} />
+                      <Route path="/crm" element={<CRM />} />
+                      
+                      {/* Rotas restritas a Master e Gerente */}
                       <Route path="/conciliacao" element={<Conciliacao />} />
                       <Route path="/recorrencias" element={<Recorrencias />} />
-                      <Route path="/crm" element={<CRM />} />
                       <Route path="/cadastros" element={<Cadastros />} />
                       <Route path="/relatorios" element={<Relatorios />} />
 
+                      {/* Rotas exclusivas do Master */}
                       <Route path="/configuracoes" element={<Configuracoes />} />
                     </Routes>
                   </div>
                 </main>
+
               </div>
 
               {/* Global Drawers & Slide Panels */}
