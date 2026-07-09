@@ -51,6 +51,7 @@ export default function CRM() {
 
   // Form states for profile
   const [profileNome, setProfileNome] = useState('');
+  const [profileDocumento, setProfileDocumento] = useState('');
   const [profileEmail, setProfileEmail] = useState('');
   const [profileTelefone, setProfileTelefone] = useState('');
   const [profileStatus, setProfileStatus] = useState<'ativo' | 'inativo' | 'bpi'>('ativo');
@@ -85,6 +86,7 @@ export default function CRM() {
   const handleOpenProfile = (ent: EntidadeNegocio) => {
     setSelectedEntity(ent);
     setProfileNome(ent.nome_razao_social);
+    setProfileDocumento(ent.documento || '');
     setProfileEmail(ent.email || '');
     setProfileTelefone(ent.telefone || '');
     setProfileStatus(ent.status_base || 'ativo');
@@ -96,7 +98,7 @@ export default function CRM() {
     try {
       await updateEntity({
         id: selectedEntity.id,
-        data: { nome_razao_social: profileNome, email: profileEmail, telefone: profileTelefone, status_base: profileStatus }
+        data: { nome_razao_social: profileNome, documento: profileDocumento, email: profileEmail, telefone: profileTelefone, status_base: profileStatus }
       });
       setSelectedEntity(null);
     } catch (err) {
@@ -143,12 +145,12 @@ export default function CRM() {
         </div>
         <div className="bg-white border-2 border-neutral-100 p-6 rounded-3xl shadow-sm flex items-center justify-between">
           <div>
-            <p className="text-[10px] font-black uppercase tracking-widest text-neutral-400 mb-1">Inadimplência</p>
-            <p className="text-2xl font-black text-alert-red">
-              {stats?.inadimplencia_rate || 0}%
+            <p className="text-[10px] font-black uppercase tracking-widest text-neutral-400 mb-1">Fornecedores Ativos</p>
+            <p className="text-2xl font-black text-amber-600">
+              {entidades.filter(e => e.tipo === 'fornecedor').length}
             </p>
           </div>
-          <div className="w-12 h-12 rounded-2xl bg-red-50 text-alert-red flex items-center justify-center"><AlertTriangle className="w-6 h-6" /></div>
+          <div className="w-12 h-12 rounded-2xl bg-amber-50 text-amber-600 flex items-center justify-center"><Building className="w-6 h-6" /></div>
         </div>
 
       </div>
@@ -301,9 +303,10 @@ export default function CRM() {
                     </div>
                     <div>
                       <h2 className="text-sm font-black uppercase tracking-widest text-neutral-900">{profileNome}</h2>
-                      <p className="text-[10px] text-neutral-400 font-mono">{selectedEntity.documento}</p>
+                      <p className="text-[10px] text-neutral-400 font-mono">Edição de Perfil</p>
                     </div>
                   </div>
+
                   <button type="button" onClick={() => setSelectedEntity(null)} className="p-2 hover:bg-neutral-200 rounded-xl transition-colors">
                     <X className="w-6 h-6" />
                   </button>
@@ -321,7 +324,12 @@ export default function CRM() {
                       <label className="text-[10px] font-black uppercase text-neutral-400 tracking-widest">Nome / Razão Social</label>
                       <input type="text" value={profileNome} onChange={(e) => setProfileNome(e.target.value)} className="w-full h-12 bg-neutral-50 border-2 border-neutral-100 rounded-2xl px-5 text-xs font-black outline-none focus:border-primary transition-all" />
                     </div>
+                    <div className="space-y-2">
+                      <label className="text-[10px] font-black uppercase text-neutral-400 tracking-widest">CPF / CNPJ</label>
+                      <input type="text" value={profileDocumento} onChange={(e) => setProfileDocumento(e.target.value)} className="w-full h-12 bg-neutral-50 border-2 border-neutral-100 rounded-2xl px-5 text-xs font-black outline-none focus:border-primary transition-all font-mono" />
+                    </div>
                     <div className="grid grid-cols-2 gap-4">
+
                       <div className="space-y-2">
                         <label className="text-[10px] font-black uppercase text-neutral-400 tracking-widest">Email Corporativo</label>
                         <input type="email" value={profileEmail} onChange={(e) => setProfileEmail(e.target.value)} className="w-full h-12 bg-neutral-50 border-2 border-neutral-100 rounded-2xl px-5 text-xs font-black outline-none focus:border-primary transition-all" />

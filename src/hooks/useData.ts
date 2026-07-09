@@ -158,9 +158,17 @@ export function useCategorias() {
     }
   });
 
+  const deleteMutation = useMutation({
+    mutationFn: categoriasService.delete,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['categorias'] });
+    }
+  });
+
   return {
     ...query,
     createCategory: createMutation.mutateAsync,
+    deleteCategory: deleteMutation.mutateAsync,
     isCreating: createMutation.isPending
   };
 }

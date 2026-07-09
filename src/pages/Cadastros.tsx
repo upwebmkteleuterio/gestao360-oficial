@@ -37,10 +37,10 @@ export default function Cadastros() {
   const dragScrollTabs = useDragScroll();
   const { data: contas = [], createAccount } = useContas();
   const { data: centrosCusto = [], createCC, deleteCC } = useCentrosCusto();
-  const { data: categorias = [], createCategory } = useCategorias();
+  const { data: categorias = [], createCategory, deleteCategory } = useCategorias();
 
   const [activeSubTab, setActiveSubTab] = useState<SubTabType>('contas');
-  
+
   // Pagination
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 50;
@@ -108,7 +108,32 @@ export default function Cadastros() {
     return Math.max(Math.ceil(data.length / itemsPerPage), 1);
   }, [activeSubTab, contas, centrosCusto, categorias, itemsPerPage]);
 
+  const handleDeleteCC = async (id: string) => {
+    try {
+      await deleteCC(id);
+    } catch (err: any) {
+      if (err?.code === '23503') {
+        alert('Não é possível excluir este Centro de Custo pois existem lançamentos financeiros vinculados a ele. Para excluir, remova ou altere os lançamentos primeiro.');
+      } else {
+        alert('Erro ao excluir centro de custo.');
+      }
+    }
+  };
+
+  const handleDeleteCat = async (id: string) => {
+    try {
+      await deleteCategory(id);
+    } catch (err: any) {
+      if (err?.code === '23503') {
+        alert('Não é possível excluir esta Categoria pois existem lançamentos financeiros vinculados a ela. Para excluir, remova ou altere os lançamentos primeiro.');
+      } else {
+        alert('Erro ao excluir categoria.');
+      }
+    }
+  };
+
   return (
+
     <div className="space-y-6">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
@@ -159,7 +184,8 @@ export default function Cadastros() {
                   <tr key={cc.id} className="border-b border-neutral-50 hover:bg-neutral-50/50 transition-all">
                     <td className="py-4 px-8 font-black uppercase tracking-tighter text-neutral-900">{cc.nome}</td>
                     <td className="py-4 px-8 text-neutral-500">{cc.descricao || 'Sem descrição'}</td>
-                    <td className="py-4 px-8 text-right"><button onClick={() => deleteCC(cc.id)} className="p-2 hover:bg-red-50 text-neutral-300 hover:text-alert-red rounded-xl transition-all"><Trash2 className="w-4 h-4" /></button></td>
+                    <td className="py-4 px-8 text-right"><button onClick={() => handleDeleteCC(cc.id)} className="p-2 hover:bg-red-50 text-neutral-300 hover:text-alert-red rounded-xl transition-all"><Trash2 className="w-4 h-4" /></button></td>
+
                   </tr>
                 ))}
               </tbody>
@@ -177,7 +203,8 @@ export default function Cadastros() {
                   <tr key={cat.id} className="border-b border-neutral-50 hover:bg-neutral-50/50 transition-all">
                     <td className="py-4 px-8 font-black uppercase tracking-tighter text-neutral-900">{cat.nome}</td>
                     <td className="py-4 px-8 text-center"><span className={`rounded-lg px-3 py-1.5 uppercase font-black text-[9px] tracking-widest ${cat.tipo === 'entrada' ? 'bg-emerald-50 text-bank-truth-green' : 'bg-red-50 text-alert-red'}`}>{cat.tipo}</span></td>
-                    <td className="py-4 px-8 text-right"><button className="p-2 hover:bg-red-50 text-neutral-300 hover:text-alert-red rounded-xl transition-all"><Trash2 className="w-4 h-4" /></button></td>
+                    <td className="py-4 px-8 text-right"><button onClick={() => handleDeleteCat(cat.id)} className="p-2 hover:bg-red-50 text-neutral-300 hover:text-alert-red rounded-xl transition-all"><Trash2 className="w-4 h-4" /></button></td>
+
                   </tr>
                 ))}
               </tbody>

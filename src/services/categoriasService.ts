@@ -22,5 +22,15 @@ export const categoriasService = {
     
     if (error) throw error;
     return data as CategoriaFinanceira;
+  },
+
+  delete: async (id: string): Promise<boolean> => {
+    const { error } = await supabase
+      .from('categorias_financeiras')
+      .delete()
+      .eq('id', id);
+    
+    if (error) throw error;
+    return true;
   }
 };
