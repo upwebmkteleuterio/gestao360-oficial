@@ -175,51 +175,86 @@ export default function Conciliacao() {
     }
   };
 
+  // CSV Import Mappings
+  const [csvPreviewRows, setCsvPreviewRows] = useState<any[]>([]);
+  const [csvHeaders, setCsvHeaders] = useState<string[]>([]);
+  const [columnMapping, setColumnMapping] = useState({
+    data: '',
+    valor: '',
+    descricao: ''
+  });
+
   const processFile = (file: File) => {
     const reader = new FileReader();
     reader.onload = async (event) => {
       const text = event.target?.result as string;
       setCsvContentText(text);
+      
+      // Parse for preview
+      const lines = text.split('\n').filter(l => l.trim());
+      if (lines.length > 0) {
+        const separator = lines[0].includes(';') ? ';' : ',';
+        const headers = lines[0].split(separator).map(h => h.trim().replace(/"/g, ''));
+        setCsvHeaders(headers);
+        
+        const preview = lines.slice(1, 6).map(line => {
+          const parts = line.split(separator).map(p => p.trim().replace(/"/g, ''));
+          const row: any = {};
+          headers.forEach((h, i) => { row[h] = parts[i]; });
+          return row;
+        });
+        setCsvPreviewRows(preview);
+
+        // Auto-detection logic
+        const newMapping = { data: '', valor: '', descricao: '' };
+        headers.forEach(h => {
+          const lower = h.toLowerCase();
+          if (lower.includes('dat') || lower.includes('venc')) newMapping.data = h;
+          if (lower.includes('val') || lower.includes('quant') || lower.includes('amo')) newMapping.valor = h;
+          if (lower.includes('desc') || lower.includes('hist') || lower.includes('obs')) newMapping.descricao = h;
+        });
+        setColumnMapping(newMapping);
+      }
     };
     reader.readAsText(file);
   };
 
   const handleImportCSVSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!csvContentText.trim()) return;
+    if (!csvContentText.trim() || !columnMapping.data || !columnMapping.valor || !columnMapping.descricao) return;
 
     try {
-      const lines = csvContentText.split('\n');
-      const rowsToImport: any[] = [];
+      const lines = csvContentText.split('\n').filter(l => l.trim());
+      const separator = lines[0].includes(';') ? ';' : ',';
+      const headers = lines[0].split(separator).map(h => h.trim().replace(/"/g, ''));
+      
+      const rowsToImport = lines.slice(1).map(line => {
+        const parts = line.split(separator).map(p => p.trim().replace(/"/g, ''));
+        const rowData: any = {};
+        headers.forEach((h, i) => { rowData[h] = parts[i]; });
 
-      lines.forEach((line, index) => {
-        if (!line.trim() || index === 0) return;
-        const parts = line.split(';');
-        if (parts.length >= 4) {
-          const date = parts[0].trim();
-          const valStr = parts[1].trim().replace(',', '.');
-          const val = parseFloat(valStr);
-          const desc = parts[2].trim();
-          const type = parts[3].trim() as 'debito' | 'credito';
-          rowsToImport.push({
-            data: date,
-            valor: val,
-            descricao: desc,
-            movimento: type
-          });
-        }
-      });
+        const valRaw = rowData[columnMapping.valor] || '0';
+        const val = parseFloat(valRaw.replace(',', '.').replace(/[^\d.-]/g, ''));
+        
+        return {
+          data: rowData[columnMapping.data],
+          valor: val,
+          descricao: rowData[columnMapping.descricao]
+        };
+      }).filter(r => r.data && !isNaN(r.valor));
 
       if (rowsToImport.length === 0) {
-        alert('CSV inválido.');
+        alert('Nenhum dado válido encontrado com o mapeamento atual.');
         return;
       }
 
       await importCSV({ contaBancariaId: selectedImportContaId, rows: rowsToImport });
       setCsvContentText('');
+      setCsvPreviewRows([]);
       setModalOpen('isImportarCSVOpen', false);
+      alert(`${rowsToImport.length} transações importadas com sucesso!`);
     } catch (err: any) {
-      alert('Falha: ' + err.message);
+      alert('Falha na importação: ' + err.message);
     }
   };
 
@@ -526,12 +561,87 @@ export default function Conciliacao() {
             <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setModalOpen('isImportarCSVOpen', false)} className="absolute inset-0 bg-black/40 backdrop-blur-xs" />
             <motion.form initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.9, opacity: 0 }} onSubmit={handleImportCSVSubmit} className="bg-white w-full max-w-[480px] rounded-3xl shadow-2xl border border-neutral-100 flex flex-col relative z-20 overflow-hidden">
               <header className="px-6 py-5 border-b border-neutral-100 flex justify-between items-center bg-neutral-50"><h2 className="text-sm font-black uppercase tracking-widest text-neutral-900">Importar Extrato CSV</h2><button type="button" onClick={() => setModalOpen('isImportarCSVOpen', false)} className="p-2 hover:bg-neutral-200 rounded-xl transition-colors"><X className="w-5 h-5" /></button></header>
-              <div className="p-8 space-y-6">
-                <div className="space-y-2"><label className="text-[10px] font-black text-neutral-400 uppercase tracking-widest">Conta Bancária</label><select value={selectedImportContaId} onChange={(e) => setSelectedImportContaId(e.target.value)} className="w-full h-12 bg-white border-2 border-neutral-200 rounded-2xl px-4 text-xs font-black uppercase tracking-widest focus:border-primary focus:outline-none cursor-pointer">{contas.map(cnt => <option key={cnt.id} value={cnt.id}>{cnt.nome_banco}</option>)}</select></div>
-                <div onDragOver={handleDragOver} onDragLeave={handleDragLeave} onDrop={handleDrop} onClick={triggerFileSelect} className={`border-4 border-dashed rounded-3xl p-10 text-center cursor-pointer transition-all flex flex-col items-center gap-4 ${isDragging ? 'border-primary bg-primary/5' : csvContentText ? 'border-bank-truth-green bg-emerald-50/20' : 'border-neutral-100 bg-neutral-50 hover:border-neutral-300'}`}><input type="file" ref={fileInputRef} onChange={handleFileChange} accept=".csv" className="hidden" /><div className="w-16 h-16 rounded-2xl bg-white border-2 border-neutral-100 shadow-sm flex items-center justify-center text-primary"><Upload className="w-8 h-8" /></div><p className="text-[10px] font-black uppercase tracking-widest text-neutral-800">{csvContentText ? 'Arquivo Pronto' : 'Arraste ou Selecione o CSV'}</p></div>
-                <div className="space-y-2"><label className="text-[10px] font-black text-neutral-400 uppercase tracking-widest">Conteúdo (Preview)</label><textarea rows={4} value={csvContentText} onChange={(e) => setCsvContentText(e.target.value)} className="w-full p-4 bg-neutral-50 border-2 border-neutral-200 font-mono text-[10px] rounded-2xl focus:outline-none" /></div>
+              <div className="p-8 space-y-6 max-h-[70vh] overflow-y-auto">
+                <div className="space-y-2">
+                  <label className="text-[10px] font-black text-neutral-400 uppercase tracking-widest">Conta Bancária de Destino</label>
+                  <select value={selectedImportContaId} onChange={(e) => setSelectedImportContaId(e.target.value)} className="w-full h-12 bg-white border-2 border-neutral-200 rounded-2xl px-4 text-xs font-black uppercase tracking-widest focus:border-primary focus:outline-none cursor-pointer">
+                    {contas.map(cnt => <option key={cnt.id} value={cnt.id}>{cnt.nome_banco}</option>)}
+                  </select>
+                </div>
+
+                {!csvContentText ? (
+                  <div onDragOver={handleDragOver} onDragLeave={handleDragLeave} onDrop={handleDrop} onClick={triggerFileSelect} className={`border-4 border-dashed rounded-3xl p-10 text-center cursor-pointer transition-all flex flex-col items-center gap-4 ${isDragging ? 'border-primary bg-primary/5' : 'border-neutral-100 bg-neutral-50 hover:border-neutral-300'}`}>
+                    <input type="file" ref={fileInputRef} onChange={handleFileChange} accept=".csv" className="hidden" />
+                    <div className="w-16 h-16 rounded-2xl bg-white border-2 border-neutral-100 shadow-sm flex items-center justify-center text-primary"><Upload className="w-8 h-8" /></div>
+                    <p className="text-[10px] font-black uppercase tracking-widest text-neutral-800">Arraste ou Selecione o CSV do Banco</p>
+                    <span className="text-[9px] text-neutral-400 font-medium">O sistema detectará as colunas automaticamente</span>
+                  </div>
+                ) : (
+                  <div className="space-y-6 animate-fade-in">
+                    <div className="p-4 bg-emerald-50 border-2 border-emerald-100 rounded-2xl flex items-center justify-between">
+                      <div className="flex items-center gap-3">
+                        <FileSpreadsheet className="w-6 h-6 text-bank-truth-green" />
+                        <div>
+                          <p className="text-[10px] font-black text-bank-truth-green uppercase">Arquivo Carregado</p>
+                          <p className="text-[9px] text-emerald-700 font-bold">{csvHeaders.length} colunas detectadas</p>
+                        </div>
+                      </div>
+                      <button type="button" onClick={() => { setCsvContentText(''); setCsvPreviewRows([]); }} className="text-xs font-black text-emerald-700 hover:underline uppercase tracking-widest">Trocar Arquivo</button>
+                    </div>
+
+                    <div className="space-y-4">
+                      <h3 className="text-[10px] font-black text-neutral-400 uppercase tracking-widest">Mapeamento de Colunas</h3>
+                      <div className="grid grid-cols-1 gap-3">
+                        {['data', 'valor', 'descricao'].map((field) => (
+                          <div key={field} className="flex items-center gap-3">
+                            <div className="w-24 shrink-0 text-[10px] font-black text-neutral-600 uppercase">{field === 'data' ? 'Data' : field === 'valor' ? 'Valor' : 'Descrição'}</div>
+                            <select
+                              value={columnMapping[field as keyof typeof columnMapping]}
+                              onChange={(e) => setColumnMapping(prev => ({ ...prev, [field]: e.target.value }))}
+                              className="flex-1 h-10 bg-neutral-50 border-2 border-neutral-200 rounded-xl px-3 text-[10px] font-bold focus:border-primary outline-none"
+                            >
+                              <option value="">Selecionar Coluna...</option>
+                              {csvHeaders.map(h => <option key={h} value={h}>{h}</option>)}
+                            </select>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+
+                    <div className="space-y-2">
+                      <h3 className="text-[10px] font-black text-neutral-400 uppercase tracking-widest">Preview dos Dados</h3>
+                      <div className="border-2 border-neutral-100 rounded-2xl overflow-hidden bg-white">
+                        <table className="w-full text-[9px] text-left">
+                          <thead className="bg-neutral-50 border-b border-neutral-100">
+                            <tr>
+                              {Object.values(columnMapping).filter(v => v).map(h => <th key={h} className="p-2 font-black uppercase text-neutral-500">{h}</th>)}
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {csvPreviewRows.map((row, i) => (
+                              <tr key={i} className="border-b border-neutral-50 last:border-0">
+                                {Object.values(columnMapping).filter(v => v).map((h: string) => (
+                                  <td key={h} className="p-2 font-medium text-neutral-700 truncate max-w-[100px]">{row[h]}</td>
+                                ))}
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    </div>
+                  </div>
+                )}
               </div>
-              <footer className="px-8 py-6 border-t border-neutral-100 bg-neutral-50 flex justify-end gap-3"><button type="button" onClick={() => setModalOpen('isImportarCSVOpen', false)} className="px-6 py-2 font-black text-[10px] uppercase tracking-widest text-neutral-500">Cancelar</button><button type="submit" disabled={!csvContentText.trim()} className="px-8 py-3 font-black text-[10px] uppercase tracking-widest bg-neutral-900 text-white rounded-xl shadow-md hover:brightness-95 disabled:opacity-50 transition-all">Importar Agora</button></footer>
+              <footer className="px-8 py-6 border-t border-neutral-100 bg-neutral-50 flex justify-end gap-3">
+                <button type="button" onClick={() => setModalOpen('isImportarCSVOpen', false)} className="px-6 py-2 font-black text-[10px] uppercase tracking-widest text-neutral-500">Cancelar</button>
+                <button
+                  type="submit"
+                  disabled={!csvContentText.trim() || !columnMapping.data || !columnMapping.valor || !columnMapping.descricao}
+                  className="px-8 py-3 font-black text-[10px] uppercase tracking-widest bg-neutral-900 text-white rounded-xl shadow-md hover:brightness-95 disabled:opacity-50 transition-all"
+                >
+                  Confirmar Importação
+                </button>
+              </footer>
             </motion.form>
           </div>
         )}
