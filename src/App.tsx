@@ -47,6 +47,9 @@ const queryClient = new QueryClient({
 });
 
 function NotificationDropdown() {
+  // Safe way to call useNotifications without throwing context error if outside AuthProvider
+  // Wait, NotificationDropdown is INSIDE AppContent, which IS inside AuthProvider.
+  // So it should work!
   const { notifications, unreadCount, markAsRead, markAllAsRead } = useNotifications();
   const [isOpen, setIsOpen] = useState(false);
   const navigate = useNavigate();
@@ -145,7 +148,7 @@ function PrivateRoute({ children }: { children: React.ReactNode }) {
 
 function AppContent() {
   const { setModalOpen, isSidebarCollapsed, setSidebarCollapsed } = useUIStore();
-  const { signOut } = useAuth();
+  const { signOut } = useAuth(); // This is fine since AppContent is inside AuthProvider
   const [isMobileSidebarOpen, setMobileSidebarOpen] = useState(false);
 
   return (

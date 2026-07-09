@@ -2,7 +2,7 @@ import React, { createContext, useContext, useEffect, useState } from 'react';
 import { Session, User } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
 import { useUIStore } from '../store/uiStore';
-import { queryClient } from '../App';
+import { useQueryClient } from '@tanstack/react-query';
 
 type Role = 'master' | 'gerente' | 'colaborador';
 
@@ -21,6 +21,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [role, setRole] = useState<Role>('colaborador');
   const [isLoading, setIsLoading] = useState(true);
+
+  const queryClient = useQueryClient();
 
   // Sync role helper
   const extractRole = async (currentUser: User | null, currentSession: Session | null) => {
