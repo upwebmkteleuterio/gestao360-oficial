@@ -169,12 +169,6 @@ function AppContent() {
                     >
                       <Menu className="w-5 h-5" />
                     </button>
-
-                    <span className="font-bold text-xs text-on-surface-variant flex items-center gap-1.5 bg-transparent">
-                      <span>Sede Financeira</span>
-                      <span className="w-1.5 h-1.5 bg-bank-truth-green rounded-full"></span>
-                      <span className="hidden sm:inline">Integrado</span>
-                    </span>
                   </div>
 
                   {/* Quick Actions */}

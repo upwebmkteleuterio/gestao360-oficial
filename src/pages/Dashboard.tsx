@@ -4,7 +4,6 @@ import {
   TrendingDown, 
   CheckCircle2, 
   Bell,
-  Settings,
   Calendar,
   Filter,
   Download,
@@ -43,7 +42,12 @@ export default function Dashboard() {
   const [periodFilter, setPeriodFilter] = useState<'all' | 'este-mes' | '2023-10' | '2026-06' | '90-dias'>('all');
   const [customStart, setCustomStart] = useState('');
   const [customEnd, setCustomEnd] = useState('');
-  const [showToast, setShowToast] = useState(true);
+
+  // Normalizing activeTab for dashboard scope
+  const currentView = useMemo(() => {
+    if (!activeTab || activeTab === 'dashboard' || activeTab === 'general') return 'general';
+    return activeTab as string;
+  }, [activeTab]);
 
   // Filtering lancamentos based on selected period
   const filteredLancamentos = useMemo(() => {
@@ -107,8 +111,8 @@ export default function Dashboard() {
 
       return {
         ...account,
-        consolidated: account.saldo_inicial + consolidatedChange,
-        simulated: account.saldo_inicial + simulatedChange
+        consolidated: (account.saldo_inicial || 0) + consolidatedChange,
+        simulated: (account.saldo_inicial || 0) + simulatedChange
       };
     });
   }, [contas, filteredLancamentos]);
@@ -156,9 +160,9 @@ export default function Dashboard() {
             <nav ref={dragScrollTabs.ref} {...dragScrollTabs.props} className="flex gap-4 sm:gap-6 select-none overflow-x-auto scrollbar-none whitespace-nowrap scroll-smooth pb-0.5" style={{ cursor: 'grab', userSelect: 'none' }}>
               <button 
                 type="button" 
-                onClick={() => { setPeriodFilter('all'); setActiveTab('general'); }}
+                onClick={() => { setPeriodFilter('all'); setActiveTab('dashboard'); }}
                 className={`text-xs font-bold pb-1 sm:pb-2 pt-1 sm:pt-2 transition-colors border-b-2 shrink-0 whitespace-nowrap ${
-                  (activeTab === 'general' || !activeTab)
+                  currentView === 'general'
                     ? 'text-primary border-primary' 
                     : 'text-secondary hover:text-primary border-transparent'
                 }`}
@@ -167,9 +171,9 @@ export default function Dashboard() {
               </button>
               <button 
                 type="button" 
-                onClick={() => { setActiveTab('cashflow'); }}
+                onClick={() => { setActiveTab('cashflow' as any); }}
                 className={`text-xs font-bold pb-1 sm:pb-2 pt-1 sm:pt-2 transition-colors border-b-2 shrink-0 whitespace-nowrap ${
-                  activeTab === 'cashflow'
+                  currentView === 'cashflow'
                     ? 'text-primary border-primary' 
                     : 'text-secondary hover:text-primary border-transparent'
                 }`}
@@ -178,9 +182,9 @@ export default function Dashboard() {
               </button>
               <button 
                 type="button" 
-                onClick={() => { setActiveTab('audit'); }}
+                onClick={() => { setActiveTab('audit' as any); }}
                 className={`text-xs font-bold pb-1 sm:pb-2 pt-1 sm:pt-2 transition-colors border-b-2 shrink-0 whitespace-nowrap ${
-                  activeTab === 'audit'
+                  currentView === 'audit'
                     ? 'text-primary border-primary' 
                     : 'text-secondary hover:text-primary border-transparent'
                 }`}
@@ -189,18 +193,9 @@ export default function Dashboard() {
               </button>
             </nav>
           </div>
-          
-          <div className="flex items-center gap-4">
-            <button 
-              onClick={() => { setActiveTab('audit'); }}
-              className="text-secondary hover:text-primary p-1.5 rounded-full hover:bg-neutral-100 transition-colors"
-            >
-              <Settings className="w-5 h-5" />
-            </button>
-          </div>
         </div>
 
-        {(activeTab === 'general' || !activeTab) && (
+        {currentView === 'general' && (
           <>
             <section className="flex flex-wrap items-center justify-between gap-4 bg-white dark:bg-surface p-4 rounded-lg border border-surface-border shadow-sm animate-fade-in">
               <div className="flex flex-wrap items-center gap-4 w-full md:w-auto">
@@ -517,19 +512,13 @@ export default function Dashboard() {
           </>
         )}
 
-        {activeTab === 'cashflow' && (
+        {currentView === 'cashflow' && (
           <section className="bg-white dark:bg-surface p-6 rounded-xl border border-surface-border shadow-sm animate-fade-in">
             <div className="flex items-center justify-between mb-6">
               <h4 className="text-sm font-bold uppercase tracking-wider text-on-surface flex items-center gap-2">
                 <LineChart className="w-5 h-5 text-primary" />
                 Histórico de Fluxo de Caixa
               </h4>
-              <button 
-                onClick={() => setActiveTab('general')}
-                className="text-xs font-bold text-primary hover:underline"
-              >
-                Voltar para Visão Geral
-              </button>
             </div>
             
             <div className="overflow-x-auto">
@@ -538,18 +527,20 @@ export default function Dashboard() {
                   <tr className="bg-surface-container-low text-on-surface-variant border-b border-surface-border">
                     <th className="py-3 px-4 text-[10px] font-black uppercase tracking-wider">Data</th>
                     <th className="py-3 px-4 text-[10px] font-black uppercase tracking-wider">Descrição</th>
+                    <th className="py-3 px-4 text-[10px] font-black uppercase tracking-wider">Entidade</th>
                     <th className="py-3 px-4 text-[10px] font-black uppercase tracking-wider text-right">Valor</th>
                     <th className="py-3 px-4 text-[10px] font-black uppercase tracking-wider text-center">Status</th>
                   </tr>
                 </thead>
                 <tbody className="text-xs">
                   {lancamentos.length === 0 ? (
-                    <tr><td colSpan={4} className="py-8 text-center text-on-surface-variant">Nenhum dado encontrado</td></tr>
+                    <tr><td colSpan={5} className="py-8 text-center text-on-surface-variant font-medium">Nenhum dado real encontrado. Realize lançamentos para visualizar.</td></tr>
                   ) : (
                     lancamentos.slice(0, 10).map(l => (
                       <tr key={l.id} className="border-b border-surface-border hover:bg-neutral-50">
                         <td className="py-3 px-4 font-mono">{l.data_vencimento.split('-').reverse().join('/')}</td>
                         <td className="py-3 px-4 font-bold">{l.observacoes || 'Lançamento Operacional'}</td>
+                        <td className="py-3 px-4">{entidades.find(e => e.id === l.entidade_id)?.nome_razao_social || '-'}</td>
                         <td className={`py-3 px-4 text-right font-bold ${l.tipo === 'saida' ? 'text-alert-red' : 'text-bank-truth-green'}`}>
                           {valueFormatter(l.valor_previsto)}
                         </td>
@@ -569,19 +560,13 @@ export default function Dashboard() {
           </section>
         )}
 
-        {activeTab === 'audit' && (
+        {currentView === 'audit' && (
           <section className="bg-white dark:bg-surface p-6 rounded-xl border border-surface-border shadow-sm animate-fade-in">
             <div className="flex items-center justify-between mb-6">
               <h4 className="text-sm font-bold uppercase tracking-wider text-on-surface flex items-center gap-2">
                 <Shield className="w-5 h-5 text-primary" />
                 Logs de Auditoria do Sistema
               </h4>
-              <button 
-                onClick={() => setActiveTab('general')}
-                className="text-xs font-bold text-primary hover:underline"
-              >
-                Voltar para Visão Geral
-              </button>
             </div>
 
             <div className="overflow-x-auto">
@@ -596,7 +581,7 @@ export default function Dashboard() {
                 </thead>
                 <tbody className="text-xs">
                   {auditoriaLogs.length === 0 ? (
-                    <tr><td colSpan={4} className="py-8 text-center text-on-surface-variant">Nenhum log registrado</td></tr>
+                    <tr><td colSpan={4} className="py-8 text-center text-on-surface-variant font-medium">Nenhum log real registrado no banco de dados.</td></tr>
                   ) : (
                     auditoriaLogs.slice(0, 10).map(log => (
                       <tr key={log.id} className="border-b border-surface-border hover:bg-neutral-50">
