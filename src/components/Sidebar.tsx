@@ -7,8 +7,6 @@ import {
   LayoutDashboard,
   FileSpreadsheet,
   UserSquare2,
-  Moon,
-  Sun,
   ShieldCheck,
   X,
   Repeat
@@ -24,28 +22,12 @@ interface SidebarProps {
 
 export default function Sidebar({ isOpen, onClose, isCollapsed }: SidebarProps) {
   const {
-    theme,
-    setTheme,
     setActiveTab,
   } = useUIStore();
 
   const { user, role } = useAuth();
   const location = useLocation();
   const navigate = useNavigate();
-
-  // Sync theme with HTML document class
-  useEffect(() => {
-    const root = window.document.documentElement;
-    if (theme === 'dark') {
-      root.classList.add('dark');
-    } else {
-      root.classList.remove('dark');
-    }
-  }, [theme]);
-
-  const toggleTheme = () => {
-    setTheme(theme === 'dark' ? 'light' : 'dark');
-  };
 
   const navItems = [
     { id: 'dashboard' as TabType, label: 'Painel Geral', icon: LayoutDashboard, path: '/dashboard', roles: ['master', 'gerente', 'colaborador'] },
@@ -150,25 +132,6 @@ export default function Sidebar({ isOpen, onClose, isCollapsed }: SidebarProps) 
           )}
 
           <div className={`flex items-center transition-all ${isCollapsed ? 'flex-col gap-4' : 'justify-between pt-1'}`}>
-            {/* Theme switcher */}
-            <button 
-              onClick={toggleTheme}
-              className={`p-2 rounded-lg border border-surface-border text-on-surface hover:bg-surface-container transition-all flex items-center gap-1.5 text-xs font-semibold ${isCollapsed ? 'w-10 h-10 justify-center' : ''}`}
-              title={isCollapsed ? (theme === 'dark' ? 'Mudar para tema claro' : 'Mudar para tema escuro') : undefined}
-            >
-              {theme === 'dark' ? (
-                <>
-                  <Sun className="w-4 h-4 text-primary" />
-                  {!isCollapsed && <span className="text-[10px]">Claro</span>}
-                </>
-              ) : (
-                <>
-                  <Moon className="w-4 h-4 text-on-surface-variant" />
-                  {!isCollapsed && <span className="text-[10px]">Escuro</span>}
-                </>
-              )}
-            </button>
-            
             {!isCollapsed && <span className="text-[9px] font-bold text-on-surface-variant/40 animate-fade-in">v3.6.0 Stable</span>}
           </div>
         </div>

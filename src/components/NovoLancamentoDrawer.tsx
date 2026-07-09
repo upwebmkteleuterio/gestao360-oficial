@@ -164,9 +164,14 @@ export default function NovoLancamentoDrawer() {
 
   const { createLancamento, updateLancamento, isCreating, isUpdating, data: lancamentos = [] } = useLancamentos();
   const { data: entidades = [] } = useEntidades();
-  const { data: centros = [] } = useCentrosCusto();
-  const { data: categorias = [] } = useCategorias();
-  const { data: contas = [] } = useContas();
+  const { data: rawCentros = [] } = useCentrosCusto();
+  const { data: rawCategorias = [] } = useCategorias();
+  const { data: rawContas = [] } = useContas();
+
+  // Filter out soft-deleted items for new selection
+  const centros = rawCentros.filter((c: any) => c.status !== 'excluido');
+  const categorias = rawCategorias.filter((c: any) => c.status !== 'excluido');
+  const contas = rawContas.filter((c: any) => c.status !== 'excluido');
 
   // Toasts state
   const [isSubmitting, setIsSubmitting] = useState(false);

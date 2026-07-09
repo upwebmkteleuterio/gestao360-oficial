@@ -27,7 +27,7 @@ export const categoriasService = {
   delete: async (id: string): Promise<boolean> => {
     const { error } = await supabase
       .from('categorias_financeiras')
-      .delete()
+      .update({ status: 'excluido' })
       .eq('id', id);
     
     if (error) throw error;

@@ -98,6 +98,9 @@ export default function Lancamentos() {
   const { data: entidades = [] } = useEntidades();
   const { data: categorias = [] } = useCategorias();
 
+  // For dropdowns, use active only
+  const activeContas = contas.filter((c: any) => c.status !== 'excluido');
+
   // Zustand Store
   const { 
     setModalOpen,

@@ -33,10 +33,13 @@ export default function Dashboard() {
   const [selectedCCId, setSelectedCCId] = useState<string | null>(null);
 
   const { data: lancamentos = [], isLoading: loadingLancamentos } = useLancamentos();
-  const { data: contas = [], isLoading: loadingContas } = useContas();
-  const { data: centrosCusto = [] } = useCentrosCusto();
+  const { data: rawContas = [], isLoading: loadingContas } = useContas();
+  const { data: rawCentrosCusto = [] } = useCentrosCusto();
   const { data: auditoriaLogs = [], refetch: refetchAudit, isFetching: fetchingAudit } = useAuditoriaLogs();
   const { data: entidades = [] } = useEntidades();
+
+  const contas = rawContas.filter((c: any) => c.status !== 'excluido');
+  const centrosCusto = rawCentrosCusto.filter((c: any) => c.status !== 'excluido');
 
   // Detail modal state for audit
   const [selectedAuditLog, setSelectedAuditLog] = useState<any | null>(null);

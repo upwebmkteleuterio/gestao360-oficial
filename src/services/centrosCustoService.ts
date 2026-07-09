@@ -39,7 +39,7 @@ export const centrosCustoService = {
   delete: async (id: string): Promise<boolean> => {
     const { error } = await supabase
       .from('centros_custo')
-      .delete()
+      .update({ status: 'excluido' })
       .eq('id', id);
     
     if (error) throw error;

@@ -158,6 +158,13 @@ export function useCategorias() {
     }
   });
 
+  const updateMutation = useMutation({
+    mutationFn: ({ id, data }: { id: string, data: any }) => categoriasService.update(id, data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['categorias'] });
+    }
+  });
+
   const deleteMutation = useMutation({
     mutationFn: categoriasService.delete,
     onSuccess: () => {
@@ -168,6 +175,7 @@ export function useCategorias() {
   return {
     ...query,
     createCategory: createMutation.mutateAsync,
+    updateCategory: updateMutation.mutateAsync,
     deleteCategory: deleteMutation.mutateAsync,
     isCreating: createMutation.isPending
   };
@@ -188,6 +196,13 @@ export function useContas() {
     }
   });
 
+  const updateMutation = useMutation({
+    mutationFn: ({ id, data }: { id: string, data: any }) => contasService.update(id, data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['contas'] });
+    }
+  });
+
   const deleteMutation = useMutation({
     mutationFn: contasService.delete,
     onSuccess: () => {
@@ -198,6 +213,7 @@ export function useContas() {
   return {
     ...query,
     createAccount: createMutation.mutateAsync,
+    updateAccount: updateMutation.mutateAsync,
     deleteAccount: deleteMutation.mutateAsync,
     isCreating: createMutation.isPending
   };

@@ -52,7 +52,7 @@ export const contasService = {
   delete: async (id: string): Promise<boolean> => {
     const { error } = await supabase
       .from('contas_bancarias')
-      .delete()
+      .update({ status: 'excluido' })
       .eq('id', id);
     
     if (error) throw error;
