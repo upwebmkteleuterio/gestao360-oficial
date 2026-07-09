@@ -268,16 +268,17 @@ export default function Configuracoes() {
               <table className="w-full text-left border-collapse">
                 <thead><tr className="bg-neutral-50 text-neutral-400 border-b border-neutral-100 text-[9px] font-black uppercase tracking-widest"><th className="py-4 px-8">Usuário</th><th className="py-4 px-8">Nível</th><th className="py-4 px-8 text-center">Status</th><th className="py-4 px-8 text-right">Cargo</th></tr></thead>
                 <tbody className="text-[11px] font-bold">
-                  {paginatedUsers.length === 0 ? <tr><td colSpan={4} className="py-20 text-center opacity-40 uppercase tracking-widest">Nenhum usuário</td></tr> : 
-                  paginatedUsers.map((u) => (
+                  {usuarios.length === 0 ? <tr><td colSpan={4} className="py-20 text-center opacity-40 uppercase tracking-widest">Nenhum usuário</td></tr> :
+                  usuarios.map((u) => (
                     <tr key={u.id} className="border-b border-neutral-50 hover:bg-neutral-50/50 transition-all">
-                      <td className="py-4 px-8"><div className="flex items-center gap-4"><div className="w-10 h-10 rounded-2xl bg-primary/10 text-primary flex items-center justify-center font-black uppercase shadow-sm">{(u.nome || u.email).substring(0, 2)}</div><div><p className="text-neutral-900 font-black uppercase tracking-tighter">{u.nome || 'Pendente'}</p><p className="text-[10px] text-neutral-400 lowercase">{u.email}</p></div></div></td>
-                      <td className="py-4 px-8"><span className="rounded-lg bg-neutral-100 text-neutral-600 px-3 py-1.5 uppercase font-black text-[9px] tracking-widest">{u.perfil}</span></td>
+                      <td className="py-4 px-8"><div className="flex items-center gap-4"><div className="w-10 h-10 rounded-2xl bg-primary/10 text-primary flex items-center justify-center font-black uppercase shadow-sm">{(u.nome || u.email || 'U').substring(0, 2)}</div><div><p className="text-neutral-900 font-black uppercase tracking-tighter">{u.nome || 'Pendente'}</p><p className="text-[10px] text-neutral-400 lowercase">{u.email}</p></div></div></td>
+                      <td className="py-4 px-8"><span className="rounded-lg bg-neutral-100 text-neutral-600 px-3 py-1.5 uppercase font-black text-[9px] tracking-widest">{u.perfil || 'colaborador'}</span></td>
                       <td className="py-4 px-8 text-center"><button onClick={() => handleToggleUserActive(u.id, u.status)} className={`w-12 h-6 rounded-full p-1 transition-all ${u.status ? 'bg-bank-truth-green' : 'bg-neutral-200'}`}><div className={`w-4 h-4 bg-white rounded-full transition-all ${u.status ? 'ml-6' : 'ml-0'}`} /></button></td>
-                      <td className="py-4 px-8 text-right"><select value={u.perfil} onChange={(e) => handleRoleChange(u.id, e.target.value as any)} className="bg-white border-2 border-neutral-100 rounded-lg text-[10px] font-black uppercase px-3 py-2 focus:border-primary outline-none cursor-pointer"><option value="colaborador">Analista</option><option value="gerente">Gestor</option><option value="master">Master</option></select></td>
+                      <td className="py-4 px-8 text-right"><select value={u.perfil || 'colaborador'} onChange={(e) => handleRoleChange(u.id, e.target.value as any)} className="bg-white border-2 border-neutral-100 rounded-lg text-[10px] font-black uppercase px-3 py-2 focus:border-primary outline-none cursor-pointer"><option value="colaborador">Analista</option><option value="gerente">Gestor</option><option value="master">Master</option></select></td>
                     </tr>
                   ))}
                 </tbody>
+
               </table>
             </div>
           </div>
