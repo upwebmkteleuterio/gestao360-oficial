@@ -14,6 +14,7 @@ import { useNotifications } from './hooks/useData';
 // Custom layout components
 import Sidebar from './components/Sidebar';
 import NovoLancamentoDrawer from './components/NovoLancamentoDrawer';
+import CadastroRapidoModal from './components/CadastroRapidoModal';
 
 import NewLaunchButton from './components/NewLaunchButton';
 
@@ -214,6 +215,7 @@ function AppContent() {
 
               {/* Global Drawers & Slide Panels */}
               <NovoLancamentoDrawer />
+              <CadastroRapidoModal />
             </div>
           </PrivateRoute>
         }

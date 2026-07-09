@@ -6,8 +6,9 @@ export const auditoriaService = {
     const { data, error } = await supabase
       .from('auditoria_logs')
       .select('*, profiles(nome, email)')
-      .order('data_hora', { ascending: false });
-    
+      .order('data_hora', { ascending: false })
+      .limit(100);
+
     if (error) throw error;
     return data;
   }

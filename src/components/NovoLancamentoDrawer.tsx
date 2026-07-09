@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { 
   X, 
@@ -8,25 +8,25 @@ import {
   XCircle, 
   AlertTriangle, 
   Clock,
-  Loader2
+  Loader2,
+  Search,
+  ChevronRight
 } from 'lucide-react';
 import { useUIStore } from '../store/uiStore';
 import { useLancamentos, useEntidades, useCentrosCusto, useCategorias, useContas } from '../hooks/useData';
 import MoneyInput from './MoneyInput';
 
-function formatBRL(value: string): string {
+function formatBRL(value: any): string {
+  if (value === null || value === undefined) return '';
 
-  if (!value) return '';
-
-  if (/^\d+(\.\d+)?$/.test(value)) {
-    const num = parseFloat(value);
-    return num.toLocaleString('pt-BR', {
+  if (typeof value === 'number') {
+    return value.toLocaleString('pt-BR', {
       minimumFractionDigits: 2,
       maximumFractionDigits: 2,
     });
   }
 
-  const clean = value.replace(/\D/g, '');
+  const clean = value.toString().replace(/\D/g, '');
   if (!clean) return '';
   const parsed = parseInt(clean, 10);
   const formatted = (parsed / 100).toLocaleString('pt-BR', {
@@ -35,6 +35,119 @@ function formatBRL(value: string): string {
   });
   return formatted;
 }
+
+const SearchableSelect = ({ 
+  label, 
+  value, 
+  onChange, 
+  options, 
+  placeholder, 
+  required,
+  onAddClick
+}: { 
+  label: string;
+  value: string;
+  onChange: (val: string) => void;
+  options: { id: string; label: string; sublabel?: string }[];
+  placeholder: string;
+  required?: boolean;
+  onAddClick?: () => void;
+}) => {
+  const [isOpen, setIsOpen] = useState(false);
+  const [search, setSearch] = useState('');
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  const filtered = options.filter(o => 
+    o.label.toLowerCase().includes(search.toLowerCase()) || 
+    o.sublabel?.toLowerCase().includes(search.toLowerCase())
+  );
+
+  const selectedOption = options.find(o => o.id === value);
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (containerRef.current && !containerRef.current.contains(event.target as Node)) {
+        setIsOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  return (
+    <div className="flex flex-col gap-2 relative" ref={containerRef}>
+      <div className="flex justify-between items-center">
+        <label className="text-xs font-black text-secondary uppercase tracking-widest">{label} {required && <span className="text-alert-red">*</span>}</label>
+        {onAddClick && (
+          <button
+            type="button"
+            onClick={onAddClick}
+            className="text-[10px] font-black text-primary hover:underline uppercase tracking-widest flex items-center gap-1 z-50 relative"
+          >
+            <Plus className="w-3.5 h-3.5" /> Cadastro Rápido
+          </button>
+        )}
+      </div>
+
+      <button
+        type="button"
+        onClick={() => setIsOpen(!isOpen)}
+        className={`w-full h-12 bg-white border-2 border-neutral-200 rounded-xl px-4 flex items-center justify-between text-sm font-bold transition-all shadow-xs ${isOpen ? 'border-primary' : ''}`}
+      >
+        <span className={selectedOption ? 'text-on-surface' : 'text-secondary/50'}>
+          {selectedOption ? selectedOption.label : placeholder}
+        </span>
+        <ChevronRight className={`w-4 h-4 text-secondary transition-transform ${isOpen ? 'rotate-90' : ''}`} />
+      </button>
+
+      <AnimatePresence>
+        {isOpen && (
+          <motion.div
+            initial={{ opacity: 0, y: -10 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -10 }}
+            className="absolute top-[calc(100%+8px)] left-0 w-full bg-white border-2 border-neutral-100 rounded-2xl shadow-2xl z-[100] overflow-hidden"
+          >
+            <div className="p-3 border-b border-neutral-100 bg-neutral-50">
+              <div className="relative">
+                <Search className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-neutral-400" />
+                <input
+                  type="text"
+                  autoFocus
+                  placeholder="Pesquisar..."
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                  className="w-full h-9 pl-9 pr-3 bg-white border border-neutral-200 rounded-lg text-xs font-bold focus:outline-none focus:border-primary transition-all"
+                />
+              </div>
+            </div>
+            <div className="max-h-60 overflow-y-auto p-1.5 scrollbar-thin">
+              {filtered.length === 0 ? (
+                <div className="py-8 text-center text-[10px] font-black uppercase text-neutral-300">Nenhum resultado</div>
+              ) : (
+                filtered.map(opt => (
+                  <button
+                    key={opt.id}
+                    type="button"
+                    onClick={() => {
+                      onChange(opt.id);
+                      setIsOpen(false);
+                      setSearch('');
+                    }}
+                    className={`w-full p-3 text-left rounded-xl transition-all flex flex-col gap-0.5 ${value === opt.id ? 'bg-primary/5 border border-primary/20' : 'hover:bg-neutral-50 border border-transparent'}`}
+                  >
+                    <span className="text-xs font-black uppercase tracking-tight text-neutral-900">{opt.label}</span>
+                    {opt.sublabel && <span className="text-[9px] font-bold text-neutral-400 uppercase tracking-widest">{opt.sublabel}</span>}
+                  </button>
+                ))
+              )}
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
+  );
+};
 
 export default function NovoLancamentoDrawer() {
   const { 
@@ -73,6 +186,22 @@ export default function NovoLancamentoDrawer() {
   }, [selectedLancamentoIdForModal, lancamentos]);
 
   useEffect(() => {
+    if (editingItem) {
+      setLancamentoFormDraft({
+        tipo: editingItem.tipo,
+        valor_previsto: formatBRL(editingItem.valor_previsto),
+        data_emissao: editingItem.data_emissao,
+        data_vencimento: editingItem.data_vencimento,
+        entidade_id: editingItem.entidade_id,
+        centro_custo_id: editingItem.centro_custo_id,
+        categoria_id: editingItem.categoria_id,
+        conta_bancaria_id: editingItem.conta_bancaria_id,
+        observacoes: editingItem.observacoes
+      });
+    }
+  }, [editingItem]);
+
+  useEffect(() => {
     if (contas.length > 0 && !lancamentoFormDraft.conta_bancaria_id) {
       setLancamentoFormDraft({ conta_bancaria_id: contas[0].id });
     }
@@ -86,10 +215,10 @@ export default function NovoLancamentoDrawer() {
   }, [categorias, lancamentoFormDraft.tipo]);
 
   useEffect(() => {
-    if (filteredCategorias.length > 0) {
+    if (filteredCategorias.length > 0 && !editingItem) {
       setLancamentoFormDraft({ categoria_id: filteredCategorias[0].id });
     }
-  }, [filteredCategorias]);
+  }, [filteredCategorias, editingItem]);
 
   const handleClose = () => {
     setModalOpen('isNovoLancamentoOpen', false);
@@ -124,8 +253,8 @@ export default function NovoLancamentoDrawer() {
       centro_custo_id: lancamentoFormDraft.centro_custo_id || null,
       categoria_id: lancamentoFormDraft.categoria_id || null,
       conta_bancaria_id: lancamentoFormDraft.conta_bancaria_id || null,
-      status_pagamento: 'aberto' as const,
-      status_aprovacao: 'pendente_digital' as const,
+      status_pagamento: editingItem?.status_pagamento || 'aberto',
+      status_aprovacao: editingItem?.status_aprovacao || 'pendente_digital',
       observacoes: lancamentoFormDraft.observacoes
     };
 
@@ -270,60 +399,48 @@ export default function NovoLancamentoDrawer() {
                 </div>
 
                 <div className="flex flex-col gap-2">
-                  <div className="flex justify-between items-center">
-                    <label className="text-xs font-black text-secondary uppercase tracking-widest">Entidade / Destinatário <span className="text-alert-red">*</span></label>
-                    <button
-                      type="button"
-                      onClick={() => setModalOpen('isCadastroRapidoOpen', true)}
-                      className="text-[10px] font-black text-primary hover:underline uppercase tracking-widest flex items-center gap-1 z-50 relative"
-                    >
-                      <Plus className="w-3.5 h-3.5" /> Cadastro Rápido
-                    </button>
-                  </div>
-
-                  <select 
+                  <SearchableSelect
+                    label="Entidade / Destinatário"
+                    placeholder="Selecione um cliente / fornecedor"
                     value={lancamentoFormDraft.entidade_id}
-                    onChange={(e) => setLancamentoFormDraft({ entidade_id: e.target.value })}
-                    className="w-full h-12 bg-white border-2 border-neutral-200 text-sm font-bold rounded-xl focus:outline-none focus:border-primary transition-all px-4 shadow-xs appearance-none cursor-pointer"
+                    onChange={(val) => setLancamentoFormDraft({ entidade_id: val })}
+                    options={entidades
+                      .filter(e => e.status_base !== 'inativo' && e.status_base !== 'bpi')
+                      .map(e => ({
+
+                        id: e.id,
+                        label: e.nome_razao_social,
+                        sublabel: e.tipo.toUpperCase()
+                      }))}
                     required
-                  >
-                    <option value="" disabled>Selecione um cliente / fornecedor</option>
-                    {entidades.map(e => (
-                      <option key={e.id} value={e.id}>
-                        {e.nome_razao_social} ({e.tipo.toUpperCase()})
-                      </option>
-                    ))}
-                  </select>
+                    onAddClick={() => setModalOpen('isCadastroRapidoOpen', true)}
+                  />
                 </div>
 
                 <div className="grid grid-cols-2 gap-4">
-                  <div className="flex flex-col gap-2">
-                    <label className="text-xs font-black text-secondary uppercase tracking-widest">Categoria Contábil <span className="text-alert-red">*</span></label>
-                    <select 
-                      value={lancamentoFormDraft.categoria_id}
-                      onChange={(e) => setLancamentoFormDraft({ categoria_id: e.target.value })}
-                      className="w-full h-12 bg-white border-2 border-neutral-200 text-sm font-bold rounded-xl focus:outline-none focus:border-primary transition-all px-4 shadow-xs appearance-none cursor-pointer"
-                      required
-                    >
-                      {filteredCategorias.map(c => (
-                        <option key={c.id} value={c.id}>{c.nome}</option>
-                      ))}
-                    </select>
-                  </div>
+                  <SearchableSelect
+                    label="Categoria Contábil"
+                    placeholder="Selecione..."
+                    value={lancamentoFormDraft.categoria_id}
+                    onChange={(val) => setLancamentoFormDraft({ categoria_id: val })}
+                    options={filteredCategorias.map(c => ({
+                      id: c.id,
+                      label: c.nome
+                    }))}
+                    required
+                  />
 
-                  <div className="flex flex-col gap-2">
-                    <label className="text-xs font-black text-secondary uppercase tracking-widest">Centro de Custo <span className="text-alert-red">*</span></label>
-                    <select 
-                      value={lancamentoFormDraft.centro_custo_id}
-                      onChange={(e) => setLancamentoFormDraft({ centro_custo_id: e.target.value })}
-                      className="w-full h-12 bg-white border-2 border-neutral-200 text-sm font-bold rounded-xl focus:outline-none focus:border-primary transition-all px-4 shadow-xs appearance-none cursor-pointer"
-                      required
-                    >
-                      {centros.map(cc => (
-                        <option key={cc.id} value={cc.id}>{cc.nome}</option>
-                      ))}
-                    </select>
-                  </div>
+                  <SearchableSelect
+                    label="Centro de Custo"
+                    placeholder="Selecione..."
+                    value={lancamentoFormDraft.centro_custo_id}
+                    onChange={(val) => setLancamentoFormDraft({ centro_custo_id: val })}
+                    options={centros.map(cc => ({
+                      id: cc.id,
+                      label: cc.nome
+                    }))}
+                    required
+                  />
                 </div>
 
                 <div className="grid grid-cols-2 gap-4">

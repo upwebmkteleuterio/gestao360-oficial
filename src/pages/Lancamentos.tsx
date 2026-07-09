@@ -240,18 +240,6 @@ export default function Lancamentos() {
       setInterceptorTarget(item);
       setInterceptorType('edit');
     } else {
-      setLancamentoFormDraft({
-        tipo: item.tipo,
-        valor_previsto: item.valor_previsto.toString(),
-        data_emissao: item.data_emissao,
-        data_vencimento: item.data_vencimento,
-        entidade_id: item.entidade_id,
-        centro_custo_id: item.centro_custo_id,
-        categoria_id: item.categoria_id,
-        conta_bancaria_id: item.conta_bancaria_id,
-        recorrencia: false,
-        observacoes: item.observacoes
-      });
       setSelectedLancamentoIdForModal(item.id);
       setModalOpen('isNovoLancamentoOpen', true);
     }
@@ -288,18 +276,6 @@ export default function Lancamentos() {
     } else if (interceptorType === 'edit') {
       setSelectedRecorrenciaAction(mode);
       
-      setLancamentoFormDraft({
-        tipo: target.tipo,
-        valor_previsto: target.valor_previsto.toString(),
-        data_emissao: target.data_emissao,
-        data_vencimento: target.data_vencimento,
-        entidade_id: target.entidade_id,
-        centro_custo_id: target.centro_custo_id,
-        categoria_id: target.categoria_id,
-        conta_bancaria_id: target.conta_bancaria_id,
-        recorrencia: true,
-        observacoes: target.observacoes
-      });
       setSelectedLancamentoIdForModal(target.id);
       setModalOpen('isNovoLancamentoOpen', true);
     }

@@ -244,8 +244,9 @@ export default function Dashboard() {
               <table className="w-full text-left border-collapse">
                 <thead><tr className="bg-neutral-50 text-neutral-400 border-b border-neutral-100 text-[9px] font-black uppercase tracking-widest"><th className="py-4 px-8">Data</th><th className="py-4 px-8">Descrição</th><th className="py-4 px-8">Entidade</th><th className="py-4 px-8 text-right">Valor</th></tr></thead>
                 <tbody className="text-[11px] font-bold">
-                  {lancamentos.slice(0, 10).map(l => (
+                  {lancamentos.slice(0, 50).map(l => (
                     <tr key={l.id} className="border-b border-neutral-50 hover:bg-neutral-50">
+
                       <td className="py-4 px-8 font-mono">{l.data_vencimento.split('-').reverse().join('/')}</td>
                       <td className="py-4 px-8 uppercase">{l.observacoes || 'Lançamento'}</td>
                       <td className="py-4 px-8">{entidades.find(e => e.id === l.entidade_id)?.nome_razao_social || '-'}</td>
@@ -288,8 +289,9 @@ export default function Dashboard() {
                       <td colSpan={5} className="py-20 text-center text-secondary opacity-40 uppercase tracking-widest text-[10px]">Nenhum log registrado ainda</td>
                     </tr>
                   ) : (
-                    auditoriaLogs.slice(0, 20).map(log => (
+                    auditoriaLogs.slice(0, 50).map(log => (
                       <tr key={log.id} className="border-b border-neutral-50 hover:bg-neutral-50/50 transition-colors">
+
                         <td className="py-4 px-8 font-mono text-secondary">
                           {new Date(log.data_hora).toLocaleDateString()} {new Date(log.data_hora).toLocaleTimeString()}
                         </td>

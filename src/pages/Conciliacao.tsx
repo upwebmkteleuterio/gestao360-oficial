@@ -1,13 +1,13 @@
 import React, { useState, useMemo, useRef } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { 
-  FileSpreadsheet, 
-  Check, 
-  Link2, 
-  Unlink, 
-  ArrowRight, 
-  Search, 
-  Upload, 
+import {
+  FileSpreadsheet,
+  Check,
+  Link2,
+  Unlink,
+  ArrowRight,
+  Search,
+  Upload,
   HelpCircle,
   AlertTriangle,
   ChevronRight,
@@ -19,11 +19,13 @@ import {
   Building,
   ArrowDownCircle,
   ArrowUpCircle,
-  Loader2
+  Loader2,
+  Calendar
 } from 'lucide-react';
 import { useConciliacao, useContas, useLancamentos, useEntidades } from '../hooks/useData';
 import { useUIStore } from '../store/uiStore';
 import { TransacaoBanco, LancamentoFinanceiro } from '../types';
+import Button from '../components/Button';
 
 export default function Conciliacao() {
   // Query state hooks
@@ -91,8 +93,8 @@ export default function Conciliacao() {
         if (periodFilter === 'month') {
           return tx.data_transacao.startsWith(selectedMonth);
         } else {
-          const start = customStartDate || '0000-00-00';
-          const end = customEndDate || '9999-99-99';
+          const start = customStartDate || '1900-01-01';
+          const end = customEndDate || '2100-12-31';
           return tx.data_transacao >= start && tx.data_transacao <= end;
         }
       })
@@ -121,8 +123,8 @@ export default function Conciliacao() {
       if (periodFilter === 'month') {
         if (!l.data_vencimento.startsWith(selectedMonth)) return false;
       } else {
-        const start = customStartDate || '0000-00-00';
-        const end = customEndDate || '9999-99-99';
+        const start = customStartDate || '1900-01-01';
+        const end = customEndDate || '2100-12-31';
         if (l.data_vencimento < start || l.data_vencimento > end) return false;
       }
 
@@ -412,50 +414,19 @@ export default function Conciliacao() {
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold tracking-tight text-neutral-900 uppercase">Concíliação Bancária</h1>
-          <p className="text-sm text-neutral-500 mt-1 font-medium">Sincronize a Verdade Bancária com suas previsões financeiras.</p>
+          <p className="text-sm text-neutral-500 mt-1 font-medium italic">"Sincronize a Verdade Bancária com suas previsões financeiras."</p>
         </div>
 
         <div className="flex flex-wrap items-center gap-4">
-          {/* Period Selector */}
-          <div className="flex bg-neutral-100 p-1 rounded-xl border border-neutral-200 h-12 items-center">
-            <button
-              onClick={() => setPeriodFilter('month')}
-              className={`px-4 h-full font-black text-[10px] uppercase tracking-widest rounded-lg transition-all ${periodFilter === 'month' ? 'bg-white text-neutral-900 shadow-sm' : 'text-neutral-500 hover:text-neutral-900'}`}
-            >
-              Por Mês
-            </button>
-            <button
-              onClick={() => setPeriodFilter('custom')}
-              className={`px-4 h-full font-black text-[10px] uppercase tracking-widest rounded-lg transition-all ${periodFilter === 'custom' ? 'bg-white text-neutral-900 shadow-sm' : 'text-neutral-500 hover:text-neutral-900'}`}
-            >
-              Período
-            </button>
-          </div>
-
-          {periodFilter === 'month' ? (
-            <input
-              type="month"
-              value={selectedMonth}
-              onChange={(e) => setSelectedMonth(e.target.value)}
-              className="h-12 px-4 bg-white border-2 border-neutral-100 rounded-xl text-xs font-bold focus:border-primary outline-none"
-            />
-          ) : (
-            <div className="flex items-center gap-2">
-              <input type="date" value={customStartDate} onChange={(e) => setCustomStartDate(e.target.value)} className="h-12 px-3 bg-white border-2 border-neutral-100 rounded-xl text-[10px] font-bold outline-none w-32" />
-              <span className="text-neutral-300 font-black">/</span>
-              <input type="date" value={customEndDate} onChange={(e) => setCustomEndDate(e.target.value)} className="h-12 px-3 bg-white border-2 border-neutral-100 rounded-xl text-[10px] font-bold outline-none w-32" />
-            </div>
-          )}
-
           <div className="flex bg-neutral-100 p-1 rounded-xl border border-neutral-200 h-12 items-center">
             {contas.map(c => (
-              <button 
+              <button
                 key={c.id}
-                type="button" 
+                type="button"
                 onClick={() => setSelectedContaId(c.id)}
                 className={`px-4 py-2 font-black text-[10px] uppercase tracking-widest rounded-lg transition-all cursor-pointer h-full ${
-                  selectedContaId === c.id 
-                    ? 'bg-white text-neutral-900 shadow-sm' 
+                  selectedContaId === c.id
+                    ? 'bg-white text-neutral-900 shadow-sm'
                     : 'text-neutral-500 hover:text-neutral-900'
                 }`}
               >
@@ -464,7 +435,7 @@ export default function Conciliacao() {
             ))}
           </div>
 
-          <button 
+          <button
             type="button"
             onClick={() => setModalOpen('isImportarCSVOpen', true)}
             className="px-6 py-2 bg-neutral-900 text-white font-black text-[10px] uppercase tracking-widest rounded-lg hover:bg-neutral-800 transition-all shadow-md flex items-center gap-2 h-12 cursor-pointer"
@@ -472,6 +443,75 @@ export default function Conciliacao() {
             <FileSpreadsheet className="w-4 h-4" />
             Importar CSV
           </button>
+        </div>
+      </div>
+
+      {/* Quick Help Banner */}
+      <div className="p-5 bg-primary/5 border-2 border-primary/10 rounded-2xl flex items-start gap-4">
+        <div className="w-10 h-10 rounded-xl bg-white border border-primary/20 flex items-center justify-center shrink-0">
+          <HelpCircle className="w-6 h-6 text-primary" />
+        </div>
+        <div className="space-y-1">
+          <h4 className="text-xs font-black text-primary uppercase tracking-widest">Como conciliar?</h4>
+          <p className="text-[10px] font-medium text-neutral-600 leading-relaxed uppercase tracking-tight">
+            1. Selecione a <strong>Conta Bancária</strong> no topo. <br />
+            2. Filtre pelo <strong>Mês</strong> ou <strong>Período</strong> desejado para visualizar as transações. <br />
+            3. Selecione um item do <strong>Extrato (Lado Esquerdo)</strong>. <br />
+            4. Escolha a previsão correspondente no <strong>Sistema (Lado Direito)</strong> e clique em <strong>Vincular</strong>.
+          </p>
+        </div>
+      </div>
+
+      {/* Controls Bar */}
+      <div className="bg-white border-2 border-neutral-100 p-4 rounded-2xl flex flex-wrap items-center gap-6 shadow-sm">
+        <div className="flex items-center gap-3 border-r border-neutral-100 pr-6">
+          <Calendar className="w-4 h-4 text-neutral-400" />
+          <div className="flex bg-neutral-100 p-1 rounded-lg">
+            <button
+              onClick={() => setPeriodFilter('month')}
+              className={`px-3 py-1.5 font-black text-[9px] uppercase tracking-widest rounded-md transition-all ${periodFilter === 'month' ? 'bg-white text-neutral-900 shadow-xs' : 'text-neutral-500'}`}
+            >
+              Mês
+            </button>
+            <button
+              onClick={() => setPeriodFilter('custom')}
+              className={`px-3 py-1.5 font-black text-[9px] uppercase tracking-widest rounded-md transition-all ${periodFilter === 'custom' ? 'bg-white text-neutral-900 shadow-xs' : 'text-neutral-500'}`}
+            >
+              Período
+            </button>
+          </div>
+        </div>
+
+        {periodFilter === 'month' ? (
+          <div className="flex items-center gap-3">
+            <span className="text-[9px] font-black text-neutral-400 uppercase tracking-widest">Mês de Referência:</span>
+            <input
+              type="month"
+              value={selectedMonth}
+              onChange={(e) => setSelectedMonth(e.target.value)}
+              className="h-10 px-4 bg-neutral-50 border-2 border-neutral-100 rounded-xl text-xs font-bold focus:border-primary outline-none"
+            />
+          </div>
+        ) : (
+          <div className="flex items-center gap-3">
+            <span className="text-[9px] font-black text-neutral-400 uppercase tracking-widest">De:</span>
+            <input type="date" value={customStartDate} onChange={(e) => setCustomStartDate(e.target.value)} className="h-10 px-3 bg-neutral-50 border-2 border-neutral-100 rounded-xl text-[10px] font-bold outline-none" />
+            <span className="text-[9px] font-black text-neutral-400 uppercase tracking-widest">Até:</span>
+            <input type="date" value={customEndDate} onChange={(e) => setCustomEndDate(e.target.value)} className="h-10 px-3 bg-neutral-50 border-2 border-neutral-100 rounded-xl text-[10px] font-bold outline-none" />
+          </div>
+        )}
+
+        <div className="flex-1"></div>
+
+        <div className="relative w-64">
+          <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-neutral-300" />
+          <input
+            type="text"
+            placeholder="Pesquisar previsões..."
+            value={erpSearch}
+            onChange={(e) => setErpSearch(e.target.value)}
+            className="w-full h-10 pl-9 pr-4 bg-neutral-50 border-2 border-neutral-100 rounded-xl text-[10px] font-bold focus:border-primary outline-none transition-all"
+          />
         </div>
       </div>
 
@@ -489,11 +529,20 @@ export default function Conciliacao() {
 
           <div className="p-5 space-y-3 max-h-[600px] overflow-y-auto bg-neutral-50/20">
             {bankStatements.length === 0 ? (
-              <div className="py-20 text-center opacity-40 space-y-3">
-                <Upload className="w-10 h-10 mx-auto" />
-                <p className="text-[10px] font-black uppercase tracking-widest">Nenhuma transação</p>
+              <div className="py-20 text-center opacity-60 space-y-3">
+                <div className="w-16 h-16 bg-neutral-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                  <Upload className="w-8 h-8 text-neutral-400" />
+                </div>
+                <p className="text-[10px] font-black uppercase tracking-widest text-neutral-800">Nenhuma transação encontrada</p>
+                <p className="text-[9px] text-neutral-500 font-medium px-10">
+                  {periodFilter === 'month'
+                    ? `Não há registros importados para ${selectedMonth.split('-').reverse().join('/')}.`
+                    : 'Não há registros para o período selecionado.'}
+                  <br />Tente alterar o filtro acima ou importar um novo arquivo CSV.
+                </p>
               </div>
             ) : (
+
               bankStatements.map(tx => {
                 const isReconciled = tx.status_conciliacao;
                 const isSelected = selectedTransacaoForConciliationId === tx.id;
@@ -660,88 +709,134 @@ export default function Conciliacao() {
         {isImportarCSVOpen && (
           <div className="fixed inset-0 z-50 flex items-center justify-center p-4 overflow-hidden">
             <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setModalOpen('isImportarCSVOpen', false)} className="absolute inset-0 bg-black/40 backdrop-blur-xs" />
-            <motion.form initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.9, opacity: 0 }} onSubmit={handleImportCSVSubmit} className="bg-white w-full max-w-[480px] rounded-3xl shadow-2xl border border-neutral-100 flex flex-col relative z-20 overflow-hidden">
-              <header className="px-6 py-5 border-b border-neutral-100 flex justify-between items-center bg-neutral-50"><h2 className="text-sm font-black uppercase tracking-widest text-neutral-900">Importar Extrato CSV</h2><button type="button" onClick={() => setModalOpen('isImportarCSVOpen', false)} className="p-2 hover:bg-neutral-200 rounded-xl transition-colors"><X className="w-5 h-5" /></button></header>
-              <div className="p-8 space-y-6 max-h-[70vh] overflow-y-auto">
-                <div className="space-y-2">
-                  <label className="text-[10px] font-black text-neutral-400 uppercase tracking-widest">Conta Bancária de Destino</label>
-                  <select value={selectedImportContaId} onChange={(e) => setSelectedImportContaId(e.target.value)} className="w-full h-12 bg-white border-2 border-neutral-200 rounded-2xl px-4 text-xs font-black uppercase tracking-widest focus:border-primary focus:outline-none cursor-pointer">
-                    {contas.map(cnt => <option key={cnt.id} value={cnt.id}>{cnt.nome_banco}</option>)}
-                  </select>
+            <motion.form initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.9, opacity: 0 }} onSubmit={handleImportCSVSubmit} className="bg-white w-full max-w-[520px] rounded-3xl shadow-2xl border-2 border-neutral-100 flex flex-col relative z-20 overflow-hidden">
+              <header className="px-8 py-6 border-b border-neutral-100 flex justify-between items-center bg-neutral-50/50">
+                <div>
+                  <h2 className="text-sm font-black uppercase tracking-widest text-neutral-900">Importar Extrato Bancário</h2>
+                  <p className="text-[9px] font-black text-primary uppercase tracking-widest mt-1">Siga as etapas para uma conciliação segura</p>
                 </div>
+                <button type="button" onClick={() => setModalOpen('isImportarCSVOpen', false)} className="p-2 hover:bg-neutral-200 rounded-xl transition-colors">
+                  <X className="w-5 h-5" />
+                </button>
+              </header>
 
-                {!csvContentText ? (
-                  <div onDragOver={handleDragOver} onDragLeave={handleDragLeave} onDrop={handleDrop} onClick={triggerFileSelect} className={`border-4 border-dashed rounded-3xl p-10 text-center cursor-pointer transition-all flex flex-col items-center gap-4 ${isDragging ? 'border-primary bg-primary/5' : 'border-neutral-100 bg-neutral-50 hover:border-neutral-300'}`}>
-                    <input type="file" ref={fileInputRef} onChange={handleFileChange} accept=".csv" className="hidden" />
-                    <div className="w-16 h-16 rounded-2xl bg-white border-2 border-neutral-100 shadow-sm flex items-center justify-center text-primary"><Upload className="w-8 h-8" /></div>
-                    <p className="text-[10px] font-black uppercase tracking-widest text-neutral-800">Arraste ou Selecione o CSV do Banco</p>
-                    <span className="text-[9px] text-neutral-400 font-medium">O sistema detectará as colunas automaticamente</span>
+              <div className="p-8 space-y-6 max-h-[75vh] overflow-y-auto">
+                {/* ETAPA 1: CONFIGURAÇÃO */}
+                <div className="space-y-4">
+                  <div className="flex items-center gap-3">
+                    <div className="w-6 h-6 rounded-full bg-neutral-900 text-white flex items-center justify-center text-[10px] font-black">1</div>
+                    <h3 className="text-[10px] font-black uppercase text-neutral-900 tracking-widest">Configuração do Lançamento</h3>
                   </div>
-                ) : (
-                  <div className="space-y-6 animate-fade-in">
-                    <div className="p-4 bg-emerald-50 border-2 border-emerald-100 rounded-2xl flex items-center justify-between">
-                      <div className="flex items-center gap-3">
-                        <FileSpreadsheet className="w-6 h-6 text-bank-truth-green" />
-                        <div>
-                          <p className="text-[10px] font-black text-bank-truth-green uppercase">Arquivo Carregado</p>
-                          <p className="text-[9px] text-emerald-700 font-bold">{csvHeaders.length} colunas detectadas</p>
-                        </div>
-                      </div>
-                      <button type="button" onClick={() => { setCsvContentText(''); setCsvPreviewRows([]); }} className="text-xs font-black text-emerald-700 hover:underline uppercase tracking-widest">Trocar Arquivo</button>
-                    </div>
 
-                    <div className="space-y-4">
-                      <h3 className="text-[10px] font-black text-neutral-400 uppercase tracking-widest">Mapeamento de Colunas</h3>
-                      <div className="grid grid-cols-1 gap-3">
-                        {['data', 'valor', 'descricao'].map((field) => (
-                          <div key={field} className="flex items-center gap-3">
-                            <div className="w-24 shrink-0 text-[10px] font-black text-neutral-600 uppercase">{field === 'data' ? 'Data' : field === 'valor' ? 'Valor' : 'Descrição'}</div>
-                            <select
-                              value={columnMapping[field as keyof typeof columnMapping]}
-                              onChange={(e) => setColumnMapping(prev => ({ ...prev, [field]: e.target.value }))}
-                              className="flex-1 h-10 bg-neutral-50 border-2 border-neutral-200 rounded-xl px-3 text-[10px] font-bold focus:border-primary outline-none"
-                            >
-                              <option value="">Selecionar Coluna...</option>
-                              {csvHeaders.map(h => <option key={h} value={h}>{h}</option>)}
-                            </select>
-                          </div>
-                        ))}
-                      </div>
+                  <div className="grid grid-cols-2 gap-4 bg-neutral-50 p-5 rounded-2xl border border-neutral-100">
+                    <div className="space-y-2">
+                      <label className="text-[9px] font-black text-neutral-400 uppercase tracking-widest">Conta de Destino</label>
+                      <select
+                        value={selectedImportContaId}
+                        onChange={(e) => setSelectedImportContaId(e.target.value)}
+                        className="w-full h-11 bg-white border-2 border-neutral-200 rounded-xl px-3 text-[10px] font-black uppercase tracking-widest focus:border-primary outline-none cursor-pointer"
+                      >
+                        {contas.map(cnt => <option key={cnt.id} value={cnt.id}>{cnt.nome_banco}</option>)}
+                      </select>
                     </div>
 
                     <div className="space-y-2">
-                      <h3 className="text-[10px] font-black text-neutral-400 uppercase tracking-widest">Preview dos Dados</h3>
-                      <div className="border-2 border-neutral-100 rounded-2xl overflow-hidden bg-white">
-                        <table className="w-full text-[9px] text-left">
-                          <thead className="bg-neutral-50 border-b border-neutral-100">
-                            <tr>
-                              {Object.values(columnMapping).filter(v => v).map(h => <th key={h} className="p-2 font-black uppercase text-neutral-500">{h}</th>)}
-                            </tr>
-                          </thead>
-                          <tbody>
-                            {csvPreviewRows.map((row, i) => (
-                              <tr key={i} className="border-b border-neutral-50 last:border-0">
-                                {Object.values(columnMapping).filter(v => v).map((h: string) => (
-                                  <td key={h} className="p-2 font-medium text-neutral-700 truncate max-w-[100px]">{row[h]}</td>
-                                ))}
-                              </tr>
-                            ))}
-                          </tbody>
-                        </table>
-                      </div>
+                      <label className="text-[9px] font-black text-neutral-400 uppercase tracking-widest">Tipo de Filtro</label>
+                      <select
+                        value={periodFilter}
+                        onChange={(e) => setPeriodFilter(e.target.value as any)}
+                        className="w-full h-11 bg-white border-2 border-neutral-200 rounded-xl px-3 text-[10px] font-black uppercase tracking-widest focus:border-primary outline-none cursor-pointer"
+                      >
+                        <option value="month">Por Mês</option>
+                        <option value="custom">Período Customizado</option>
+                      </select>
                     </div>
                   </div>
-                )}
+                </div>
+
+                {/* ETAPA 2: ARQUIVO */}
+                <div className="space-y-4">
+                  <div className="flex items-center gap-3">
+                    <div className="w-6 h-6 rounded-full bg-neutral-900 text-white flex items-center justify-center text-[10px] font-black">2</div>
+                    <h3 className="text-[10px] font-black uppercase text-neutral-900 tracking-widest">Anexar Planilha (.CSV)</h3>
+                  </div>
+
+                  {!csvContentText ? (
+                    <div onDragOver={handleDragOver} onDragLeave={handleDragLeave} onDrop={handleDrop} onClick={triggerFileSelect} className={`border-4 border-dashed rounded-3xl p-10 text-center cursor-pointer transition-all flex flex-col items-center gap-4 ${isDragging ? 'border-primary bg-primary/5' : 'border-neutral-100 bg-neutral-50 hover:border-neutral-300'}`}>
+                      <input type="file" ref={fileInputRef} onChange={handleFileChange} accept=".csv" className="hidden" />
+                      <div className="w-14 h-14 rounded-2xl bg-white border-2 border-neutral-100 shadow-sm flex items-center justify-center text-primary">
+                        <Upload className="w-7 h-7" />
+                      </div>
+                      <p className="text-[9px] font-black uppercase tracking-widest text-neutral-800">Clique para selecionar ou arraste o arquivo do banco</p>
+                    </div>
+                  ) : (
+                    <div className="space-y-6 animate-fade-in bg-white border-2 border-neutral-100 rounded-3xl p-6 shadow-sm">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-3">
+                          <div className="w-10 h-10 rounded-xl bg-emerald-50 text-bank-truth-green flex items-center justify-center">
+                            <FileSpreadsheet className="w-5 h-5" />
+                          </div>
+                          <div>
+                            <p className="text-[10px] font-black text-bank-truth-green uppercase">Planilha Carregada</p>
+                            <p className="text-[9px] text-emerald-700 font-bold uppercase">{csvHeaders.length} colunas detectadas</p>
+                          </div>
+                        </div>
+                        <button type="button" onClick={() => { setCsvContentText(''); setCsvPreviewRows([]); }} className="text-[9px] font-black text-alert-red hover:underline uppercase tracking-widest px-3 py-1.5 bg-red-50 rounded-lg">Trocar</button>
+                      </div>
+
+                      <div className="space-y-4">
+                        <h3 className="text-[9px] font-black text-neutral-400 uppercase tracking-[0.2em]">Mapeamento de Dados</h3>
+                        <div className="grid grid-cols-1 gap-3">
+                          {['data', 'valor', 'descricao'].map((field) => (
+                            <div key={field} className="flex items-center gap-4">
+                              <div className="w-20 shrink-0 text-[9px] font-black text-neutral-600 uppercase">{field === 'data' ? 'Data' : field === 'valor' ? 'Valor' : 'Descrição'}</div>
+                              <select
+                                value={columnMapping[field as keyof typeof columnMapping]}
+                                onChange={(e) => setColumnMapping(prev => ({ ...prev, [field]: e.target.value }))}
+                                className="flex-1 h-10 bg-neutral-50 border-2 border-neutral-200 rounded-xl px-3 text-[9px] font-black uppercase tracking-widest focus:border-primary outline-none appearance-none cursor-pointer"
+                              >
+                                <option value="">Selecionar...</option>
+                                {csvHeaders.map(h => <option key={h} value={h}>{h}</option>)}
+                              </select>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+
+                      <div className="space-y-2 pt-2 border-t border-neutral-50">
+                        <h3 className="text-[9px] font-black text-neutral-400 uppercase tracking-[0.2em]">Preview dos Lançamentos</h3>
+                        <div className="border border-neutral-100 rounded-xl overflow-hidden bg-neutral-50/50">
+                          <table className="w-full text-[8px] text-left">
+                            <thead className="bg-neutral-100 border-b border-neutral-100">
+                              <tr>
+                                {Object.values(columnMapping).filter(v => v).map(h => <th key={h} className="p-2 font-black uppercase text-neutral-500">{h}</th>)}
+                              </tr>
+                            </thead>
+                            <tbody>
+                              {csvPreviewRows.map((row, i) => (
+                                <tr key={i} className="border-b border-neutral-100/50 last:border-0">
+                                  {Object.values(columnMapping).filter(v => v).map((h: string) => (
+                                    <td key={h} className="p-2 font-bold text-neutral-600 truncate max-w-[120px] uppercase">{row[h]}</td>
+                                  ))}
+                                </tr>
+                              ))}
+                            </tbody>
+                          </table>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </div>
               </div>
-              <footer className="px-8 py-6 border-t border-neutral-100 bg-neutral-50 flex justify-end gap-3">
-                <button type="button" onClick={() => setModalOpen('isImportarCSVOpen', false)} className="px-6 py-2 font-black text-[10px] uppercase tracking-widest text-neutral-500">Cancelar</button>
-                <button
+              <footer className="px-8 py-6 border-t border-neutral-100 bg-neutral-50/50 flex justify-end gap-3">
+                <button type="button" onClick={() => setModalOpen('isImportarCSVOpen', false)} className="px-6 py-2 font-black text-[10px] uppercase tracking-widest text-neutral-400 hover:text-neutral-900 transition-colors">Cancelar</button>
+                <Button
                   type="submit"
                   disabled={!csvContentText.trim() || !columnMapping.data || !columnMapping.valor || !columnMapping.descricao}
-                  className="px-8 py-3 font-black text-[10px] uppercase tracking-widest bg-neutral-900 text-white rounded-xl shadow-md hover:brightness-95 disabled:opacity-50 transition-all"
+                  className="!bg-neutral-900 shadow-xl"
                 >
-                  Confirmar Importação
-                </button>
+                  Finalizar e Importar
+                </Button>
               </footer>
             </motion.form>
           </div>
