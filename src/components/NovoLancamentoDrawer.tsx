@@ -12,8 +12,10 @@ import {
 } from 'lucide-react';
 import { useUIStore } from '../store/uiStore';
 import { useLancamentos, useEntidades, useCentrosCusto, useCategorias, useContas } from '../hooks/useData';
+import MoneyInput from './MoneyInput';
 
 function formatBRL(value: string): string {
+
   if (!value) return '';
 
   if (/^\d+(\.\d+)?$/.test(value)) {
@@ -245,13 +247,12 @@ export default function NovoLancamentoDrawer() {
                     <label className="text-xs font-black text-secondary uppercase tracking-widest">Valor Estimado <span className="text-alert-red">*</span></label>
                     <div className="relative group">
                       <span className="absolute left-4 top-1/2 -translate-y-1/2 text-xs text-secondary font-black">R$</span>
-                      <input 
-                        type="text"
-                        required
-                        placeholder="0,00"
-                        value={formatBRL(lancamentoFormDraft.valor_previsto)}
-                        onChange={(e) => setLancamentoFormDraft({ valor_previsto: formatBRL(e.target.value) })}
+                      <MoneyInput
+                        value={lancamentoFormDraft.valor_previsto}
+                        onChange={(val) => setLancamentoFormDraft({ valor_previsto: val })}
                         className="w-full h-12 pl-10 pr-4 bg-white border-2 border-neutral-200 rounded-xl font-mono text-sm font-black text-on-surface focus:outline-none focus:border-primary transition-all shadow-xs"
+                        placeholder="0,00"
+                        required
                       />
                     </div>
                   </div>

@@ -78,16 +78,18 @@ export default function CRM() {
     e.preventDefault();
     try {
       await createEntity({
-        ...entidadeFormDraft,
+        tipo: entidadeFormDraft.tipo as any,
+        nome_razao_social: entidadeFormDraft.nome_razao_social,
+        documento: entidadeFormDraft.documento,
         status_base: 'ativo',
-        status_sincronizacao: true,
-        created_at: new Date().toISOString()
+        status_sincronizacao: true
       } as any);
 
       resetAllDrafts();
       setModalOpen('isCadastroRapidoOpen', false);
     } catch (err) {
-      alert('Erro ao criar');
+      console.error(err);
+      alert('Erro ao criar entidade. Verifique se os campos estão corretos.');
     }
   };
 

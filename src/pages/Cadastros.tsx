@@ -28,6 +28,7 @@ import {
 import { useContas, useCentrosCusto, useCategorias } from '../hooks/useData';
 import { useUIStore } from '../store/uiStore';
 import { useDragScroll } from '../hooks/useDragScroll';
+import MoneyInput from '../components/MoneyInput';
 
 type SubTabType = 'contas' | 'centros' | 'categorias';
 
@@ -178,8 +179,9 @@ export default function Cadastros() {
               <header className="px-8 py-6 border-b border-neutral-50 flex justify-between items-center bg-neutral-50/50"><h2 className="text-sm font-black uppercase tracking-widest text-neutral-900">Nova Conta Bancária</h2><button type="button" onClick={() => setIsNewAccountOpen(false)} className="p-2 hover:bg-neutral-200 rounded-xl transition-colors"><X className="w-6 h-6" /></button></header>
               <div className="p-10 space-y-6">
                 <div className="space-y-2"><label className="text-[10px] font-black uppercase text-neutral-400 tracking-widest">Nome do Banco</label><input type="text" required value={bankName} onChange={(e) => setBankName(e.target.value)} className="w-full h-12 bg-neutral-50 border-2 border-neutral-100 rounded-2xl px-5 text-xs font-black focus:border-primary outline-none" /></div>
-                <div className="space-y-2"><label className="text-[10px] font-black uppercase text-neutral-400 tracking-widest">Saldo Inicial (R$)</label><input type="text" required value={bankInitial} onChange={(e) => setBankInitial(e.target.value)} className="w-full h-12 bg-neutral-50 border-2 border-neutral-100 rounded-2xl px-5 text-xs font-black focus:border-primary outline-none" placeholder="0,00" /></div>
+                <div className="space-y-2"><label className="text-[10px] font-black uppercase text-neutral-400 tracking-widest">Saldo Inicial (R$)</label><MoneyInput value={bankInitial} onChange={setBankInitial} className="w-full h-12 bg-neutral-50 border-2 border-neutral-100 rounded-2xl px-5 text-xs font-black focus:border-primary outline-none" placeholder="0,00" required /></div>
               </div>
+
               <footer className="px-10 py-8 border-t border-neutral-50 bg-neutral-50/50 flex justify-end gap-3"><button type="button" onClick={() => setIsNewAccountOpen(false)} className="px-6 py-2 font-black text-[10px] uppercase tracking-widest text-neutral-500">Cancelar</button><button type="submit" className="px-10 py-3 bg-neutral-900 text-white font-black text-[10px] uppercase tracking-widest rounded-2xl shadow-xl">Salvar Conta</button></footer>
             </motion.form>
           </div>
