@@ -27,6 +27,7 @@ import {
   ArrowRight
 } from 'lucide-react';
 import { useEntidades } from '../hooks/useData';
+import { useAuth } from '../hooks/useAuth';
 import { useUIStore } from '../store/uiStore';
 import { EntidadeNegocio } from '../types';
 import { supabase } from '@/integrations/supabase/client';

@@ -21,6 +21,7 @@ import {
 } from 'lucide-react';
 
 import { useLancamentos, useContas, useEntidades, useCategorias } from '../hooks/useData';
+import { useAuth } from '../hooks/useAuth';
 import { useUIStore } from '../store/uiStore';
 import { LancamentoFinanceiro } from '../types';
 import { motion, AnimatePresence } from 'motion/react';
