@@ -169,9 +169,9 @@ export default function NovoLancamentoDrawer() {
   const { data: rawContas = [] } = useContas();
 
   // Filter out soft-deleted items for new selection
-  const centros = rawCentros.filter((c: any) => c.status !== 'excluido');
-  const categorias = rawCategorias.filter((c: any) => c.status !== 'excluido');
-  const contas = rawContas.filter((c: any) => c.status !== 'excluido');
+  const centros = useMemo(() => rawCentros.filter((c: any) => c.status !== 'excluido'), [rawCentros]);
+  const categorias = useMemo(() => rawCategorias.filter((c: any) => c.status !== 'excluido'), [rawCategorias]);
+  const contas = useMemo(() => rawContas.filter((c: any) => c.status !== 'excluido'), [rawContas]);
 
   // Toasts state
   const [isSubmitting, setIsSubmitting] = useState(false);

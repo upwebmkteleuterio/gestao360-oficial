@@ -12,6 +12,7 @@ interface AuthContextType {
   role: Role;
   isLoading: boolean;
   signOut: () => Promise<void>;
+  hasRole: (allowedRoles: Role[]) => boolean;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -95,8 +96,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
+  const hasRole = (allowedRoles: Role[]) => allowedRoles.includes(role);
+
   return (
-    <AuthContext.Provider value={{ session, user, role, isLoading, signOut }}>
+    <AuthContext.Provider value={{ session, user, role, isLoading, signOut, hasRole }}>
       {children}
     </AuthContext.Provider>
   );

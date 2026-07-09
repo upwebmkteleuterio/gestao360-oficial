@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import {
   Search,
   ArrowUpRight,
@@ -99,7 +99,7 @@ export default function Lancamentos() {
   const { data: categorias = [] } = useCategorias();
 
   // For dropdowns, use active only
-  const activeContas = contas.filter((c: any) => c.status !== 'excluido');
+  const activeContas = useMemo(() => contas.filter((c: any) => c.status !== 'excluido'), [contas]);
 
   // Zustand Store
   const { 

@@ -38,8 +38,8 @@ export default function Dashboard() {
   const { data: auditoriaLogs = [], refetch: refetchAudit, isFetching: fetchingAudit } = useAuditoriaLogs();
   const { data: entidades = [] } = useEntidades();
 
-  const contas = rawContas.filter((c: any) => c.status !== 'excluido');
-  const centrosCusto = rawCentrosCusto.filter((c: any) => c.status !== 'excluido');
+  const contas = useMemo(() => rawContas.filter((c: any) => c.status !== 'excluido'), [rawContas]);
+  const centrosCusto = useMemo(() => rawCentrosCusto.filter((c: any) => c.status !== 'excluido'), [rawCentrosCusto]);
 
   // Detail modal state for audit
   const [selectedAuditLog, setSelectedAuditLog] = useState<any | null>(null);
