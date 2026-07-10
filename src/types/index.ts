@@ -44,6 +44,7 @@ export interface ContaBancaria {
   conta: string;
   saldo_inicial: number;
   data_abertura: string;
+  logo_url?: string;
 }
 
 export type StatusAprovacao = 'pendente_digital' | 'digital' | 'confirmado_master';

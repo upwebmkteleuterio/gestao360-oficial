@@ -90,7 +90,8 @@ export default function CadastroRapidoModal() {
 
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files) {
-      const newFiles = Array.from(e.target.files).map(f => ({
+      const fileList = Array.from(e.target.files) as File[];
+      const newFiles: LocalFile[] = fileList.map(f => ({
         name: f.name,
         size: f.size,
         type: f.type,

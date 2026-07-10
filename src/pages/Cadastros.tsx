@@ -1,15 +1,15 @@
 import React, { useState, useMemo } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { 
-  Building2, 
-  Coins, 
-  Tag, 
-  Briefcase, 
-  Plus, 
-  Trash2, 
-  X, 
-  Building, 
-  History, 
+import {
+  Building2,
+  Coins,
+  Tag,
+  Briefcase,
+  Plus,
+  Trash2,
+  X,
+  Building,
+  History,
   AlertTriangle,
   CheckCircle2,
   XCircle,
@@ -24,13 +24,17 @@ import {
   Receipt,
   ArrowRight,
   Loader2,
-  Edit2
+  Edit2,
+  Upload,
+  Camera,
+  Image as ImageIcon
 } from 'lucide-react';
 import { useContas, useCentrosCusto, useCategorias } from '../hooks/useData';
 import { useAuth } from '../hooks/useAuth';
 import { useDragScroll } from '../hooks/useDragScroll';
 import MoneyInput from '../components/MoneyInput';
 import Button from '../components/Button';
+import { supabase } from '@/integrations/supabase/client';
 
 type SubTabType = 'contas' | 'centros' | 'categorias';
 
@@ -63,6 +67,8 @@ export default function Cadastros() {
   // Form states
   const [bankName, setBankName] = useState('');
   const [bankInitial, setBankInitial] = useState('');
+  const [bankLogoUrl, setBankLogoUrl] = useState('');
+  const [isUploadingLogo, setIsUploadingLogo] = useState(false);
   const [ccName, setCCName] = useState('');
   const [ccDesc, setCCDesc] = useState('');
   const [catName, setCatName] = useState('');
@@ -74,6 +80,7 @@ export default function Cadastros() {
     setEditingAccount(c);
     setBankName(c.nome_banco || c.nome);
     setBankInitial(c.saldo_inicial.toFixed(2).replace('.', ','));
+    setBankLogoUrl(c.logo_url || '');
     setIsNewAccountOpen(true);
   };
 
@@ -101,7 +108,8 @@ export default function Cadastros() {
           data: {
             nome_banco: bankName,
             nome: bankName,
-            saldo_inicial: saldo
+            saldo_inicial: saldo,
+            logo_url: bankLogoUrl
           }
         });
       } else {
@@ -111,13 +119,15 @@ export default function Cadastros() {
           agencia: '0001',
           conta: '00000-0',
           saldo_inicial: saldo,
-          data_abertura: new Date().toISOString()
+          data_abertura: new Date().toISOString(),
+          logo_url: bankLogoUrl
         });
       }
       setIsNewAccountOpen(false);
       setEditingAccount(null);
       setBankName('');
       setBankInitial('');
+      setBankLogoUrl('');
     } catch (err) { alert('Erro ao salvar conta'); }
   };
 

@@ -217,8 +217,8 @@ export const useUIStore = create<UIState>()(
       setSidebarCollapsed: (isSidebarCollapsed) => set({ isSidebarCollapsed }),
 
       resetAllDrafts: () => set({
-        lancamentoFormDraft: initialDrafts.lancamentoFormDraft,
-        entidadeFormDraft: initialDrafts.entidadeFormDraft
+        lancamentoFormDraft: { ...initialDrafts.lancamentoFormDraft },
+        entidadeFormDraft: { ...initialDrafts.entidadeFormDraft }
       })
     }),
     {

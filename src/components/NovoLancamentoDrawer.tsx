@@ -216,6 +216,7 @@ export default function NovoLancamentoDrawer() {
   const { anexos: existingAnexos, deleteAnexo } = useLancamentoAnexos(selectedLancamentoIdForModal);
 
   const [attachments, setAttachments] = useState<LocalFile[]>([]);
+
   const [parcelasManuais, setParcelasManuais] = useState<Array<{ numero: number; data: string; valor: string }>>([]);
 
   // Filter out soft-deleted items for new selection
