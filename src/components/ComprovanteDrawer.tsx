@@ -187,6 +187,7 @@ export default function ComprovanteDrawer() {
             <div className="p-6 bg-white border-t border-surface-border grid grid-cols-2 gap-3 shrink-0">
               <button
                 type="button"
+                onClick={() => window.print()}
                 className="h-12 bg-neutral-900 text-white font-black text-xs uppercase tracking-[0.2em] rounded-xl flex items-center justify-center gap-2 hover:bg-black transition-all"
               >
                 <Printer className="w-4 h-4" />
@@ -194,6 +195,7 @@ export default function ComprovanteDrawer() {
               </button>
               <button
                 type="button"
+                onClick={() => window.print()}
                 className="h-12 bg-primary text-white font-black text-xs uppercase tracking-[0.2em] rounded-xl flex items-center justify-center gap-2 hover:brightness-110 transition-all shadow-md"
               >
                 <Download className="w-4 h-4" />

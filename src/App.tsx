@@ -31,6 +31,7 @@ import CRM from './pages/CRM';
 import Cadastros from './pages/Cadastros';
 import Relatorios from './pages/Relatorios';
 import Configuracoes from './pages/Configuracoes';
+import Notificacoes from './pages/Notificacoes';
 
 // Create a client for React Query caching
 const queryClient = new QueryClient({
@@ -119,7 +120,10 @@ function NotificationDropdown() {
               )}
             </div>
             <div className="p-3 bg-surface-low-low border-t border-surface-border text-center">
-              <button className="text-[10px] font-bold text-secondary hover:text-primary transition-colors">
+              <button
+                onClick={() => { navigate('/notificacoes'); setIsOpen(false); }}
+                className="text-[10px] font-bold text-secondary hover:text-primary transition-colors"
+              >
                 Ver todas as notificações
               </button>
             </div>
@@ -225,6 +229,7 @@ function AppContent() {
 
                       {/* Rotas exclusivas do Master */}
                       <Route path="/configuracoes" element={<Configuracoes />} />
+                      <Route path="/notificacoes" element={<Notificacoes />} />
                     </Routes>
                   </div>
                 </main>

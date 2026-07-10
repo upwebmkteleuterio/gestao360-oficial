@@ -146,15 +146,15 @@ export default function Recorrencias() {
                   <p className="text-sm font-black text-on-surface opacity-60">{valueFormatter(rec.total_valor)}</p>
                 </div>
                 <div className="flex gap-2">
-                  <Button
+                  <button
                     onClick={() => handleStop(rec.id)}
                     disabled={rec.proxima_data === 'Finalizada'}
-                    className="!bg-alert-red hover:!bg-red-700 !min-w-[40px] !h-10 !px-4"
+                    className="flex items-center gap-2 px-6 h-11 bg-white border-2 border-alert-red text-alert-red font-black text-[10px] uppercase tracking-widest rounded-xl hover:bg-alert-red hover:text-white transition-all shadow-sm active:scale-[0.98] disabled:opacity-30 disabled:pointer-events-none"
                     title="Interromper Recorrência"
                   >
-                    <span className="text-[9px] font-black uppercase tracking-widest mr-2">Encerrar</span>
+                    Encerrar Série
                     <PauseCircle className="w-4 h-4" />
-                  </Button>
+                  </button>
                 </div>
               </div>
             </div>
