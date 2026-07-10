@@ -14,6 +14,9 @@ interface UIState {
   // Modals / Panels toggles
   isNovoLancamentoOpen: boolean;
   isCadastroRapidoOpen: boolean;
+  isNovaCategoriaOpen: boolean;
+  isNovoCentroCustoOpen: boolean;
+  isNovaContaOpen: boolean;
   isInterceptorRecorrenciaOpen: boolean;
   isImportarCSVOpen: boolean;
   isClassificarDiferencaOpen: boolean;
@@ -38,6 +41,8 @@ interface UIState {
     valor_previsto: string;
     data_emissao: string;
     data_vencimento: string;
+    data_competencia: string;
+    data_pagamento: string;
     entidade_id: string;
     centro_custo_id: string;
     categoria_id: string;
@@ -46,12 +51,29 @@ interface UIState {
     periodicidade: 'diario' | 'semanal' | 'mensal' | 'anual';
     quantidade_total_parcelas: string;
     observacoes: string;
+    condicao: 'a_vista' | 'a_prazo';
+    ja_recebido: boolean;
+    desconto_valor: string;
+    desconto_tipo: 'valor' | 'porcentagem';
+    acrescimo_valor: string;
+    acrescimo_tipo: 'valor' | 'porcentagem';
+    valor_recebido: string;
   };
   
   entidadeFormDraft: {
     tipo: 'cliente' | 'fornecedor' | 'ambos' | '';
+    tipo_pessoa: 'PF' | 'PJ';
     nome_razao_social: string;
     documento: string;
+    email: string;
+    telefone: string;
+    cep: string;
+    endereco: string;
+    numero: string;
+    complemento: string;
+    bairro: string;
+    cidade: string;
+    uf: string;
   };
 
   // Scroll locations to preserve context
@@ -86,6 +108,8 @@ const initialDrafts = {
     valor_previsto: '',
     data_emissao: new Date().toISOString().split('T')[0],
     data_vencimento: new Date().toISOString().split('T')[0],
+    data_competencia: new Date().toISOString().split('T')[0],
+    data_pagamento: new Date().toISOString().split('T')[0],
     entidade_id: '',
     centro_custo_id: '',
     categoria_id: '',
@@ -94,11 +118,28 @@ const initialDrafts = {
     periodicidade: 'mensal' as const,
     quantidade_total_parcelas: '12',
     observacoes: '',
+    condicao: 'a_prazo' as const,
+    ja_recebido: false,
+    desconto_valor: '0,00',
+    desconto_tipo: 'valor' as const,
+    acrescimo_valor: '0,00',
+    acrescimo_tipo: 'valor' as const,
+    valor_recebido: '0,00',
   },
   entidadeFormDraft: {
     tipo: '' as const,
+    tipo_pessoa: 'PF' as const,
     nome_razao_social: '',
     documento: '',
+    email: '',
+    telefone: '',
+    cep: '',
+    endereco: '',
+    numero: '',
+    complemento: '',
+    bairro: '',
+    cidade: '',
+    uf: '',
   }
 };
 
@@ -112,6 +153,9 @@ export const useUIStore = create<UIState>()(
 
       isNovoLancamentoOpen: false,
       isCadastroRapidoOpen: false,
+      isNovaCategoriaOpen: false,
+      isNovoCentroCustoOpen: false,
+      isNovaContaOpen: false,
       isInterceptorRecorrenciaOpen: false,
       isImportarCSVOpen: false,
       isClassificarDiferencaOpen: false,
@@ -163,26 +207,8 @@ export const useUIStore = create<UIState>()(
       setSidebarCollapsed: (isSidebarCollapsed) => set({ isSidebarCollapsed }),
 
       resetAllDrafts: () => set({
-
-        lancamentoFormDraft: {
-          tipo: 'entrada',
-          valor_previsto: '',
-          data_emissao: new Date().toISOString().split('T')[0],
-          data_vencimento: new Date().toISOString().split('T')[0],
-          entidade_id: '',
-          centro_custo_id: '',
-          categoria_id: '',
-          conta_bancaria_id: '',
-          recorrencia: false,
-          periodicidade: 'mensal',
-          quantidade_total_parcelas: '12',
-          observacoes: '',
-        },
-        entidadeFormDraft: {
-          tipo: '',
-          nome_razao_social: '',
-          documento: '',
-        }
+        lancamentoFormDraft: initialDrafts.lancamentoFormDraft,
+        entidadeFormDraft: initialDrafts.entidadeFormDraft
       })
     }),
     {

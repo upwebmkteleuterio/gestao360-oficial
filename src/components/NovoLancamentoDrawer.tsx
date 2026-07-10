@@ -10,11 +10,19 @@ import {
   Clock,
   Loader2,
   Search,
-  ChevronRight
+  ChevronRight,
+  FileText,
+  Paperclip,
+  TrendingDown,
+  TrendingUp,
+  Percent,
+  Banknote
 } from 'lucide-react';
 import { useUIStore } from '../store/uiStore';
 import { useLancamentos, useEntidades, useCentrosCusto, useCategorias, useContas } from '../hooks/useData';
 import MoneyInput from './MoneyInput';
+import { supabase } from '@/integrations/supabase/client';
+import Button from './Button';
 
 function formatBRL(value: any): string {
   if (value === null || value === undefined) return '';
@@ -36,6 +44,11 @@ function formatBRL(value: any): string {
   return formatted;
 }
 
+function parseMoney(value: string): number {
+  const cleanStr = value.replace(/\./g, '').replace(',', '.');
+  return parseFloat(cleanStr) || 0;
+}
+
 const SearchableSelect = ({ 
   label, 
   value, 
@@ -43,7 +56,9 @@ const SearchableSelect = ({
   options, 
   placeholder, 
   required,
-  onAddClick
+  onAddClick,
+  onQuickAddClick,
+  quickAddLabel
 }: { 
   label: string;
   value: string;
@@ -52,6 +67,8 @@ const SearchableSelect = ({
   placeholder: string;
   required?: boolean;
   onAddClick?: () => void;
+  onQuickAddClick?: () => void;
+  quickAddLabel?: string;
 }) => {
   const [isOpen, setIsOpen] = useState(false);
   const [search, setSearch] = useState('');
@@ -77,16 +94,27 @@ const SearchableSelect = ({
   return (
     <div className="flex flex-col gap-2 relative" ref={containerRef}>
       <div className="flex justify-between items-center">
-        <label className="text-xs font-black text-secondary uppercase tracking-widest">{label} {required && <span className="text-alert-red">*</span>}</label>
-        {onAddClick && (
-          <button
-            type="button"
-            onClick={onAddClick}
-            className="text-[10px] font-black text-primary hover:underline uppercase tracking-widest flex items-center gap-1 z-50 relative"
-          >
-            <Plus className="w-3.5 h-3.5" /> Cadastro Rápido
-          </button>
-        )}
+        <label className="text-[10px] font-black text-secondary uppercase tracking-widest">{label} {required && <span className="text-alert-red">*</span>}</label>
+        <div className="flex gap-3">
+          {onAddClick && (
+            <button
+              type="button"
+              onClick={onAddClick}
+              className="text-[10px] font-black text-primary hover:underline uppercase tracking-widest flex items-center gap-1 z-50 relative"
+            >
+              <Plus className="w-3.5 h-3.5" /> Cadastro Rápido
+            </button>
+          )}
+          {onQuickAddClick && (
+            <button
+              type="button"
+              onClick={onQuickAddClick}
+              className="text-[10px] font-black text-primary hover:underline uppercase tracking-widest flex items-center gap-1 z-50 relative"
+            >
+              <Plus className="w-3.5 h-3.5" /> {quickAddLabel || 'Novo'}
+            </button>
+          )}
+        </div>
       </div>
 
       <button
@@ -168,6 +196,12 @@ export default function NovoLancamentoDrawer() {
   const { data: rawCategorias = [] } = useCategorias();
   const { data: rawContas = [] } = useContas();
 
+  const { createCC } = useCentrosCusto();
+  const { createCategory } = useCategorias();
+  const { createAccount } = useContas();
+
+  const [attachments, setAttachments] = useState<Array<{ name: string, size: number, type: string, file: File }>>([]);
+
   // Filter out soft-deleted items for new selection
   const centros = useMemo(() => rawCentros.filter((c: any) => c.status !== 'excluido'), [rawCentros]);
   const categorias = useMemo(() => rawCategorias.filter((c: any) => c.status !== 'excluido'), [rawCategorias]);
@@ -197,11 +231,20 @@ export default function NovoLancamentoDrawer() {
         valor_previsto: formatBRL(editingItem.valor_previsto),
         data_emissao: editingItem.data_emissao,
         data_vencimento: editingItem.data_vencimento,
+        data_competencia: editingItem.data_competencia || editingItem.data_emissao,
+        data_pagamento: editingItem.data_pagamento || editingItem.data_vencimento,
         entidade_id: editingItem.entidade_id,
         centro_custo_id: editingItem.centro_custo_id,
         categoria_id: editingItem.categoria_id,
         conta_bancaria_id: editingItem.conta_bancaria_id,
-        observacoes: editingItem.observacoes
+        observacoes: editingItem.observacoes,
+        condicao: editingItem.condicao || 'a_prazo',
+        ja_recebido: editingItem.ja_recebido || false,
+        desconto_valor: formatBRL(editingItem.desconto_valor || 0),
+        desconto_tipo: editingItem.desconto_tipo || 'valor',
+        acrescimo_valor: formatBRL(editingItem.acrescimo_valor || 0),
+        acrescimo_tipo: editingItem.acrescimo_tipo || 'valor',
+        valor_recebido: formatBRL(editingItem.valor_recebido || 0),
       });
     }
   }, [editingItem]);
@@ -220,10 +263,43 @@ export default function NovoLancamentoDrawer() {
   }, [categorias, lancamentoFormDraft.tipo]);
 
   useEffect(() => {
-    if (filteredCategorias.length > 0 && !editingItem) {
+    if (filteredCategorias.length > 0 && !editingItem && !lancamentoFormDraft.categoria_id) {
       setLancamentoFormDraft({ categoria_id: filteredCategorias[0].id });
     }
   }, [filteredCategorias, editingItem]);
+
+  // Financial Calculations
+  const calculations = useMemo(() => {
+    const valorBase = parseMoney(lancamentoFormDraft.valor_previsto);
+    
+    let desconto = parseMoney(lancamentoFormDraft.desconto_valor);
+    if (lancamentoFormDraft.desconto_tipo === 'porcentagem') {
+      desconto = (valorBase * desconto) / 100;
+    }
+
+    let acrescimo = parseMoney(lancamentoFormDraft.acrescimo_valor);
+    if (lancamentoFormDraft.acrescimo_tipo === 'porcentagem') {
+      acrescimo = (valorBase * acrescimo) / 100;
+    }
+
+    const subtotal = valorBase - desconto + acrescimo;
+    const recebido = parseMoney(lancamentoFormDraft.valor_recebido);
+    const diferenca = recebido - subtotal;
+    
+    return {
+      subtotal,
+      diferenca,
+      isTroco: diferenca > 0,
+      isDevedor: diferenca < 0
+    };
+  }, [
+    lancamentoFormDraft.valor_previsto,
+    lancamentoFormDraft.desconto_valor,
+    lancamentoFormDraft.desconto_tipo,
+    lancamentoFormDraft.acrescimo_valor,
+    lancamentoFormDraft.acrescimo_tipo,
+    lancamentoFormDraft.valor_recebido
+  ]);
 
   const handleClose = () => {
     setModalOpen('isNovoLancamentoOpen', false);
@@ -235,8 +311,7 @@ export default function NovoLancamentoDrawer() {
     e.preventDefault();
     setIsSubmitting(true);
     
-    const cleanStr = lancamentoFormDraft.valor_previsto.replace(/\./g, '').replace(',', '.');
-    const val = parseFloat(cleanStr);
+    const val = parseMoney(lancamentoFormDraft.valor_previsto);
     if (isNaN(val) || val <= 0) {
       showToast('Por favor, informe um valor monetário válido.', 'warning');
       setIsSubmitting(false);
@@ -254,18 +329,30 @@ export default function NovoLancamentoDrawer() {
       valor_previsto: val,
       data_emissao: lancamentoFormDraft.data_emissao,
       data_vencimento: lancamentoFormDraft.data_vencimento,
+      data_competencia: lancamentoFormDraft.data_competencia,
+      data_pagamento: lancamentoFormDraft.ja_recebido ? lancamentoFormDraft.data_pagamento : null,
       entidade_id: lancamentoFormDraft.entidade_id || null,
       centro_custo_id: lancamentoFormDraft.centro_custo_id || null,
       categoria_id: lancamentoFormDraft.categoria_id || null,
       conta_bancaria_id: lancamentoFormDraft.conta_bancaria_id || null,
-      status_pagamento: editingItem?.status_pagamento || 'aberto',
+      status_pagamento: lancamentoFormDraft.ja_recebido ? 'pago' : 'aberto',
       status_aprovacao: editingItem?.status_aprovacao || 'pendente_digital',
-      observacoes: lancamentoFormDraft.observacoes
+      observacoes: lancamentoFormDraft.observacoes,
+      condicao: lancamentoFormDraft.condicao,
+      ja_recebido: lancamentoFormDraft.ja_recebido,
+      desconto_valor: parseMoney(lancamentoFormDraft.desconto_valor),
+      desconto_tipo: lancamentoFormDraft.desconto_tipo,
+      acrescimo_valor: parseMoney(lancamentoFormDraft.acrescimo_valor),
+      acrescimo_tipo: lancamentoFormDraft.acrescimo_tipo,
+      valor_recebido: parseMoney(lancamentoFormDraft.valor_recebido)
     };
 
     try {
+      const { data: { user } } = await supabase.auth.getUser();
+      let createdItem;
+
       if (editingItem) {
-        await updateLancamento({
+        createdItem = await updateLancamento({
           id: editingItem.id,
           data: itemDetails,
           mode: selectedRecorrenciaAction || undefined
@@ -273,27 +360,110 @@ export default function NovoLancamentoDrawer() {
         showToast('Lançamento atualizado com sucesso!', 'success');
       } else {
         let recurrencePayload = undefined;
-        if (lancamentoFormDraft.recorrencia) {
+        if (lancamentoFormDraft.recorrencia && lancamentoFormDraft.condicao === 'a_prazo') {
           recurrencePayload = {
             periodicidade: lancamentoFormDraft.periodicidade,
             quantidade_total_parcelas: parseInt(lancamentoFormDraft.quantidade_total_parcelas) || 12
           };
         }
 
-        await createLancamento({
+        createdItem = await createLancamento({
           item: itemDetails,
           recorrencia: recurrencePayload
         });
         showToast(lancamentoFormDraft.recorrencia ? 'Série recorrente gerada!' : 'Lançamento cadastrado!', 'success');
       }
 
+      // Handle Attachments
+      const lancamentoId = editingItem ? editingItem.id : (createdItem as any)?.id;
+      if (lancamentoId && attachments.length > 0) {
+        for (const attachment of (attachments as any)) {
+          const typedAttachment = attachment as any;
+          const fileExt = typedAttachment.name.split('.').pop();
+          const fileName = `${Math.random()}.${fileExt}`;
+          const filePath = `lancamentos/${lancamentoId}/${fileName}`;
+
+          const { error: uploadError } = await supabase.storage
+            .from('documents')
+            .upload(filePath, typedAttachment.file);
+
+          if (!uploadError) {
+            const { data: { publicUrl } } = supabase.storage
+              .from('documents')
+              .getPublicUrl(filePath);
+
+            await supabase.from('lancamento_anexos').insert({
+              lancamento_id: lancamentoId,
+              nome: typedAttachment.name,
+              url: publicUrl,
+              tamanho: typedAttachment.size,
+              tipo_arquivo: typedAttachment.type,
+              user_id: user?.id
+            });
+          }
+        }
+      }
+
       resetAllDrafts();
+      setAttachments([]);
       handleClose();
     } catch (err: any) {
       showToast('Erro: ' + err.message, 'error');
     } finally {
       setIsSubmitting(false);
     }
+  };
+
+  // Quick Action Modal States
+  const [isQuickCatOpen, setIsQuickCatOpen] = useState(false);
+  const [isQuickCCOpen, setIsQuickCCOpen] = useState(false);
+  const [isQuickAccountOpen, setIsQuickAccountOpen] = useState(false);
+
+  // Quick Action Form States
+  const [quickCatName, setQuickCatName] = useState('');
+  const [quickCCName, setQuickCCName] = useState('');
+  const [quickAccountName, setQuickAccountName] = useState('');
+  const [quickAccountSaldo, setQuickAccountSaldo] = useState('0,00');
+
+  const handleQuickCatSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    try {
+      const newCat = await createCategory({ nome: quickCatName, tipo: lancamentoFormDraft.tipo });
+      if (newCat) setLancamentoFormDraft({ categoria_id: (newCat as any).id });
+      setIsQuickCatOpen(false);
+      setQuickCatName('');
+      showToast('Categoria criada!', 'success');
+    } catch (err) { showToast('Erro ao criar categoria', 'error'); }
+  };
+
+  const handleQuickCCSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    try {
+      const newCC = await createCC({ nome: quickCCName, descricao: '' });
+      if (newCC) setLancamentoFormDraft({ centro_custo_id: (newCC as any).id });
+      setIsQuickCCOpen(false);
+      setQuickCCName('');
+      showToast('Centro de custo criado!', 'success');
+    } catch (err) { showToast('Erro ao criar centro', 'error'); }
+  };
+
+  const handleQuickAccountSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    try {
+      const newAccount = await createAccount({
+        nome_banco: quickAccountName,
+        nome: quickAccountName,
+        saldo_inicial: parseMoney(quickAccountSaldo),
+        agencia: '0001',
+        conta: '0-0',
+        data_abertura: new Date().toISOString()
+      });
+      if (newAccount) setLancamentoFormDraft({ conta_bancaria_id: (newAccount as any).id });
+      setIsQuickAccountOpen(false);
+      setQuickAccountName('');
+      setQuickAccountSaldo('0,00');
+      showToast('Conta bancária criada!', 'success');
+    } catch (err) { showToast('Erro ao criar conta', 'error'); }
   };
 
   return (
@@ -317,7 +487,7 @@ export default function NovoLancamentoDrawer() {
               exit={{ x: '100%' }}
               transition={{ type: 'spring', damping: 25, stiffness: 200 }}
               onSubmit={handleFormSubmit}
-              className="w-full md:w-[500px] h-full bg-surface shadow-2xl flex flex-col relative z-20"
+              className="w-full md:w-[550px] h-full bg-surface shadow-2xl flex flex-col relative z-20"
             >
               <header className="flex items-center justify-between px-6 py-5 border-b border-surface-border bg-surface shrink-0">
                 <div>
@@ -349,7 +519,7 @@ export default function NovoLancamentoDrawer() {
                 )}
 
                 <div className="flex flex-col gap-2">
-                  <label className="text-xs font-black text-secondary uppercase tracking-widest">Direcionador de Fluxo Contábil</label>
+                  <label className="text-[10px] font-black text-secondary uppercase tracking-widest">Direcionador de Fluxo Contábil</label>
                   <div className="flex bg-neutral-100 dark:bg-surface-container border-2 border-neutral-100 dark:border-surface-border rounded-xl p-1 h-12 select-none">
                     <button 
                       type="button"
@@ -376,9 +546,27 @@ export default function NovoLancamentoDrawer() {
                   </div>
                 </div>
 
+                <div className="flex flex-col gap-2">
+                  <SearchableSelect
+                    label="Entidade / Destinatário"
+                    placeholder="Selecione um cliente / fornecedor"
+                    value={lancamentoFormDraft.entidade_id}
+                    onChange={(val) => setLancamentoFormDraft({ entidade_id: val })}
+                    options={entidades
+                      .filter(e => e.status_base !== 'inativo' && e.status_base !== 'bpi')
+                      .map(e => ({
+                        id: e.id,
+                        label: e.nome_razao_social,
+                        sublabel: e.tipo.toUpperCase()
+                      }))}
+                    required
+                    onAddClick={() => setModalOpen('isCadastroRapidoOpen', true)}
+                  />
+                </div>
+
                 <div className="grid grid-cols-2 gap-4">
                   <div className="flex flex-col gap-2">
-                    <label className="text-xs font-black text-secondary uppercase tracking-widest">Valor Estimado <span className="text-alert-red">*</span></label>
+                    <label className="text-[10px] font-black text-secondary uppercase tracking-widest">Valor Estimado <span className="text-alert-red">*</span></label>
                     <div className="relative group">
                       <span className="absolute left-4 top-1/2 -translate-y-1/2 text-xs text-secondary font-black">R$</span>
                       <MoneyInput
@@ -392,7 +580,84 @@ export default function NovoLancamentoDrawer() {
                   </div>
 
                   <div className="flex flex-col gap-2">
-                    <label className="text-xs font-black text-secondary uppercase tracking-widest">Data de Vencimento <span className="text-alert-red">*</span></label>
+                    <label className="text-[10px] font-black text-secondary uppercase tracking-widest">Condição</label>
+                    <div className="flex bg-neutral-100 dark:bg-surface-container border-2 border-neutral-100 dark:border-surface-border rounded-xl p-1 h-12 select-none">
+                      <button 
+                        type="button"
+                        onClick={() => setLancamentoFormDraft({ condicao: 'a_vista' })}
+                        className={`flex-1 text-[10px] font-black rounded-lg transition-all uppercase tracking-tighter ${
+                          lancamentoFormDraft.condicao === 'a_vista' 
+                            ? 'bg-white dark:bg-surface text-primary shadow-sm' 
+                            : 'text-secondary hover:text-on-surface'
+                        }`}
+                      >
+                        À Vista
+                      </button>
+                      <button 
+                        type="button"
+                        onClick={() => setLancamentoFormDraft({ condicao: 'a_prazo' })}
+                        className={`flex-1 text-[10px] font-black rounded-lg transition-all uppercase tracking-tighter ${
+                          lancamentoFormDraft.condicao === 'a_prazo' 
+                            ? 'bg-white dark:bg-surface text-primary shadow-sm' 
+                            : 'text-secondary hover:text-on-surface'
+                        }`}
+                      >
+                        A Prazo
+                      </button>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="p-4 bg-neutral-50 rounded-2xl border-2 border-neutral-100 space-y-4">
+                  <label className="flex items-center gap-3 cursor-pointer select-none">
+                    <input 
+                      type="checkbox"
+                      checked={lancamentoFormDraft.ja_recebido} 
+                      onChange={(e) => setLancamentoFormDraft({ ja_recebido: e.target.checked })}
+                      className="rounded-md border-neutral-300 text-primary focus:ring-primary w-5 h-5 transition-all"
+                    />
+                    <span className="font-black text-[10px] text-on-background uppercase tracking-wider">Já foi recebido / pago?</span>
+                  </label>
+
+                  {lancamentoFormDraft.ja_recebido && (
+                    <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} className="grid grid-cols-2 gap-4">
+                      <div className="flex flex-col gap-2">
+                        <label className="text-[10px] font-black text-secondary uppercase tracking-widest">Data do Recebimento</label>
+                        <input 
+                          type="date"
+                          value={lancamentoFormDraft.data_pagamento}
+                          onChange={(e) => setLancamentoFormDraft({ data_pagamento: e.target.value })}
+                          className="w-full h-10 bg-white border-2 border-neutral-200 text-xs font-bold rounded-lg px-3 focus:outline-none focus:border-primary shadow-xs"
+                        />
+                      </div>
+                      <div className="flex flex-col gap-2">
+                        <label className="text-[10px] font-black text-secondary uppercase tracking-widest">Valor Recebido</label>
+                        <div className="relative">
+                          <span className="absolute left-3 top-1/2 -translate-y-1/2 text-[10px] text-secondary font-black">R$</span>
+                          <MoneyInput
+                            value={lancamentoFormDraft.valor_recebido}
+                            onChange={(val) => setLancamentoFormDraft({ valor_recebido: val })}
+                            className="w-full h-10 pl-8 pr-3 bg-white border-2 border-neutral-200 rounded-lg font-mono text-xs font-black text-on-surface focus:outline-none focus:border-primary shadow-xs"
+                          />
+                        </div>
+                      </div>
+                    </motion.div>
+                  )}
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="flex flex-col gap-2">
+                    <label className="text-[10px] font-black text-secondary uppercase tracking-widest">Data de Competência</label>
+                    <input 
+                      type="date"
+                      value={lancamentoFormDraft.data_competencia}
+                      onChange={(e) => setLancamentoFormDraft({ data_competencia: e.target.value })}
+                      className="w-full h-12 bg-white border-2 border-neutral-200 text-sm font-bold rounded-xl focus:outline-none focus:border-primary transition-all px-4 shadow-xs"
+                    />
+                  </div>
+
+                  <div className="flex flex-col gap-2">
+                    <label className="text-[10px] font-black text-secondary uppercase tracking-widest">Data de Vencimento <span className="text-alert-red">*</span></label>
                     <input 
                       type="date"
                       required
@@ -403,23 +668,54 @@ export default function NovoLancamentoDrawer() {
                   </div>
                 </div>
 
-                <div className="flex flex-col gap-2">
-                  <SearchableSelect
-                    label="Entidade / Destinatário"
-                    placeholder="Selecione um cliente / fornecedor"
-                    value={lancamentoFormDraft.entidade_id}
-                    onChange={(val) => setLancamentoFormDraft({ entidade_id: val })}
-                    options={entidades
-                      .filter(e => e.status_base !== 'inativo' && e.status_base !== 'bpi')
-                      .map(e => ({
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="flex flex-col gap-2">
+                    <div className="flex justify-between items-center">
+                      <label className="text-[10px] font-black text-secondary uppercase tracking-widest">Desconto</label>
+                      <div className="flex bg-neutral-100 rounded-lg p-0.5">
+                        <button type="button" onClick={() => setLancamentoFormDraft({ desconto_tipo: 'valor' })} className={`px-1.5 py-0.5 text-[9px] font-black rounded ${lancamentoFormDraft.desconto_tipo === 'valor' ? 'bg-white shadow-sm text-primary' : 'text-neutral-400'}`}>R$</button>
+                        <button type="button" onClick={() => setLancamentoFormDraft({ desconto_tipo: 'porcentagem' })} className={`px-1.5 py-0.5 text-[9px] font-black rounded ${lancamentoFormDraft.desconto_tipo === 'porcentagem' ? 'bg-white shadow-sm text-primary' : 'text-neutral-400'}`}>%</button>
+                      </div>
+                    </div>
+                    <MoneyInput
+                      value={lancamentoFormDraft.desconto_valor}
+                      onChange={(val) => setLancamentoFormDraft({ desconto_valor: val })}
+                      className="w-full h-12 px-4 bg-white border-2 border-neutral-200 rounded-xl font-mono text-sm font-black text-on-surface focus:outline-none focus:border-primary transition-all shadow-xs"
+                    />
+                  </div>
 
-                        id: e.id,
-                        label: e.nome_razao_social,
-                        sublabel: e.tipo.toUpperCase()
-                      }))}
-                    required
-                    onAddClick={() => setModalOpen('isCadastroRapidoOpen', true)}
-                  />
+                  <div className="flex flex-col gap-2">
+                    <div className="flex justify-between items-center">
+                      <label className="text-[10px] font-black text-secondary uppercase tracking-widest">Acréscimo</label>
+                      <div className="flex bg-neutral-100 rounded-lg p-0.5">
+                        <button type="button" onClick={() => setLancamentoFormDraft({ acrescimo_tipo: 'valor' })} className={`px-1.5 py-0.5 text-[9px] font-black rounded ${lancamentoFormDraft.acrescimo_tipo === 'valor' ? 'bg-white shadow-sm text-primary' : 'text-neutral-400'}`}>R$</button>
+                        <button type="button" onClick={() => setLancamentoFormDraft({ acrescimo_tipo: 'porcentagem' })} className={`px-1.5 py-0.5 text-[9px] font-black rounded ${lancamentoFormDraft.acrescimo_tipo === 'porcentagem' ? 'bg-white shadow-sm text-primary' : 'text-neutral-400'}`}>%</button>
+                      </div>
+                    </div>
+                    <MoneyInput
+                      value={lancamentoFormDraft.acrescimo_valor}
+                      onChange={(val) => setLancamentoFormDraft({ acrescimo_valor: val })}
+                      className="w-full h-12 px-4 bg-white border-2 border-neutral-200 rounded-xl font-mono text-sm font-black text-on-surface focus:outline-none focus:border-primary transition-all shadow-xs"
+                    />
+                  </div>
+                </div>
+
+                <div className="flex flex-col gap-2 border-y-2 border-neutral-50 py-4">
+                  <div className="flex justify-between items-center px-2">
+                    <span className="text-[10px] font-black text-secondary uppercase tracking-widest">Subtotal</span>
+                    <span className="text-sm font-black text-neutral-900">R$ {formatBRL(calculations.subtotal)}</span>
+                  </div>
+                  
+                  {lancamentoFormDraft.ja_recebido && (
+                    <div className="flex justify-between items-center px-2 mt-2">
+                      <span className={`text-[10px] font-black uppercase tracking-widest ${calculations.isTroco ? 'text-bank-truth-green' : calculations.isDevedor ? 'text-alert-red' : 'text-secondary'}`}>
+                        {calculations.isTroco ? 'Troco' : calculations.isDevedor ? 'Devedor' : 'Saldo'}
+                      </span>
+                      <span className={`text-sm font-black ${calculations.isTroco ? 'text-bank-truth-green' : calculations.isDevedor ? 'text-alert-red' : 'text-neutral-900'}`}>
+                        R$ {formatBRL(Math.abs(calculations.diferenca))}
+                      </span>
+                    </div>
+                  )}
                 </div>
 
                 <div className="grid grid-cols-2 gap-4">
@@ -433,6 +729,8 @@ export default function NovoLancamentoDrawer() {
                       label: c.nome
                     }))}
                     required
+                    onQuickAddClick={() => setIsQuickCatOpen(true)}
+                    quickAddLabel="Nova Categoria"
                   />
 
                   <SearchableSelect
@@ -445,12 +743,17 @@ export default function NovoLancamentoDrawer() {
                       label: cc.nome
                     }))}
                     required
+                    onQuickAddClick={() => setIsQuickCCOpen(true)}
+                    quickAddLabel="Novo Centro de Custo"
                   />
                 </div>
 
                 <div className="grid grid-cols-2 gap-4">
                   <div className="flex flex-col gap-2">
-                    <label className="text-xs font-black text-secondary uppercase tracking-widest">Conta Bancária <span className="text-alert-red">*</span></label>
+                    <div className="flex justify-between items-center">
+                      <label className="text-[10px] font-black text-secondary uppercase tracking-widest">Conta Bancária <span className="text-alert-red">*</span></label>
+                      <button type="button" onClick={() => setIsQuickAccountOpen(true)} className="text-[10px] font-black text-primary hover:underline uppercase tracking-widest flex items-center gap-1"><Plus className="w-3 h-3" /> Nova Conta</button>
+                    </div>
                     <select 
                       value={lancamentoFormDraft.conta_bancaria_id}
                       onChange={(e) => setLancamentoFormDraft({ conta_bancaria_id: e.target.value })}
@@ -464,7 +767,7 @@ export default function NovoLancamentoDrawer() {
                   </div>
 
                   <div className="flex flex-col gap-2">
-                    <label className="text-xs font-black text-secondary uppercase tracking-widest">Data de Emissão</label>
+                    <label className="text-[10px] font-black text-secondary uppercase tracking-widest">Data de Emissão</label>
                     <input 
                       type="date"
                       value={lancamentoFormDraft.data_emissao}
@@ -474,7 +777,7 @@ export default function NovoLancamentoDrawer() {
                   </div>
                 </div>
 
-                {!editingItem && (
+                {!editingItem && lancamentoFormDraft.condicao === 'a_prazo' && (
                   <div className="p-5 bg-neutral-50 dark:bg-surface-container border-2 border-neutral-100 dark:border-surface-border rounded-2xl space-y-5">
                     <label className="flex items-center gap-3 cursor-pointer select-none">
                       <input 
@@ -483,7 +786,7 @@ export default function NovoLancamentoDrawer() {
                         onChange={(e) => setLancamentoFormDraft({ recorrencia: e.target.checked })}
                         className="rounded-md border-neutral-300 text-primary focus:ring-primary w-5 h-5 transition-all"
                       />
-                      <span className="font-black text-xs text-on-background uppercase tracking-wider">Geração de Série Recorrente?</span>
+                      <span className="font-black text-[10px] text-on-background uppercase tracking-wider">Geração de Série Recorrente?</span>
                     </label>
 
                     {lancamentoFormDraft.recorrencia && (
@@ -523,8 +826,61 @@ export default function NovoLancamentoDrawer() {
                   </div>
                 )}
 
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="flex flex-col gap-2">
+                    <label className="text-[10px] font-black text-secondary uppercase tracking-widest">Nota Fiscal / Produto</label>
+                    <div className="relative group cursor-pointer h-12 border-2 border-dashed border-neutral-200 rounded-xl hover:border-primary transition-all flex items-center justify-center gap-2 text-secondary hover:text-primary bg-neutral-50/50">
+                      <Paperclip className="w-4 h-4" />
+                      <span className="text-[10px] font-black uppercase">{attachments.length > 0 ? `${attachments.length} Anexo(s)` : 'Anexar Documento'}</span>
+                      <input
+                        type="file"
+                        multiple
+                        onChange={(e) => {
+                          if (e.target.files) {
+                            const newFiles = Array.from(e.target.files).map(f => ({
+                              name: f.name,
+                              size: f.size,
+                              type: f.type,
+                              file: f
+                            }));
+                            setAttachments(prev => [...prev, ...newFiles]);
+                          }
+                        }}
+                        className="absolute inset-0 opacity-0 cursor-pointer"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-4 pt-6 pl-2">
+                    <label className="flex items-center gap-2 cursor-pointer select-none">
+                      <input type="checkbox" className="rounded-md border-neutral-300 text-primary w-4 h-4" />
+                      <span className="text-[9px] font-black text-neutral-500 uppercase tracking-widest">Recibo</span>
+                    </label>
+                    <label className="flex items-center gap-2 cursor-pointer select-none">
+                      <input type="checkbox" className="rounded-md border-neutral-300 text-primary w-4 h-4" />
+                      <span className="text-[9px] font-black text-neutral-500 uppercase tracking-widest">Comprovante</span>
+                    </label>
+                  </div>
+                </div>
+
+                {attachments.length > 0 && (
+                  <div className="space-y-2">
+                    {attachments.map((f: any, i: number) => (
+                      <div key={i} className="flex items-center justify-between p-3 bg-neutral-50 border border-neutral-100 rounded-xl">
+                        <div className="flex items-center gap-2">
+                          <FileText className="w-3.5 h-3.5 text-primary" />
+                          <span className="text-[10px] font-bold truncate max-w-[150px]">{f.name}</span>
+                        </div>
+                        <button type="button" onClick={() => setAttachments(prev => prev.filter((_, idx) => idx !== i))} className="text-neutral-400 hover:text-alert-red transition-colors">
+                          <X className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
                 <div className="flex flex-col gap-2">
-                  <label className="text-xs font-black text-secondary uppercase tracking-widest">Observações Contábeis</label>
+                  <label className="text-[10px] font-black text-secondary uppercase tracking-widest">Observações Contábeis</label>
                   <textarea 
                     rows={4}
                     placeholder="Digite descrições detalhadas..."
@@ -539,7 +895,7 @@ export default function NovoLancamentoDrawer() {
                 <button 
                   type="button" 
                   onClick={handleClose}
-                  className="px-6 py-3 font-black text-xs text-secondary border-2 border-neutral-200 rounded-xl hover:bg-neutral-100 hover:border-neutral-300 transition-all uppercase tracking-widest"
+                  className="px-6 py-3 font-black text-[10px] text-secondary border-2 border-neutral-200 rounded-xl hover:bg-neutral-100 hover:border-neutral-300 transition-all uppercase tracking-widest"
                 >
                   Cancelar
                 </button>
@@ -547,11 +903,63 @@ export default function NovoLancamentoDrawer() {
                 <button 
                   type="submit"
                   disabled={isSubmitting || isCreating || isUpdating}
-                  className="px-8 py-3 font-black text-xs text-on-primary-container bg-primary-container hover:brightness-95 rounded-xl shadow-md transition-all active:scale-[0.98] flex items-center gap-2 uppercase tracking-widest"
+                  className="px-8 py-3 font-black text-[10px] text-on-primary-container bg-primary-container hover:brightness-95 rounded-xl shadow-md transition-all active:scale-[0.98] flex items-center gap-2 uppercase tracking-widest"
                 >
                   {isSubmitting ? <Loader2 className="w-4 h-4 animate-spin" /> : <CheckCircle2 className="w-4 h-4" />}
                   {isSubmitting ? 'Salvando...' : 'Salvar Registro'}
                 </button>
+              </footer>
+            </motion.form>
+          </div>
+        )}
+      </AnimatePresence>
+
+      {/* Quick Action Modals */}
+      <AnimatePresence>
+        {isQuickCatOpen && (
+          <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setIsQuickCatOpen(false)} className="absolute inset-0 bg-black/60 backdrop-blur-sm" />
+            <motion.form initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.9, opacity: 0 }} onSubmit={handleQuickCatSubmit} className="bg-white w-full max-w-[400px] rounded-3xl shadow-2xl relative z-10 overflow-hidden">
+              <header className="px-8 py-5 border-b border-neutral-100 flex justify-between items-center"><h3 className="text-xs font-black uppercase tracking-widest text-neutral-900">Nova Categoria</h3><button type="button" onClick={() => setIsQuickCatOpen(false)}><X className="w-5 h-5 text-neutral-400" /></button></header>
+              <div className="p-8 space-y-4">
+                <div className="space-y-2"><label className="text-[10px] font-black uppercase text-neutral-400">Nome</label><input type="text" required value={quickCatName} onChange={(e) => setQuickCatName(e.target.value)} className="w-full h-12 bg-neutral-50 border-2 border-neutral-100 rounded-xl px-4 text-xs font-bold outline-none focus:border-primary" /></div>
+              </div>
+              <footer className="px-8 py-6 border-t border-neutral-100 bg-neutral-50 flex justify-end gap-3">
+                <button type="button" onClick={() => setIsQuickCatOpen(false)} className="px-4 py-2 text-[10px] font-black uppercase text-neutral-500">Cancelar</button>
+                <Button type="submit">Adicionar</Button>
+              </footer>
+            </motion.form>
+          </div>
+        )}
+
+        {isQuickCCOpen && (
+          <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setIsQuickCCOpen(false)} className="absolute inset-0 bg-black/60 backdrop-blur-sm" />
+            <motion.form initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.9, opacity: 0 }} onSubmit={handleQuickCCSubmit} className="bg-white w-full max-w-[400px] rounded-3xl shadow-2xl relative z-10 overflow-hidden">
+              <header className="px-8 py-5 border-b border-neutral-100 flex justify-between items-center"><h3 className="text-xs font-black uppercase tracking-widest text-neutral-900">Novo Centro de Custo</h3><button type="button" onClick={() => setIsQuickCCOpen(false)}><X className="w-5 h-5 text-neutral-400" /></button></header>
+              <div className="p-8 space-y-4">
+                <div className="space-y-2"><label className="text-[10px] font-black uppercase text-neutral-400">Nome</label><input type="text" required value={quickCCName} onChange={(e) => setQuickCCName(e.target.value)} className="w-full h-12 bg-neutral-50 border-2 border-neutral-100 rounded-xl px-4 text-xs font-bold outline-none focus:border-primary" /></div>
+              </div>
+              <footer className="px-8 py-6 border-t border-neutral-100 bg-neutral-50 flex justify-end gap-3">
+                <button type="button" onClick={() => setIsQuickCCOpen(false)} className="px-4 py-2 text-[10px] font-black uppercase text-neutral-500">Cancelar</button>
+                <Button type="submit">Adicionar</Button>
+              </footer>
+            </motion.form>
+          </div>
+        )}
+
+        {isQuickAccountOpen && (
+          <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setIsQuickAccountOpen(false)} className="absolute inset-0 bg-black/60 backdrop-blur-sm" />
+            <motion.form initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.9, opacity: 0 }} onSubmit={handleQuickAccountSubmit} className="bg-white w-full max-w-[400px] rounded-3xl shadow-2xl relative z-10 overflow-hidden">
+              <header className="px-8 py-5 border-b border-neutral-100 flex justify-between items-center"><h3 className="text-xs font-black uppercase tracking-widest text-neutral-900">Nova Conta Bancária</h3><button type="button" onClick={() => setIsQuickAccountOpen(false)}><X className="w-5 h-5 text-neutral-400" /></button></header>
+              <div className="p-8 space-y-4">
+                <div className="space-y-2"><label className="text-[10px] font-black uppercase text-neutral-400">Nome do Banco / Conta</label><input type="text" required value={quickAccountName} onChange={(e) => setQuickAccountName(e.target.value)} className="w-full h-12 bg-neutral-50 border-2 border-neutral-100 rounded-xl px-4 text-xs font-bold outline-none focus:border-primary" /></div>
+                <div className="space-y-2"><label className="text-[10px] font-black uppercase text-neutral-400">Saldo Inicial</label><MoneyInput value={quickAccountSaldo} onChange={setQuickAccountSaldo} className="w-full h-12 bg-neutral-50 border-2 border-neutral-100 rounded-xl px-4 text-xs font-bold outline-none focus:border-primary" /></div>
+              </div>
+              <footer className="px-8 py-6 border-t border-neutral-100 bg-neutral-50 flex justify-end gap-3">
+                <button type="button" onClick={() => setIsQuickAccountOpen(false)} className="px-4 py-2 text-[10px] font-black uppercase text-neutral-500">Cancelar</button>
+                <Button type="submit">Adicionar</Button>
               </footer>
             </motion.form>
           </div>
