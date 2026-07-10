@@ -23,7 +23,7 @@ import {
   Hash
 } from 'lucide-react';
 import { useUIStore } from '../store/uiStore';
-import { useLancamentos, useEntidades, useCentrosCusto, useCategorias, useContas } from '../hooks/useData';
+import { useLancamentos, useEntidades, useCentrosCusto, useCategorias, useContas, useLancamentoAnexos } from '../hooks/useData';
 import MoneyInput from './MoneyInput';
 import { supabase } from '@/integrations/supabase/client';
 import Button from './Button';
@@ -212,6 +212,8 @@ export default function NovoLancamentoDrawer() {
   const { createCC } = useCentrosCusto();
   const { createCategory } = useCategorias();
   const { createAccount } = useContas();
+
+  const { anexos: existingAnexos, deleteAnexo } = useLancamentoAnexos(selectedLancamentoIdForModal);
 
   const [attachments, setAttachments] = useState<LocalFile[]>([]);
   const [parcelasManuais, setParcelasManuais] = useState<Array<{ numero: number; data: string; valor: string }>>([]);
@@ -1000,59 +1002,74 @@ export default function NovoLancamentoDrawer() {
                   </motion.div>
                 )}
 
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="flex flex-col gap-2">
-                    <label className="text-[10px] font-black text-secondary uppercase tracking-widest">Nota Fiscal / Produto</label>
-                    <div className="relative group cursor-pointer h-12 border-2 border-dashed border-neutral-200 rounded-xl hover:border-primary transition-all flex items-center justify-center gap-2 text-secondary hover:text-primary bg-neutral-50/50">
-                      <Paperclip className="w-4 h-4" />
-                      <span className="text-[10px] font-black uppercase">{attachments.length > 0 ? `${attachments.length} Anexo(s)` : 'Anexar Documento'}</span>
-                      <input
-                        type="file"
-                        multiple
-                        onChange={(e) => {
-                          if (e.target.files) {
-                            const fileList = Array.from(e.target.files) as File[];
-                            const newFiles: LocalFile[] = fileList.map(f => ({
-                              name: f.name,
-                              size: f.size,
-                              type: f.type,
-                              file: f
-                            }));
-                            setAttachments(prev => [...prev, ...newFiles]);
-                          }
-                        }}
-                        className="absolute inset-0 opacity-0 cursor-pointer"
-                      />
-                    </div>
-                  </div>
-
-                  <div className="flex items-center gap-4 pt-6 pl-2">
-                    <label className="flex items-center gap-2 cursor-pointer select-none">
-                      <input type="checkbox" className="rounded-md border-neutral-300 text-primary w-4 h-4" />
-                      <span className="text-[9px] font-black text-neutral-500 uppercase tracking-widest">Recibo</span>
-                    </label>
-                    <label className="flex items-center gap-2 cursor-pointer select-none">
-                      <input type="checkbox" className="rounded-md border-neutral-300 text-primary w-4 h-4" />
-                      <span className="text-[9px] font-black text-neutral-500 uppercase tracking-widest">Comprovante</span>
-                    </label>
+                <div className="flex flex-col gap-2">
+                  <label className="text-[10px] font-black text-secondary uppercase tracking-widest">Nota Fiscal / Produto</label>
+                  <div className="relative group cursor-pointer h-12 border-2 border-dashed border-neutral-200 rounded-xl hover:border-primary transition-all flex items-center justify-center gap-2 text-secondary hover:text-primary bg-neutral-50/50">
+                    <Paperclip className="w-4 h-4" />
+                    <span className="text-[10px] font-black uppercase">{(attachments.length + (existingAnexos?.length || 0)) > 0 ? `${attachments.length + (existingAnexos?.length || 0)} Anexo(s)` : 'Anexar Documento'}</span>
+                    <input
+                      type="file"
+                      multiple
+                      onChange={(e) => {
+                        if (e.target.files) {
+                          const fileList = Array.from(e.target.files) as File[];
+                          const newFiles: LocalFile[] = fileList.map(f => ({
+                            name: f.name,
+                            size: f.size,
+                            type: f.type,
+                            file: f
+                          }));
+                          setAttachments(prev => [...prev, ...newFiles]);
+                        }
+                      }}
+                      className="absolute inset-0 opacity-0 cursor-pointer"
+                    />
                   </div>
                 </div>
 
-                {attachments.length > 0 && (
-                  <div className="space-y-2">
-                    {attachments.map((f, i: number) => (
-                      <div key={i} className="flex items-center justify-between p-3 bg-neutral-50 border border-neutral-100 rounded-xl">
-                        <div className="flex items-center gap-2">
-                          <FileText className="w-3.5 h-3.5 text-primary" />
-                          <span className="text-[10px] font-bold truncate max-w-[150px]">{(f as LocalFile).name}</span>
-                        </div>
-                        <button type="button" onClick={() => setAttachments(prev => prev.filter((_, idx) => idx !== i))} className="text-neutral-400 hover:text-alert-red transition-colors">
-                          <X className="w-3.5 h-3.5" />
-                        </button>
+                <div className="space-y-2">
+                  {/* Existing Remote Attachments */}
+                  {existingAnexos && existingAnexos.map((anexo: any) => (
+                    <div key={anexo.id} className="flex items-center justify-between p-3 bg-primary/5 border border-primary/20 rounded-xl">
+                      <div className="flex items-center gap-2">
+                        <FileText className="w-3.5 h-3.5 text-primary" />
+                        <a
+                          href={anexo.url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-[10px] font-bold truncate max-w-[150px] hover:underline text-primary"
+                        >
+                          {anexo.nome} (Salvo)
+                        </a>
                       </div>
-                    ))}
-                  </div>
-                )}
+                      <button
+                        type="button"
+                        onClick={() => {
+                          if (confirm('Excluir este anexo permanentemente?')) {
+                            const path = anexo.url.split('documents/')[1];
+                            deleteAnexo({ id: anexo.id, path });
+                          }
+                        }}
+                        className="text-neutral-400 hover:text-alert-red transition-colors"
+                      >
+                        <X className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+                  ))}
+
+                  {/* Local Files to be Uploaded */}
+                  {attachments.map((f, i: number) => (
+                    <div key={i} className="flex items-center justify-between p-3 bg-neutral-50 border border-neutral-100 rounded-xl">
+                      <div className="flex items-center gap-2">
+                        <FileText className="w-3.5 h-3.5 text-primary" />
+                        <span className="text-[10px] font-bold truncate max-w-[150px]">{(f as LocalFile).name}</span>
+                      </div>
+                      <button type="button" onClick={() => setAttachments(prev => prev.filter((_, idx) => idx !== i))} className="text-neutral-400 hover:text-alert-red transition-colors">
+                        <X className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+                  ))}
+                </div>
 
                 <div className="flex flex-col gap-2">
                   <label className="text-[10px] font-black text-secondary uppercase tracking-widest">Observações Contábeis</label>

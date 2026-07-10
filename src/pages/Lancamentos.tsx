@@ -601,12 +601,16 @@ export default function Lancamentos() {
                       return (
                         <tr
                           key={item.id}
-                          className={`border-b border-surface-border hover:bg-neutral-50/50 transition-colors group cursor-default ${
+                          onClick={() => {
+                            setSelectedLancamentoIdForModal(item.id);
+                            setModalOpen('isComprovanteOpen', true);
+                          }}
+                          className={`border-b border-surface-border hover:bg-neutral-50/50 transition-colors group cursor-pointer ${
                             isChecked ? 'bg-primary/5' : ''
                           }`}
                         >
                           {/* Checkbox cell */}
-                          <td className="py-3 px-4 text-center">
+                          <td className="py-3 px-4 text-center" onClick={(e) => e.stopPropagation()}>
                             <input
                               type="checkbox"
                               className="rounded border-surface-border text-primary focus:ring-primary cursor-pointer w-4 h-4 align-middle"
@@ -694,7 +698,7 @@ export default function Lancamentos() {
                           </td>
 
                           {/* Action trigger menu */}
-                          <td className="py-3 px-4 text-right relative">
+                          <td className="py-3 px-4 text-right relative" onClick={(e) => e.stopPropagation()}>
                             <button
                               type="button"
                               onClick={(e) => handleActionMenuToggle(item.id, e)}

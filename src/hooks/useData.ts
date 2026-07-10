@@ -283,6 +283,30 @@ export function useLancamentos(filters?: any) {
   };
 }
 
+export function useLancamentoAnexos(lancamentoId: string | null) {
+  const queryClient = useQueryClient();
+
+  const query = useQuery({
+    queryKey: ['lancamentoAnexos', lancamentoId],
+    queryFn: () => lancamentoId ? lancamentosService.getAnexos(lancamentoId) : Promise.resolve([]),
+    enabled: !!lancamentoId
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: ({ id, path }: { id: string, path: string }) => lancamentosService.deleteAnexo(id, path),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['lancamentoAnexos', lancamentoId] });
+    }
+  });
+
+  return {
+    ...query,
+    anexos: query.data || [],
+    deleteAnexo: deleteMutation.mutateAsync,
+    isDeleting: deleteMutation.isPending
+  };
+}
+
 export function useRecorrencias() {
   const queryClient = useQueryClient();
 

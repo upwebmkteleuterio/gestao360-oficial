@@ -17,6 +17,7 @@ interface UIState {
   isNovaCategoriaOpen: boolean;
   isNovoCentroCustoOpen: boolean;
   isNovaContaOpen: boolean;
+  isComprovanteOpen: boolean;
   isInterceptorRecorrenciaOpen: boolean;
   isImportarCSVOpen: boolean;
   isClassificarDiferencaOpen: boolean;
@@ -163,6 +164,7 @@ export const useUIStore = create<UIState>()(
       isNovaCategoriaOpen: false,
       isNovoCentroCustoOpen: false,
       isNovaContaOpen: false,
+      isComprovanteOpen: false,
       isInterceptorRecorrenciaOpen: false,
       isImportarCSVOpen: false,
       isClassificarDiferencaOpen: false,

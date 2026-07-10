@@ -260,11 +260,38 @@ export const lancamentosService = {
         .single();
 
       if (updateError) throw updateError;
-      return updated as LancamentoFinanceiro;
-    }
-  },
-
-  approveInBatch: async (ids: string[], targetStatus: string): Promise<boolean> => {
+        return updated as LancamentoFinanceiro;
+      }
+    },
+  
+    getAnexos: async (lancamentoId: string): Promise<any[]> => {
+      const { data, error } = await supabase
+        .from('lancamento_anexos')
+        .select('*')
+        .eq('lancamento_id', lancamentoId);
+      
+      if (error) throw error;
+      return data;
+    },
+  
+    deleteAnexo: async (anexoId: string, filePath: string): Promise<void> => {
+      // Delete from storage
+      const { error: storageError } = await supabase.storage
+        .from('documents')
+        .remove([filePath]);
+      
+      if (storageError) console.error('Storage delete error:', storageError);
+  
+      // Delete from DB
+      const { error: dbError } = await supabase
+        .from('lancamento_anexos')
+        .delete()
+        .eq('id', anexoId);
+      
+      if (dbError) throw dbError;
+    },
+  
+    approveInBatch: async (ids: string[], targetStatus: string): Promise<boolean> => {
     const { error } = await supabase
       .from('lancamentos_financeiros')
       .update({ status_aprovacao: targetStatus })
