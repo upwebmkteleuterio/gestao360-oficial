@@ -52,8 +52,9 @@ export const lancamentosService = {
         .insert([{
           user_id: user.id,
           periodicidade: recorrencia.periodicidade,
+          periodicidade_customizada_dias: recorrencia.periodicidade_customizada_dias,
           quantidade_total_parcelas: recorrencia.quantidade_total_parcelas,
-          data_inicio: item.data_vencimento
+          data_inicio: recorrencia.parcelas?.[0]?.data_vencimento || item.data_vencimento
         }])
         .select()
         .single();
@@ -62,23 +63,50 @@ export const lancamentosService = {
 
       // 2. Generate Installments
       const installments = [];
-      let currentDate = new Date(item.data_vencimento + 'T00:00:00');
+      
+      if (recorrencia.parcelas && recorrencia.parcelas.length > 0) {
+        // Use custom parcels provided
+        for (let i = 0; i < recorrencia.parcelas.length; i++) {
+          const p = recorrencia.parcelas[i];
+          installments.push({
+            ...item,
+            user_id: user.id,
+            usuario_criador_id: user.id,
+            recorrencia_id: recData.id,
+            numero_parcela: i + 1,
+            data_vencimento: p.data_vencimento,
+            valor_previsto: p.valor_previsto,
+            quantidade_total_parcelas: recorrencia.quantidade_total_parcelas // helpful for UI
+          });
+        }
+      } else {
+        // Fallback to automatic generation if no custom parcels provided
+        let currentDate = new Date(item.data_vencimento + 'T00:00:00');
+        for (let i = 1; i <= recorrencia.quantidade_total_parcelas; i++) {
+          installments.push({
+            ...item,
+            user_id: user.id,
+            usuario_criador_id: user.id,
+            recorrencia_id: recData.id,
+            numero_parcela: i,
+            data_vencimento: currentDate.toISOString().split('T')[0],
+            quantidade_total_parcelas: recorrencia.quantidade_total_parcelas
+          });
 
-      for (let i = 1; i <= recorrencia.quantidade_total_parcelas; i++) {
-        installments.push({
-          ...item,
-          user_id: user.id,
-          usuario_criador_id: user.id,
-          recorrencia_id: recData.id,
-          numero_parcela: i,
-          data_vencimento: currentDate.toISOString().split('T')[0]
-        });
-
-        // Advance date based on periodicity
-        if (recorrencia.periodicidade === 'diario') currentDate.setDate(currentDate.getDate() + 1);
-        else if (recorrencia.periodicidade === 'semanal') currentDate.setDate(currentDate.getDate() + 7);
-        else if (recorrencia.periodicidade === 'mensal') currentDate.setMonth(currentDate.getMonth() + 1);
-        else if (recorrencia.periodicidade === 'anual') currentDate.setFullYear(currentDate.getFullYear() + 1);
+          // Advance date
+          if (recorrencia.periodicidade === 'diario') currentDate.setDate(currentDate.getDate() + 1);
+          else if (recorrencia.periodicidade === 'semanal') currentDate.setDate(currentDate.getDate() + 7);
+          else if (recorrencia.periodicidade === 'quinzenal') currentDate.setDate(currentDate.getDate() + 15);
+          else if (recorrencia.periodicidade === 'mensal') currentDate.setMonth(currentDate.getMonth() + 1);
+          else if (recorrencia.periodicidade === 'bimestral') currentDate.setMonth(currentDate.getMonth() + 2);
+          else if (recorrencia.periodicidade === 'trimestral') currentDate.setMonth(currentDate.getMonth() + 3);
+          else if (recorrencia.periodicidade === 'semestral') currentDate.setMonth(currentDate.getMonth() + 6);
+          else if (recorrencia.periodicidade === 'anual') currentDate.setFullYear(currentDate.getFullYear() + 1);
+          else if (recorrencia.periodicidade === 'personalizado') {
+            const dias = recorrencia.periodicidade_customizada_dias || 30;
+            currentDate.setDate(currentDate.getDate() + dias);
+          }
+        }
       }
 
       const { data: createdItems, error: itemsError } = await supabase
@@ -163,6 +191,77 @@ export const lancamentosService = {
     
     if (error) throw error;
     return true;
+  },
+
+  baixaLancamento: async (id: string, data: { valor_pago: number, data_pagamento: string, conta_bancaria_id: string }): Promise<LancamentoFinanceiro> => {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) throw new Error('Usuário não autenticado');
+
+    // 1. Get current record
+    const { data: current, error: getError } = await supabase
+      .from('lancamentos_financeiros')
+      .select('*')
+      .eq('id', id)
+      .single();
+    
+    if (getError) throw getError;
+
+    const isPartial = data.valor_pago < current.valor_previsto;
+
+    if (isPartial) {
+      const saldoRestante = current.valor_previsto - data.valor_pago;
+
+      // Update current to paid amount
+      const { data: updated, error: updateError } = await supabase
+        .from('lancamentos_financeiros')
+        .update({
+          valor_previsto: data.valor_pago,
+          valor_recebido: data.valor_pago,
+          status_pagamento: 'pago',
+          data_pagamento: data.data_pagamento,
+          conta_bancaria_id: data.conta_bancaria_id
+        })
+        .eq('id', id)
+        .select()
+        .single();
+
+      if (updateError) throw updateError;
+
+      // Create new one for remainder
+      // We strip ID and created_at/updated_at
+      const { id: _, created_at: __, updated_at: ___, ...rest } = current;
+      const { error: insertError } = await supabase
+        .from('lancamentos_financeiros')
+        .insert([{
+          ...rest,
+          valor_previsto: saldoRestante,
+          valor_recebido: 0,
+          status_pagamento: 'aberto',
+          data_pagamento: null,
+          user_id: user.id,
+          usuario_criador_id: user.id,
+          observacoes: (current.observacoes || '') + `\n[Saldo remanescente de baixa parcial de R$ ${data.valor_pago}]`
+        }]);
+
+      if (insertError) throw insertError;
+      return updated as LancamentoFinanceiro;
+    } else {
+      // Full payment
+      const { data: updated, error: updateError } = await supabase
+        .from('lancamentos_financeiros')
+        .update({
+          valor_recebido: data.valor_pago,
+          status_pagamento: 'pago',
+          data_pagamento: data.data_pagamento,
+          conta_bancaria_id: data.conta_bancaria_id
+        })
+        .eq('id', id)
+        .select()
+        .single();
+
+      if (updateError) throw updateError;
+      return updated as LancamentoFinanceiro;
+    }
   },
 
   approveInBatch: async (ids: string[], targetStatus: string): Promise<boolean> => {

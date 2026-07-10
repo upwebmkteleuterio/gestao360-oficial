@@ -1,12 +1,12 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { 
-  X, 
-  Plus, 
-  AlertCircle, 
-  CheckCircle2, 
-  XCircle, 
-  AlertTriangle, 
+import {
+  X,
+  Plus,
+  AlertCircle,
+  CheckCircle2,
+  XCircle,
+  AlertTriangle,
   Clock,
   Loader2,
   Search,
@@ -16,7 +16,11 @@ import {
   TrendingDown,
   TrendingUp,
   Percent,
-  Banknote
+  Banknote,
+  Repeat,
+  Calendar,
+  CreditCard,
+  Hash
 } from 'lucide-react';
 import { useUIStore } from '../store/uiStore';
 import { useLancamentos, useEntidades, useCentrosCusto, useCategorias, useContas } from '../hooks/useData';
@@ -44,10 +48,10 @@ function formatBRL(value: any): string {
   return formatted;
 }
 
-function parseMoney(value: string | number): number {
+function parseMoney(value: string | number | undefined | null): number {
+  if (value === undefined || value === null) return 0;
   if (typeof value === 'number') return value;
-  if (!value) return 0;
-  const cleanStr = value.replace(/\./g, '').replace(',', '.');
+  const cleanStr = value.toString().replace(/\./g, '').replace(',', '.');
   return parseFloat(cleanStr) || 0;
 }
 
@@ -210,6 +214,7 @@ export default function NovoLancamentoDrawer() {
   const { createAccount } = useContas();
 
   const [attachments, setAttachments] = useState<LocalFile[]>([]);
+  const [parcelasManuais, setParcelasManuais] = useState<Array<{ numero: number; data: string; valor: string }>>([]);
 
   // Filter out soft-deleted items for new selection
   const centros = useMemo(() => rawCentros.filter((c: any) => c.status !== 'excluido'), [rawCentros]);
@@ -276,6 +281,70 @@ export default function NovoLancamentoDrawer() {
       setLancamentoFormDraft({ categoria_id: filteredCategorias[0].id });
     }
   }, [filteredCategorias, editingItem]);
+
+  // Parcel Generation Logic
+  useEffect(() => {
+    if (editingItem) return; // Don't auto-generate when editing an existing one
+    
+    // Condition to show/generate parcels: either "A Prazo" OR "Repetir" (with more than 1 parcel)
+    const isAPrazo = lancamentoFormDraft.condicao === 'a_prazo';
+    const isRepeat = lancamentoFormDraft.recorrencia_repeat;
+    const totalParcelas = parseInt(lancamentoFormDraft.quantidade_total_parcelas) || 1;
+
+    if (!isAPrazo && !isRepeat) {
+      setParcelasManuais([]);
+      return;
+    }
+
+    if (totalParcelas < 1) return;
+
+    const valorTotal = parseMoney(lancamentoFormDraft.valor_previsto);
+    const novasParcelas = [];
+    let currentDate = new Date(lancamentoFormDraft.data_vencimento + 'T00:00:00');
+    
+    if (lancamentoFormDraft.recorrencia_com_entrada) {
+      currentDate = new Date(lancamentoFormDraft.data_emissao + 'T00:00:00');
+    }
+
+    const valorPorParcela = isRepeat
+      ? valorTotal
+      : valorTotal / totalParcelas;
+
+    for (let i = 1; i <= totalParcelas; i++) {
+      novasParcelas.push({
+        numero: i,
+        data: currentDate.toISOString().split('T')[0],
+        valor: formatBRL(valorPorParcela)
+      });
+
+      // Advance date
+      if (lancamentoFormDraft.periodicidade === 'diario') currentDate.setDate(currentDate.getDate() + 1);
+      else if (lancamentoFormDraft.periodicidade === 'semanal') currentDate.setDate(currentDate.getDate() + 7);
+      else if (lancamentoFormDraft.periodicidade === 'quinzenal') currentDate.setDate(currentDate.getDate() + 15);
+      else if (lancamentoFormDraft.periodicidade === 'mensal') currentDate.setMonth(currentDate.getMonth() + 1);
+      else if (lancamentoFormDraft.periodicidade === 'bimestral') currentDate.setMonth(currentDate.getMonth() + 2);
+      else if (lancamentoFormDraft.periodicidade === 'trimestral') currentDate.setMonth(currentDate.getMonth() + 3);
+      else if (lancamentoFormDraft.periodicidade === 'semestral') currentDate.setMonth(currentDate.getMonth() + 6);
+      else if (lancamentoFormDraft.periodicidade === 'anual') currentDate.setFullYear(currentDate.getFullYear() + 1);
+      else if (lancamentoFormDraft.periodicidade === 'personalizado') {
+        const dias = parseInt(lancamentoFormDraft.periodicidade_customizada_dias) || 30;
+        currentDate.setDate(currentDate.getDate() + dias);
+      }
+    }
+
+    setParcelasManuais(novasParcelas);
+  }, [
+    lancamentoFormDraft.condicao,
+    lancamentoFormDraft.recorrencia_repeat,
+    lancamentoFormDraft.valor_previsto,
+    lancamentoFormDraft.quantidade_total_parcelas,
+    lancamentoFormDraft.periodicidade,
+    lancamentoFormDraft.periodicidade_customizada_dias,
+    lancamentoFormDraft.data_vencimento,
+    lancamentoFormDraft.data_emissao,
+    lancamentoFormDraft.recorrencia_com_entrada,
+    editingItem
+  ]);
 
   // Financial Calculations
   const calculations = useMemo(() => {
@@ -369,10 +438,17 @@ export default function NovoLancamentoDrawer() {
         showToast('Lançamento atualizado com sucesso!', 'success');
       } else {
         let recurrencePayload = undefined;
-        if (lancamentoFormDraft.recorrencia && lancamentoFormDraft.condicao === 'a_prazo') {
+        const isRecurrent = lancamentoFormDraft.condicao === 'a_prazo' || lancamentoFormDraft.recorrencia_repeat;
+        
+        if (isRecurrent && parcelasManuais.length > 0) {
           recurrencePayload = {
             periodicidade: lancamentoFormDraft.periodicidade,
-            quantidade_total_parcelas: parseInt(lancamentoFormDraft.quantidade_total_parcelas) || 12
+            periodicidade_customizada_dias: lancamentoFormDraft.periodicidade === 'personalizado' ? parseInt(lancamentoFormDraft.periodicidade_customizada_dias) : undefined,
+            quantidade_total_parcelas: parcelasManuais.length,
+            parcelas: parcelasManuais.map(p => ({
+              data_vencimento: p.data,
+              valor_previsto: parseMoney(p.valor)
+            }))
           };
         }
 
@@ -380,7 +456,7 @@ export default function NovoLancamentoDrawer() {
           item: itemDetails,
           recorrencia: recurrencePayload
         });
-        showToast(lancamentoFormDraft.recorrencia ? 'Série recorrente gerada!' : 'Lançamento cadastrado!', 'success');
+        showToast(isRecurrent ? 'Série recorrente gerada!' : 'Lançamento cadastrado!', 'success');
       }
 
       // Handle Attachments
@@ -588,7 +664,18 @@ export default function NovoLancamentoDrawer() {
                   </div>
 
                   <div className="flex flex-col gap-2">
-                    <label className="text-[10px] font-black text-secondary uppercase tracking-widest">Condição</label>
+                    <div className="flex justify-between items-center">
+                      <label className="text-[10px] font-black text-secondary uppercase tracking-widest">Condição</label>
+                      <label className="flex items-center gap-2 cursor-pointer select-none">
+                        <input
+                          type="checkbox"
+                          checked={lancamentoFormDraft.recorrencia_repeat}
+                          onChange={(e) => setLancamentoFormDraft({ recorrencia_repeat: e.target.checked })}
+                          className="rounded-md border-neutral-300 text-primary focus:ring-primary w-4 h-4 transition-all"
+                        />
+                        <span className="text-[10px] font-black text-secondary uppercase tracking-widest">Repetir</span>
+                      </label>
+                    </div>
                     <div className="flex bg-neutral-100 dark:bg-surface-container border-2 border-neutral-100 dark:border-surface-border rounded-xl p-1 h-12 select-none">
                       <button 
                         type="button"
@@ -785,53 +872,130 @@ export default function NovoLancamentoDrawer() {
                   </div>
                 </div>
 
-                {!editingItem && lancamentoFormDraft.condicao === 'a_prazo' && (
-                  <div className="p-5 bg-neutral-50 dark:bg-surface-container border-2 border-neutral-100 dark:border-surface-border rounded-2xl space-y-5">
-                    <label className="flex items-center gap-3 cursor-pointer select-none">
-                      <input 
-                        type="checkbox"
-                        checked={lancamentoFormDraft.recorrencia} 
-                        onChange={(e) => setLancamentoFormDraft({ recorrencia: e.target.checked })}
-                        className="rounded-md border-neutral-300 text-primary focus:ring-primary w-5 h-5 transition-all"
-                      />
-                      <span className="font-black text-[10px] text-on-background uppercase tracking-wider">Geração de Série Recorrente?</span>
-                    </label>
-
-                    {lancamentoFormDraft.recorrencia && (
-                      <motion.div 
-                        initial={{ opacity: 0, height: 0 }}
-                        animate={{ opacity: 1, height: 'auto' }}
-                        exit={{ opacity: 0, height: 0 }}
-                        className="grid grid-cols-2 gap-4 pt-1"
-                      >
-                        <div className="flex flex-col gap-1.5">
-                          <span className="text-[10px] font-black text-secondary uppercase tracking-widest">Periodicidade</span>
-                          <select 
-                            value={lancamentoFormDraft.periodicidade}
-                            onChange={(e) => setLancamentoFormDraft({ periodicidade: e.target.value as any })}
-                            className="w-full h-10 bg-white border-2 border-neutral-200 text-xs font-bold rounded-lg px-3 focus:outline-none focus:border-primary"
-                          >
-                            <option value="diario">Diária</option>
-                            <option value="semanal">Semanal</option>
-                            <option value="mensal">Mensal</option>
-                            <option value="anual">Anual</option>
-                          </select>
+                {/* Seção de Parcelamento / Repetição */}
+                {!editingItem && (lancamentoFormDraft.condicao === 'a_prazo' || lancamentoFormDraft.recorrencia_repeat) && (
+                  <motion.div
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className="p-5 bg-neutral-50 dark:bg-surface-container border-2 border-neutral-100 dark:border-surface-border rounded-2xl space-y-6"
+                  >
+                    <div className="flex items-center justify-between border-b border-neutral-200 pb-3">
+                      <div className="flex items-center gap-2">
+                        <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center text-primary">
+                          {lancamentoFormDraft.recorrencia_repeat ? <Repeat className="w-4 h-4" /> : <CreditCard className="w-4 h-4" />}
                         </div>
+                        <div>
+                          <h3 className="text-xs font-black uppercase tracking-tight text-on-surface">
+                            {lancamentoFormDraft.recorrencia_repeat ? 'Configuração de Repetição' : 'Configuração de Parcelas'}
+                          </h3>
+                          <p className="text-[9px] font-bold text-secondary uppercase tracking-widest">Defina como os lançamentos serão gerados</p>
+                        </div>
+                      </div>
+                      
+                      <label className="flex items-center gap-2 cursor-pointer select-none">
+                        <span className="text-[10px] font-black text-secondary uppercase tracking-widest">Com Entrada?</span>
+                        <div
+                          onClick={() => setLancamentoFormDraft({ recorrencia_com_entrada: !lancamentoFormDraft.recorrencia_com_entrada })}
+                          className={`w-10 h-5 rounded-full transition-all relative ${lancamentoFormDraft.recorrencia_com_entrada ? 'bg-primary' : 'bg-neutral-300'}`}
+                        >
+                          <div className={`absolute top-1 w-3 h-3 bg-white rounded-full transition-all ${lancamentoFormDraft.recorrencia_com_entrada ? 'left-6' : 'left-1'}`} />
+                        </div>
+                      </label>
+                    </div>
 
-                        <div className="flex flex-col gap-1.5">
-                          <span className="text-[10px] font-black text-secondary uppercase tracking-widest">Nº de Parcelas</span>
-                          <input 
+                    <div className="grid grid-cols-3 gap-4">
+                      <div className="flex flex-col gap-1.5">
+                        <span className="text-[10px] font-black text-secondary uppercase tracking-widest">Nº vezes</span>
+                        <div className="relative">
+                          <Hash className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-neutral-400" />
+                          <input
                             type="number"
-                            min="2"
+                            min="1"
                             max="120"
                             value={lancamentoFormDraft.quantidade_total_parcelas}
                             onChange={(e) => setLancamentoFormDraft({ quantidade_total_parcelas: e.target.value })}
-                            className="w-full h-10 bg-white border-2 border-neutral-200 text-xs font-bold rounded-lg px-3 focus:outline-none focus:border-primary"
+                            className="w-full h-10 pl-9 pr-3 bg-white border-2 border-neutral-200 text-xs font-bold rounded-lg focus:outline-none focus:border-primary shadow-xs"
                           />
                         </div>
-                      </motion.div>
+                      </div>
+
+                      <div className="flex flex-col gap-1.5">
+                        <span className="text-[10px] font-black text-secondary uppercase tracking-widest">Intervalo</span>
+                        <select
+                          value={lancamentoFormDraft.periodicidade}
+                          onChange={(e) => setLancamentoFormDraft({ periodicidade: e.target.value as any })}
+                          className="w-full h-10 bg-white border-2 border-neutral-200 text-xs font-bold rounded-lg px-3 focus:outline-none focus:border-primary shadow-xs cursor-pointer appearance-none"
+                        >
+                          <option value="diario">Diário</option>
+                          <option value="semanal">Semanal</option>
+                          <option value="quinzenal">Quinzenal</option>
+                          <option value="mensal">Mensal</option>
+                          <option value="bimestral">Bimestral</option>
+                          <option value="trimestral">Trimestral</option>
+                          <option value="semestral">Semestral</option>
+                          <option value="anual">Anual</option>
+                          <option value="personalizado">Personalizado</option>
+                        </select>
+                      </div>
+
+                      {lancamentoFormDraft.periodicidade === 'personalizado' && (
+                        <div className="flex flex-col gap-1.5">
+                          <span className="text-[10px] font-black text-secondary uppercase tracking-widest">Qtd Dias</span>
+                          <input
+                            type="number"
+                            min="1"
+                            value={lancamentoFormDraft.periodicidade_customizada_dias}
+                            onChange={(e) => setLancamentoFormDraft({ periodicidade_customizada_dias: e.target.value })}
+                            className="w-full h-10 bg-white border-2 border-neutral-200 text-xs font-bold rounded-lg px-3 focus:outline-none focus:border-primary shadow-xs"
+                          />
+                        </div>
+                      )}
+                    </div>
+
+                    {parcelasManuais.length > 0 && (
+                      <div className="mt-4 border-2 border-neutral-100 rounded-xl overflow-hidden bg-white">
+                        <table className="w-full border-collapse">
+                          <thead>
+                            <tr className="bg-neutral-50 border-b border-neutral-100">
+                              <th className="px-3 py-2 text-[9px] font-black text-secondary uppercase tracking-widest text-left w-16">Parc.</th>
+                              <th className="px-3 py-2 text-[9px] font-black text-secondary uppercase tracking-widest text-left">Vencimento</th>
+                              <th className="px-3 py-2 text-[9px] font-black text-secondary uppercase tracking-widest text-left">Valor (R$)</th>
+                            </tr>
+                          </thead>
+                          <tbody className="divide-y divide-neutral-100">
+                            {parcelasManuais.map((parc, idx) => (
+                              <tr key={idx} className="hover:bg-neutral-50/50 transition-colors">
+                                <td className="px-3 py-2 text-xs font-black text-neutral-400">#{parc.numero}</td>
+                                <td className="px-2 py-1.5">
+                                  <input
+                                    type="date"
+                                    value={parc.data}
+                                    onChange={(e) => {
+                                      const newParcels = [...parcelasManuais];
+                                      newParcels[idx].data = e.target.value;
+                                      setParcelasManuais(newParcels);
+                                    }}
+                                    className="w-full bg-transparent border-none text-[11px] font-bold text-on-surface focus:ring-0 p-1"
+                                  />
+                                </td>
+                                <td className="px-2 py-1.5">
+                                  <MoneyInput
+                                    value={parc.valor}
+                                    onChange={(val) => {
+                                      const newParcels = [...parcelasManuais];
+                                      newParcels[idx].valor = val;
+                                      setParcelasManuais(newParcels);
+                                    }}
+                                    className="w-full bg-transparent border-none text-[11px] font-black text-on-surface focus:ring-0 p-1 font-mono"
+                                  />
+                                </td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
                     )}
-                  </div>
+                  </motion.div>
                 )}
 
                 <div className="grid grid-cols-2 gap-4">
@@ -845,7 +1009,8 @@ export default function NovoLancamentoDrawer() {
                         multiple
                         onChange={(e) => {
                           if (e.target.files) {
-                            const newFiles = Array.from(e.target.files).map(f => ({
+                            const fileList = Array.from(e.target.files) as File[];
+                            const newFiles: LocalFile[] = fileList.map(f => ({
                               name: f.name,
                               size: f.size,
                               type: f.type,
@@ -873,11 +1038,11 @@ export default function NovoLancamentoDrawer() {
 
                 {attachments.length > 0 && (
                   <div className="space-y-2">
-                    {attachments.map((f: any, i: number) => (
+                    {attachments.map((f, i: number) => (
                       <div key={i} className="flex items-center justify-between p-3 bg-neutral-50 border border-neutral-100 rounded-xl">
                         <div className="flex items-center gap-2">
                           <FileText className="w-3.5 h-3.5 text-primary" />
-                          <span className="text-[10px] font-bold truncate max-w-[150px]">{f.name}</span>
+                          <span className="text-[10px] font-bold truncate max-w-[150px]">{(f as LocalFile).name}</span>
                         </div>
                         <button type="button" onClick={() => setAttachments(prev => prev.filter((_, idx) => idx !== i))} className="text-neutral-400 hover:text-alert-red transition-colors">
                           <X className="w-3.5 h-3.5" />

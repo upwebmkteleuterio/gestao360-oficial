@@ -641,12 +641,17 @@ export default function Lancamentos() {
                           {/* Recurrency indicator */}
                           <td className="py-3 px-4 text-center">
                             {item.recorrencia_id ? (
-                              <span
-                                className="inline-flex bg-neutral-100 text-neutral-600 font-black text-[9px] px-2 py-0.5 rounded border border-neutral-200 uppercase"
-                                title={`Parcela ${item.numero_parcela || 1} de recorrência`}
-                              >
-                                Rec. p.{item.numero_parcela || 1}
-                              </span>
+                              <div className="flex flex-col items-center">
+                                <span
+                                  className="inline-flex bg-neutral-100 text-neutral-600 font-black text-[9px] px-2 py-0.5 rounded border border-neutral-200 uppercase"
+                                  title={`Parcela ${item.numero_parcela || 1} de ${item.quantidade_total_parcelas || '?'}`}
+                                >
+                                  {item.numero_parcela || 1} / {item.quantidade_total_parcelas || 1}
+                                </span>
+                                <span className="text-[8px] font-black text-secondary/40 uppercase mt-0.5">
+                                  Doc: {item.id.slice(0, 4)}
+                                </span>
+                              </div>
                             ) : (
                               <span className="text-secondary/20">-</span>
                             )}
@@ -708,6 +713,20 @@ export default function Lancamentos() {
                                   <Edit3 className="w-4 h-4 text-primary" />
                                   Editar
                                 </button>
+                                {item.status_pagamento === 'aberto' && (
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      setSelectedLancamentoIdForModal(item.id);
+                                      setModalOpen('isBaixaLancamentoOpen', true);
+                                      setActiveMenuId(null);
+                                    }}
+                                    className="w-full px-4 py-2 hover:bg-neutral-50 text-left text-xs text-bank-truth-green font-bold flex items-center gap-2 border-t border-neutral-100"
+                                  >
+                                    <CheckCircle2 className="w-4 h-4" />
+                                    Baixar / Receber
+                                  </button>
+                                )}
                                 {role === 'master' && (
                                   <button
                                     type="button"

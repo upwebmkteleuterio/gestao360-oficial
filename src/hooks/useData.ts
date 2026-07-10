@@ -260,11 +260,21 @@ export function useLancamentos(filters?: any) {
     }
   });
 
+  const baixaMutation = useMutation({
+    mutationFn: ({ id, data }: { id: string, data: { valor_pago: number, data_pagamento: string, conta_bancaria_id: string } }) =>
+      lancamentosService.baixaLancamento(id, data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['lancamentos'] });
+      queryClient.invalidateQueries({ queryKey: ['auditoriaLogs'] });
+    }
+  });
+
   return {
     ...query,
     createLancamento: createMutation.mutateAsync,
     updateLancamento: updateMutation.mutateAsync,
     deleteLancamento: deleteMutation.mutateAsync,
+    baixaLancamento: baixaMutation.mutateAsync,
     batchApprove: batchApproveMutation.mutateAsync,
     isCreating: createMutation.isPending,
     isUpdating: updateMutation.isPending,

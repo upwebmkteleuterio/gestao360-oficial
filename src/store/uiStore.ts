@@ -24,6 +24,7 @@ interface UIState {
   isTransferenciaBancariaOpen: boolean;
   isNovoUsuarioOpen: boolean;
   isLegacyImportOpen: boolean;
+  isBaixaLancamentoOpen: boolean;
   isSidebarCollapsed: boolean;
 
   // Selected item contexts for modals
@@ -48,7 +49,10 @@ interface UIState {
     categoria_id: string;
     conta_bancaria_id: string;
     recorrencia: boolean;
-    periodicidade: 'diario' | 'semanal' | 'mensal' | 'anual';
+    recorrencia_com_entrada: boolean;
+    recorrencia_repeat: boolean;
+    periodicidade: 'diario' | 'semanal' | 'quinzenal' | 'mensal' | 'bimestral' | 'trimestral' | 'semestral' | 'anual' | 'personalizado';
+    periodicidade_customizada_dias: string;
     quantidade_total_parcelas: string;
     observacoes: string;
     condicao: 'a_vista' | 'a_prazo';
@@ -115,8 +119,11 @@ const initialDrafts = {
     categoria_id: '',
     conta_bancaria_id: '',
     recorrencia: false,
+    recorrencia_com_entrada: true,
+    recorrencia_repeat: false,
     periodicidade: 'mensal' as const,
-    quantidade_total_parcelas: '12',
+    periodicidade_customizada_dias: '30',
+    quantidade_total_parcelas: '1',
     observacoes: '',
     condicao: 'a_prazo' as const,
     ja_recebido: false,
@@ -163,6 +170,7 @@ export const useUIStore = create<UIState>()(
       isTransferenciaBancariaOpen: false,
       isNovoUsuarioOpen: false,
       isLegacyImportOpen: false,
+      isBaixaLancamentoOpen: false,
       isSidebarCollapsed: false,
 
       selectedLancamentoIdForModal: null,

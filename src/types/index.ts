@@ -53,8 +53,10 @@ export interface LancamentoFinanceiro {
   id: string;
   tipo: 'entrada' | 'saida';
   valor_previsto: number;
+  valor_recebido: number;
   data_vencimento: string;
   data_emissao: string;
+  data_pagamento?: string;
   entidade_id: string;
   centro_custo_id: string;
   categoria_id: string;
@@ -63,6 +65,7 @@ export interface LancamentoFinanceiro {
   observacoes: string;
   recorrencia_id?: string; // Null if single parcel
   numero_parcela?: number; // parcel number if recurring
+  quantidade_total_parcelas?: number;
   status_aprovacao: StatusAprovacao;
   status_pagamento: StatusPagamento;
   usuario_criador_id: string;
@@ -102,7 +105,8 @@ export interface DiferencaFinanceira {
 
 export interface Recorrencia {
   id: string;
-  periodicidade: 'diario' | 'semanal' | 'mensal' | 'anual';
+  periodicidade: 'diario' | 'semanal' | 'quinzenal' | 'mensal' | 'bimestral' | 'trimestral' | 'semestral' | 'anual' | 'personalizado';
+  periodicidade_customizada_dias?: number;
   quantidade_total_parcelas: number;
   data_inicio: string;
 }
