@@ -231,7 +231,18 @@ export default function Cadastros() {
                 {paginatedData.length === 0 ? <tr><td colSpan={5} className="py-20 text-center opacity-40 uppercase tracking-widest">Nenhuma conta encontrada</td></tr> :
                 (paginatedData as any[]).map(c => (
                   <tr key={c.id} className="border-b border-neutral-50 hover:bg-neutral-50/50 transition-all">
-                    <td className="py-4 px-8"><div className="flex items-center gap-4"><div className="w-10 h-10 rounded-2xl bg-primary/10 text-primary flex items-center justify-center font-black uppercase shadow-sm"><Coins className="w-5 h-5" /></div><p className="text-neutral-900 font-black uppercase tracking-tighter">{c.nome_banco || c.nome}</p></div></td>
+                    <td className="py-4 px-8">
+                      <div className="flex items-center gap-4">
+                        <div className="w-10 h-10 rounded-2xl bg-primary/10 text-primary flex items-center justify-center font-black uppercase shadow-sm overflow-hidden">
+                          {c.logo_url ? (
+                            <img src={c.logo_url} alt="Logo" className="w-full h-full object-cover" />
+                          ) : (
+                            <Coins className="w-5 h-5" />
+                          )}
+                        </div>
+                        <p className="text-neutral-900 font-black uppercase tracking-tighter">{c.nome_banco || c.nome}</p>
+                      </div>
+                    </td>
                     <td className="py-4 px-8 font-mono text-neutral-500">{new Date(c.data_abertura).toLocaleDateString()}</td>
                     <td className="py-4 px-8 text-right font-mono text-bank-truth-green">{valueFormatter(c.saldo_inicial)}</td>
                     <td className="py-4 px-8 text-center"><span className="rounded-lg bg-emerald-50 text-bank-truth-green px-3 py-1.5 uppercase font-black text-[9px] tracking-widest">Operacional</span></td>
@@ -348,6 +359,59 @@ export default function Cadastros() {
             <motion.form initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.9, opacity: 0 }} onSubmit={handleAccountSubmit} className="bg-white w-full max-w-[440px] rounded-3xl shadow-2xl border-2 border-neutral-100 flex flex-col relative z-20 overflow-hidden">
               <header className="px-8 py-6 border-b border-neutral-50 flex justify-between items-center bg-neutral-50/50"><h2 className="text-sm font-black uppercase tracking-widest text-neutral-900">{editingAccount ? 'Editar Conta Bancária' : 'Nova Conta Bancária'}</h2><button type="button" onClick={() => setIsNewAccountOpen(false)} className="p-2 hover:bg-neutral-200 rounded-xl transition-colors"><X className="w-6 h-6" /></button></header>
               <div className="p-10 space-y-6">
+                <div className="flex flex-col items-center gap-4 mb-2">
+                  <div className="relative group">
+                    <div className="w-24 h-24 rounded-full bg-neutral-100 border-2 border-dashed border-neutral-300 flex items-center justify-center overflow-hidden transition-all group-hover:border-primary">
+                      {bankLogoUrl ? (
+                        <img src={bankLogoUrl} alt="Logo do Banco" className="w-full h-full object-cover" />
+                      ) : (
+                        <ImageIcon className="w-8 h-8 text-neutral-300" />
+                      )}
+                      <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                        <Camera className="w-6 h-6 text-white" />
+                      </div>
+                    </div>
+                    {isUploadingLogo && (
+                      <div className="absolute inset-0 bg-white/60 flex items-center justify-center rounded-full">
+                        <Loader2 className="w-6 h-6 text-primary animate-spin" />
+                      </div>
+                    )}
+                    <input
+                      type="file"
+                      accept="image/*"
+                      onChange={async (e) => {
+                        const file = e.target.files?.[0];
+                        if (!file) return;
+                        
+                        setIsUploadingLogo(true);
+                        try {
+                          const fileExt = file.name.split('.').pop();
+                          const fileName = `${Math.random()}.${fileExt}`;
+                          const filePath = `logos-bancos/${fileName}`;
+
+                          const { error: uploadError } = await supabase.storage
+                            .from('documents')
+                            .upload(filePath, file);
+
+                          if (uploadError) throw uploadError;
+
+                          const { data: { publicUrl } } = supabase.storage
+                            .from('documents')
+                            .getPublicUrl(filePath);
+
+                          setBankLogoUrl(publicUrl);
+                        } catch (err) {
+                          alert('Erro ao subir logo');
+                        } finally {
+                          setIsUploadingLogo(false);
+                        }
+                      }}
+                      className="absolute inset-0 opacity-0 cursor-pointer"
+                    />
+                  </div>
+                  <p className="text-[10px] font-black uppercase text-neutral-400 tracking-widest">Logo do Banco</p>
+                </div>
+
                 <div className="space-y-2"><label className="text-[10px] font-black uppercase text-neutral-400 tracking-widest">Nome da Conta / Banco</label><input type="text" required value={bankName} onChange={(e) => setBankName(e.target.value)} className="w-full h-12 bg-neutral-50 border-2 border-neutral-100 rounded-2xl px-5 text-xs font-black focus:border-primary outline-none" /></div>
                 <div className="space-y-2"><label className="text-[10px] font-black uppercase text-neutral-400 tracking-widest">Saldo Inicial (R$)</label><MoneyInput value={bankInitial} onChange={setBankInitial} className="w-full h-12 bg-neutral-50 border-2 border-neutral-100 rounded-2xl px-5 text-xs font-black focus:border-primary outline-none" placeholder="0,00" required /></div>
               </div>

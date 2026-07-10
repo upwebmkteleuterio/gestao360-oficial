@@ -854,21 +854,40 @@ export default function NovoLancamentoDrawer() {
                       <label className="text-[10px] font-black text-secondary uppercase tracking-widest">Conta Bancária <span className="text-alert-red">*</span></label>
                       <button type="button" onClick={() => setIsQuickAccountOpen(true)} className="text-[10px] font-black text-primary hover:underline uppercase tracking-widest flex items-center gap-1"><Plus className="w-3 h-3" /> Nova Conta</button>
                     </div>
-                    <select 
-                      value={lancamentoFormDraft.conta_bancaria_id}
-                      onChange={(e) => setLancamentoFormDraft({ conta_bancaria_id: e.target.value })}
-                      className="w-full h-12 bg-white border-2 border-neutral-200 text-sm font-bold rounded-xl focus:outline-none focus:border-primary transition-all px-4 shadow-xs appearance-none cursor-pointer"
-                      required
-                    >
+                    <div className="grid grid-cols-1 gap-2">
                       {contas.map(cnt => (
-                        <option key={cnt.id} value={cnt.id}>{cnt.nome_banco}</option>
+                        <button
+                          key={cnt.id}
+                          type="button"
+                          onClick={() => setLancamentoFormDraft({ conta_bancaria_id: cnt.id })}
+                          className={`flex items-center gap-3 p-3 rounded-xl border-2 transition-all text-left ${
+                            lancamentoFormDraft.conta_bancaria_id === cnt.id
+                              ? 'border-primary bg-primary/5 shadow-sm'
+                              : 'border-neutral-100 hover:border-neutral-200 bg-white'
+                          }`}
+                        >
+                          <div className="w-8 h-8 rounded-lg bg-neutral-100 flex items-center justify-center overflow-hidden shrink-0 border border-neutral-200">
+                            {cnt.logo_url ? (
+                              <img src={cnt.logo_url} alt="Logo" className="w-full h-full object-cover" />
+                            ) : (
+                              <Banknote className="w-4 h-4 text-neutral-400" />
+                            )}
+                          </div>
+                          <div className="flex flex-col min-w-0">
+                            <span className="text-[10px] font-black uppercase text-neutral-900 truncate">{cnt.nome_banco || cnt.nome}</span>
+                            <span className="text-[8px] font-bold text-neutral-400 uppercase tracking-widest">Saldo: R$ {formatBRL(cnt.saldo_inicial)}</span>
+                          </div>
+                          {lancamentoFormDraft.conta_bancaria_id === cnt.id && (
+                            <CheckCircle2 className="w-4 h-4 text-primary ml-auto" />
+                          )}
+                        </button>
                       ))}
-                    </select>
+                    </div>
                   </div>
 
                   <div className="flex flex-col gap-2">
                     <label className="text-[10px] font-black text-secondary uppercase tracking-widest">Data de Emissão</label>
-                    <input 
+                    <input
                       type="date"
                       value={lancamentoFormDraft.data_emissao}
                       onChange={(e) => setLancamentoFormDraft({ data_emissao: e.target.value })}

@@ -2,7 +2,7 @@ import React from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { Printer, Download, X, Bluetooth, Calendar, User, Wallet, Tag, FileText, ExternalLink, Hash, Clock, CheckCircle2, AlertCircle } from 'lucide-react';
 import { useUIStore } from '../store/uiStore';
-import { useLancamentos, useEntidades, useCategorias, useContas, useLancamentoAnexos } from '../hooks/useData';
+import { useLancamentos, useEntidades, useCategorias, useContas, useLancamentoAnexos, useUsuarios } from '../hooks/useData';
 
 export default function ComprovanteDrawer() {
   const { isComprovanteOpen, setModalOpen, selectedLancamentoIdForModal, setSelectedLancamentoIdForModal } = useUIStore();
@@ -10,6 +10,7 @@ export default function ComprovanteDrawer() {
   const { data: entidades = [] } = useEntidades();
   const { data: categorias = [] } = useCategorias();
   const { data: contas = [] } = useContas();
+  const { data: usuarios = [] } = useUsuarios();
   const { anexos = [] } = useLancamentoAnexos(selectedLancamentoIdForModal);
 
   const lancamento = lancamentos.find(l => l.id === selectedLancamentoIdForModal);
@@ -24,6 +25,7 @@ export default function ComprovanteDrawer() {
   const entidade = entidades.find(e => e.id === lancamento.entidade_id);
   const categoria = categorias.find(c => c.id === lancamento.categoria_id);
   const conta = contas.find(c => c.id === lancamento.conta_bancaria_id);
+  const autor = usuarios.find(u => u.id === lancamento.usuario_criador_id);
 
   const formatBRL = (val: number) => {
     return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(val);
@@ -124,6 +126,12 @@ export default function ComprovanteDrawer() {
                     <FileText className="w-3 h-3" /> Conta Bancária
                   </span>
                   <p className="text-xs font-black text-on-surface truncate">{conta?.nome_banco || 'N/A'}</p>
+                </div>
+                <div className="bg-white p-4 rounded-2xl border border-neutral-100 space-y-1.5">
+                  <span className="text-[9px] font-black uppercase text-secondary tracking-widest flex items-center gap-1.5">
+                    <User className="w-3 h-3" /> Responsável
+                  </span>
+                  <p className="text-xs font-black text-on-surface truncate">{autor?.nome || 'Sistema'}</p>
                 </div>
               </div>
 
