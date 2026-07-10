@@ -126,7 +126,7 @@ const initialDrafts = {
     periodicidade_customizada_dias: '30',
     quantidade_total_parcelas: '1',
     observacoes: '',
-    condicao: 'a_prazo' as const,
+    condicao: 'a_vista' as const,
     ja_recebido: false,
     desconto_valor: '0,00',
     desconto_tipo: 'valor' as const,

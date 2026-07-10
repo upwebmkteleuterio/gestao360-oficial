@@ -57,6 +57,7 @@ export interface LancamentoFinanceiro {
   valor_recebido: number;
   data_vencimento: string;
   data_emissao: string;
+  data_competencia?: string;
   data_pagamento?: string;
   entidade_id: string;
   centro_custo_id: string;

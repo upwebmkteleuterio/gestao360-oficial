@@ -242,6 +242,14 @@ export default function NovoLancamentoDrawer() {
   }, [selectedLancamentoIdForModal, lancamentos]);
 
   useEffect(() => {
+    if (isNovoLancamentoOpen && !selectedLancamentoIdForModal) {
+      resetAllDrafts();
+      setAttachments([]);
+      setParcelasManuais([]);
+    }
+  }, [isNovoLancamentoOpen, selectedLancamentoIdForModal]);
+
+  useEffect(() => {
     if (editingItem) {
       setLancamentoFormDraft({
         tipo: editingItem.tipo,
@@ -401,6 +409,12 @@ export default function NovoLancamentoDrawer() {
 
     if (!lancamentoFormDraft.entidade_id) {
       showToast('Por favor, preencha o destinatário.', 'warning');
+      setIsSubmitting(false);
+      return;
+    }
+
+    if (!lancamentoFormDraft.condicao) {
+      showToast('Selecione a condição de pagamento.', 'warning');
       setIsSubmitting(false);
       return;
     }
@@ -670,7 +684,7 @@ export default function NovoLancamentoDrawer() {
 
                   <div className="flex flex-col gap-2">
                     <div className="flex justify-between items-center">
-                      <label className="text-[10px] font-black text-secondary uppercase tracking-widest">Condição</label>
+                      <label className="text-[10px] font-black text-secondary uppercase tracking-widest">Condição <span className="text-alert-red">*</span></label>
                       <label className="flex items-center gap-2 cursor-pointer select-none">
                         <input
                           type="checkbox"
@@ -682,23 +696,23 @@ export default function NovoLancamentoDrawer() {
                       </label>
                     </div>
                     <div className="flex bg-neutral-100 dark:bg-surface-container border-2 border-neutral-100 dark:border-surface-border rounded-xl p-1 h-12 select-none">
-                      <button 
+                      <button
                         type="button"
                         onClick={() => setLancamentoFormDraft({ condicao: 'a_vista' })}
                         className={`flex-1 text-[10px] font-black rounded-lg transition-all uppercase tracking-tighter ${
-                          lancamentoFormDraft.condicao === 'a_vista' 
-                            ? 'bg-white dark:bg-surface text-primary shadow-sm' 
+                          lancamentoFormDraft.condicao === 'a_vista'
+                            ? 'bg-white dark:bg-surface text-primary shadow-sm'
                             : 'text-secondary hover:text-on-surface'
                         }`}
                       >
                         À Vista
                       </button>
-                      <button 
+                      <button
                         type="button"
                         onClick={() => setLancamentoFormDraft({ condicao: 'a_prazo' })}
                         className={`flex-1 text-[10px] font-black rounded-lg transition-all uppercase tracking-tighter ${
-                          lancamentoFormDraft.condicao === 'a_prazo' 
-                            ? 'bg-white dark:bg-surface text-primary shadow-sm' 
+                          lancamentoFormDraft.condicao === 'a_prazo'
+                            ? 'bg-white dark:bg-surface text-primary shadow-sm'
                             : 'text-secondary hover:text-on-surface'
                         }`}
                       >
