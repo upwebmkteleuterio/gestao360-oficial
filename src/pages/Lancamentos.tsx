@@ -704,7 +704,7 @@ export default function Lancamentos() {
                             </button>
 
                             {activeMenuId === item.id && (
-                              <div className="absolute right-12 bottom-full mb-1 bg-white border border-surface-border rounded-lg shadow-xl z-[100] py-2 w-32 animate-fade-in text-left">
+                              <div className="absolute right-12 top-0 mt-0 bg-white border border-surface-border rounded-lg shadow-xl z-[100] py-2 w-36 animate-fade-in text-left">
                                 <button
                                   type="button"
                                   onClick={() => handleEditClick(item)}
@@ -738,7 +738,6 @@ export default function Lancamentos() {
                                   </button>
                                 )}
                               </div>
-
                             )}
                           </td>
                         </tr>

@@ -456,7 +456,6 @@ export default function NovoLancamentoDrawer() {
           item: itemDetails,
           recorrencia: recurrencePayload
         });
-        showToast(isRecurrent ? 'Série recorrente gerada!' : 'Lançamento cadastrado!', 'success');
       }
 
       // Handle Attachments
@@ -484,15 +483,18 @@ export default function NovoLancamentoDrawer() {
               tipo_arquivo: (attachment as LocalFile).type,
               user_id: user?.id
             });
+          } else {
+            console.error('Erro ao subir anexo:', uploadError);
           }
         }
       }
 
+      showToast(editingItem ? 'Lançamento atualizado!' : 'Lançamento cadastrado com sucesso!', 'success');
       resetAllDrafts();
       setAttachments([]);
       handleClose();
     } catch (err: any) {
-      showToast('Erro: ' + err.message, 'error');
+      showToast('Ocorreu um problema: ' + err.message, 'error');
     } finally {
       setIsSubmitting(false);
     }
