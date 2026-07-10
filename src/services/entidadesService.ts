@@ -44,5 +44,32 @@ export const entidadesService = {
     
     if (error) throw error;
     return true;
+  },
+
+  getDocuments: async (entidadeId: string): Promise<any[]> => {
+    const { data, error } = await supabase
+      .from('entidade_documentos')
+      .select('*')
+      .eq('entidade_id', entidadeId);
+    
+    if (error) throw error;
+    return data;
+  },
+
+  deleteDocument: async (documentId: string, filePath: string): Promise<void> => {
+    // Delete from storage
+    const { error: storageError } = await supabase.storage
+      .from('documents')
+      .remove([filePath]);
+    
+    if (storageError) console.error('Storage delete error:', storageError);
+
+    // Delete from DB
+    const { error: dbError } = await supabase
+      .from('entidade_documentos')
+      .delete()
+      .eq('id', documentId);
+    
+    if (dbError) throw dbError;
   }
 };

@@ -26,24 +26,25 @@ import {
   Receipt,
   ArrowRight
 } from 'lucide-react';
-import { useEntidades } from '../hooks/useData';
+import { useEntidades, useEntidadeDocuments } from '../hooks/useData';
 import { useAuth } from '../hooks/useAuth';
 import { useUIStore } from '../store/uiStore';
 import { EntidadeNegocio } from '../types';
 import { supabase } from '@/integrations/supabase/client';
 import { useQuery } from '@tanstack/react-query';
 import Button from '../components/Button';
-import { WalletCards } from 'lucide-react';
+import { WalletCards, FileText, Download } from 'lucide-react';
 
 export default function CRM() {
   const { role } = useAuth();
   const { data: entidades = [], createEntity, updateEntity, deleteEntity } = useEntidades();
-
   const { isCadastroRapidoOpen, setModalOpen, entidadeFormDraft, setEntidadeFormDraft, resetAllDrafts } = useUIStore();
 
   const [searchTerm, setSearchTerm] = useState('');
   const [tipoFilter, setTipoFilter] = useState<'all' | 'cliente' | 'fornecedor'>('all');
   const [selectedEntity, setSelectedEntity] = useState<EntidadeNegocio | null>(null);
+
+  const { documents: existingDocuments, deleteDocument } = useEntidadeDocuments(selectedEntity?.id || null);
 
   // Pagination
   const [currentPage, setCurrentPage] = useState(1);
@@ -365,6 +366,57 @@ export default function CRM() {
                         <option value="bpi">BPI (Baixado)</option>
                       </select>
                     </div>
+                  </div>
+                </div>
+
+                {/* Documents Section */}
+                <div className="space-y-6">
+                  <h3 className="text-[10px] font-black uppercase tracking-[0.2em] text-primary flex items-center gap-2">
+                    <FileText className="w-4 h-4" /> Documentos Vinculados ({existingDocuments.length})
+                  </h3>
+                  <div className="space-y-2">
+                    {existingDocuments.length > 0 ? (
+                      existingDocuments.map((doc: any) => (
+                        <div key={doc.id} className="flex items-center justify-between p-4 bg-neutral-50 border-2 border-neutral-100 rounded-2xl group hover:border-primary/20 transition-all">
+                          <div className="flex items-center gap-3">
+                            <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center text-primary">
+                              <FileText className="w-4 h-4" />
+                            </div>
+                            <div>
+                              <p className="text-[10px] font-black uppercase tracking-tight text-neutral-900">{doc.nome}</p>
+                              <p className="text-[8px] text-neutral-400">{(doc.tamanho / 1024 / 1024).toFixed(2)} MB • PDF</p>
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-all">
+                            <a
+                              href={doc.url}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="p-2 hover:bg-white rounded-lg text-primary transition-all"
+                            >
+                              <Download className="w-3.5 h-3.5" />
+                            </a>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                if (confirm('Excluir este documento?')) {
+                                  const path = doc.url.split('documents/')[1];
+                                  deleteDocument({ id: doc.id, path });
+                                }
+                              }}
+                              className="p-2 hover:bg-white rounded-lg text-alert-red transition-all"
+                            >
+                              <Trash2 className="w-3.5 h-3.5" />
+                            </button>
+                          </div>
+                        </div>
+                      ))
+                    ) : (
+                      <div className="p-8 text-center bg-neutral-50 border-2 border-dashed border-neutral-200 rounded-3xl">
+                        <FileText className="w-8 h-8 mx-auto text-neutral-300 mb-2" />
+                        <p className="text-[10px] font-bold text-neutral-400 uppercase tracking-widest">Nenhum documento anexado</p>
+                      </div>
+                    )}
                   </div>
                 </div>
 

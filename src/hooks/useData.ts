@@ -105,6 +105,30 @@ export function useEntidades() {
   };
 }
 
+export function useEntidadeDocuments(entidadeId: string | null) {
+  const queryClient = useQueryClient();
+
+  const query = useQuery({
+    queryKey: ['entidadeDocuments', entidadeId],
+    queryFn: () => entidadeId ? entidadesService.getDocuments(entidadeId) : Promise.resolve([]),
+    enabled: !!entidadeId
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: ({ id, path }: { id: string, path: string }) => entidadesService.deleteDocument(id, path),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['entidadeDocuments', entidadeId] });
+    }
+  });
+
+  return {
+    ...query,
+    documents: query.data || [],
+    deleteDocument: deleteMutation.mutateAsync,
+    isDeleting: deleteMutation.isPending
+  };
+}
+
 export function useCentrosCusto() {
   const queryClient = useQueryClient();
 
