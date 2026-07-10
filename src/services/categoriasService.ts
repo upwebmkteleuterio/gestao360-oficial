@@ -32,5 +32,17 @@ export const categoriasService = {
     
     if (error) throw error;
     return true;
+  },
+
+  update: async (id: string, data: Partial<CategoriaFinanceira>): Promise<CategoriaFinanceira> => {
+    const { data: updatedData, error } = await supabase
+      .from('categorias_financeiras')
+      .update(data)
+      .eq('id', id)
+      .select()
+      .single();
+    
+    if (error) throw error;
+    return updatedData as CategoriaFinanceira;
   }
 };

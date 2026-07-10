@@ -55,7 +55,7 @@ export default function Dashboard() {
     }
   });
   
-  const { setModalOpen } = useUIStore();
+  const { setModalOpen, setActiveTab } = useUIStore();
 
   const [periodFilter, setPeriodFilter] = useState<'all' | 'este-mes' | '2023-10' | '2026-06' | '90-dias'>('all');
   const [customStart, setCustomStart] = useState('');

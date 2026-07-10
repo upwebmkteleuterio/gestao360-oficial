@@ -20,20 +20,27 @@ import Button from './Button';
 
 type TabType = 'dados' | 'endereco' | 'documentos';
 
+interface LocalFile {
+  name: string;
+  size: number;
+  type: string;
+  file: File;
+}
+
 export default function CadastroRapidoModal() {
-  const { 
-    isCadastroRapidoOpen, 
-    setModalOpen, 
-    entidadeFormDraft, 
-    setEntidadeFormDraft, 
-    setLancamentoFormDraft, 
-    resetAllDrafts 
+  const {
+    isCadastroRapidoOpen,
+    setModalOpen,
+    entidadeFormDraft,
+    setEntidadeFormDraft,
+    setLancamentoFormDraft,
+    resetAllDrafts
   } = useUIStore();
   
   const { createEntity } = useEntidades();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [activeTab, setActiveTab] = useState<TabType>('dados');
-  const [files, setFiles] = useState<Array<{ name: string, size: number, type: string, file: File }>>([]);
+  const [files, setFiles] = useState<LocalFile[]>([]);
   const [isSearchingCep, setIsSearchingCep] = useState(false);
 
   const maskCpfCnpj = (value: string) => {
@@ -126,27 +133,27 @@ export default function CadastroRapidoModal() {
 
       // Handle file uploads if any
       if (newEntity && files.length > 0) {
-        for (const fileItem of (files as any)) {
-          const typedFile = fileItem as any;
-          const fileExt = typedFile.name.split('.').pop();
+        for (let i = 0; i < files.length; i++) {
+          const fileItem = files[i] as LocalFile;
+          const fileExt = fileItem.name.split('.').pop();
           const fileName = `${Math.random()}.${fileExt}`;
           const filePath = `entidades/${(newEntity as any).id}/${fileName}`;
 
           const { error: uploadError } = await supabase.storage
             .from('documents')
-            .upload(filePath, typedFile.file);
+            .upload(filePath, fileItem.file);
 
           if (!uploadError) {
             const { data: { publicUrl } } = supabase.storage
               .from('documents')
               .getPublicUrl(filePath);
 
-            await supabase.from('entidade_documentos').insert({
+            await (supabase.from('entidade_documentos') as any).insert({
               entidade_id: (newEntity as any).id,
-              nome: typedFile.name,
+              nome: fileItem.name,
               url: publicUrl,
-              tamanho: typedFile.size,
-              tipo_arquivo: typedFile.type,
+              tamanho: fileItem.size,
+              tipo_arquivo: fileItem.type,
               user_id: user?.id
             });
           }

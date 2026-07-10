@@ -44,7 +44,9 @@ function formatBRL(value: any): string {
   return formatted;
 }
 
-function parseMoney(value: string): number {
+function parseMoney(value: string | number): number {
+  if (typeof value === 'number') return value;
+  if (!value) return 0;
   const cleanStr = value.replace(/\./g, '').replace(',', '.');
   return parseFloat(cleanStr) || 0;
 }
@@ -177,17 +179,24 @@ const SearchableSelect = ({
   );
 };
 
+interface LocalFile {
+  name: string;
+  size: number;
+  type: string;
+  file: File;
+}
+
 export default function NovoLancamentoDrawer() {
-  const { 
-    isNovoLancamentoOpen, 
-    setModalOpen, 
+  const {
+    isNovoLancamentoOpen,
+    setModalOpen,
     selectedLancamentoIdForModal,
     setSelectedLancamentoIdForModal,
     selectedRecorrenciaAction,
     setSelectedRecorrenciaAction,
-    lancamentoFormDraft, 
-    setLancamentoFormDraft, 
-    resetAllDrafts 
+    lancamentoFormDraft,
+    setLancamentoFormDraft,
+    resetAllDrafts
   } = useUIStore();
 
   const { createLancamento, updateLancamento, isCreating, isUpdating, data: lancamentos = [] } = useLancamentos();
@@ -200,7 +209,7 @@ export default function NovoLancamentoDrawer() {
   const { createCategory } = useCategorias();
   const { createAccount } = useContas();
 
-  const [attachments, setAttachments] = useState<Array<{ name: string, size: number, type: string, file: File }>>([]);
+  const [attachments, setAttachments] = useState<LocalFile[]>([]);
 
   // Filter out soft-deleted items for new selection
   const centros = useMemo(() => rawCentros.filter((c: any) => c.status !== 'excluido'), [rawCentros]);
@@ -377,27 +386,26 @@ export default function NovoLancamentoDrawer() {
       // Handle Attachments
       const lancamentoId = editingItem ? editingItem.id : (createdItem as any)?.id;
       if (lancamentoId && attachments.length > 0) {
-        for (const attachment of (attachments as any)) {
-          const typedAttachment = attachment as any;
-          const fileExt = typedAttachment.name.split('.').pop();
+        for (const attachment of attachments) {
+          const fileExt = (attachment as LocalFile).name.split('.').pop();
           const fileName = `${Math.random()}.${fileExt}`;
           const filePath = `lancamentos/${lancamentoId}/${fileName}`;
 
           const { error: uploadError } = await supabase.storage
             .from('documents')
-            .upload(filePath, typedAttachment.file);
+            .upload(filePath, (attachment as LocalFile).file);
 
           if (!uploadError) {
             const { data: { publicUrl } } = supabase.storage
               .from('documents')
               .getPublicUrl(filePath);
 
-            await supabase.from('lancamento_anexos').insert({
+            await (supabase.from('lancamento_anexos') as any).insert({
               lancamento_id: lancamentoId,
-              nome: typedAttachment.name,
+              nome: (attachment as LocalFile).name,
               url: publicUrl,
-              tamanho: typedAttachment.size,
-              tipo_arquivo: typedAttachment.type,
+              tamanho: (attachment as LocalFile).size,
+              tipo_arquivo: (attachment as LocalFile).type,
               user_id: user?.id
             });
           }
