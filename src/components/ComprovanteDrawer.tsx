@@ -1,168 +1,195 @@
 import React from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { Printer, Download, X, Bluetooth } from 'lucide-react';
+import { Printer, Download, X, Bluetooth, Calendar, User, Wallet, Tag, FileText, ExternalLink, Hash, Clock, CheckCircle2, AlertCircle } from 'lucide-react';
+import { useUIStore } from '../store/uiStore';
+import { useLancamentos, useEntidades, useCategorias, useContas, useLancamentoAnexos } from '../hooks/useData';
 
-interface ComprovanteDrawerProps {
-  isOpen: boolean;
-  onClose: () => void;
-  data?: {
-    idTransacao?: string;
-    conta?: string;
-    responsavel?: string;
-    valorTransacionado?: number;
-    taxa?: number;
-    totalConciliado?: number;
-    dataHora?: string;
+export default function ComprovanteDrawer() {
+  const { isComprovanteOpen, setModalOpen, selectedLancamentoIdForModal, setSelectedLancamentoIdForModal } = useUIStore();
+  const { data: lancamentos = [] } = useLancamentos();
+  const { data: entidades = [] } = useEntidades();
+  const { data: categorias = [] } = useCategorias();
+  const { data: contas = [] } = useContas();
+  const { anexos = [] } = useLancamentoAnexos(selectedLancamentoIdForModal);
+
+  const lancamento = lancamentos.find(l => l.id === selectedLancamentoIdForModal);
+
+  const handleClose = () => {
+    setModalOpen('isComprovanteOpen', false);
+    setSelectedLancamentoIdForModal(null);
   };
-}
 
-export default function ComprovanteDrawer({ isOpen, onClose, data }: ComprovanteDrawerProps) {
-  // Fallbacks if no data provided
-  const idTransacao = data?.idTransacao || '#TXN-98234';
-  const conta = data?.conta || 'Banco Itaú - CC';
-  const responsavel = data?.responsavel || 'Admin Geral';
-  const valorTransacionado = data?.valorTransacionado ?? 15430.00;
-  const taxa = data?.taxa ?? 15.00;
-  const totalConciliado = data?.totalConciliado ?? (valorTransacionado - taxa);
-  const dataHora = data?.dataHora || '24/10/2023 14:32';
+  if (!lancamento) return null;
+
+  const entidade = entidades.find(e => e.id === lancamento.entidade_id);
+  const categoria = categorias.find(c => c.id === lancamento.categoria_id);
+  const conta = contas.find(c => c.id === lancamento.conta_bancaria_id);
 
   const formatBRL = (val: number) => {
     return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(val);
   };
 
+  const formatDate = (dateStr: string) => {
+    return dateStr.split('-').reverse().join('/');
+  };
+
   return (
     <AnimatePresence>
-      {isOpen && (
-        <div className="fixed inset-0 z-50 overflow-hidden font-sans select-none" id="comprovante-drawer-container">
-          {/* Backdrop overlay */}
-          <motion.div 
+      {isComprovanteOpen && (
+        <div className="fixed inset-0 z-[250] overflow-hidden font-sans select-none">
+          <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             className="absolute inset-0 bg-neutral-900/60 backdrop-blur-xs transition-opacity duration-300"
-            onClick={onClose}
+            onClick={handleClose}
           />
           
-          {/* Slide body */}
-          <motion.div 
+          <motion.div
             initial={{ x: '100%' }}
             animate={{ x: 0 }}
             exit={{ x: '100%' }}
             transition={{ type: 'spring', damping: 25, stiffness: 200 }}
-            className="absolute inset-y-0 right-0 max-w-md w-full bg-surface shadow-2xl flex flex-col h-full transform transition-transform duration-300"
+            className="absolute inset-y-0 right-0 max-w-lg w-full bg-surface shadow-2xl flex flex-col h-full transform transition-transform duration-300"
           >
-            {/* Drawer Header */}
-            <div className="px-6 py-4 border-b border-surface-border flex items-center justify-between bg-surface bg-surface-container-lowest">
-              <h2 className="text-sm font-black uppercase text-on-surface tracking-wider">Impressão de Comprovante</h2>
-              <button 
-                onClick={onClose}
-                className="p-1 rounded-full text-on-surface-variant hover:bg-surface-container transition-all"
+            <div className="px-6 py-5 border-b border-surface-border flex items-center justify-between bg-white shrink-0">
+              <div>
+                <h2 className="text-sm font-black uppercase text-on-surface tracking-wider">Detalhes do Lançamento</h2>
+                <p className="text-[10px] font-bold text-secondary uppercase tracking-widest mt-0.5">Visão completa do registro financeiro</p>
+              </div>
+              <button
+                onClick={handleClose}
+                className="p-2 rounded-xl text-secondary hover:bg-neutral-100 transition-all"
               >
-                <X className="w-5 h-5" />
+                <X className="w-6 h-6" />
               </button>
             </div>
 
-            {/* Content body with the thermal print styled coupon */}
-            <div className="flex-1 overflow-y-auto p-6 bg-neutral-100 flex flex-col justify-start space-y-6">
-              <div className="text-center">
-                <span className="text-[10px] uppercase font-bold tracking-widest text-on-surface-variant">Preview do Recibo</span>
+            <div className="flex-1 overflow-y-auto bg-neutral-50/50 p-6 space-y-6">
+              {/* Resumo de Valor e Status */}
+              <div className="bg-white border border-neutral-100 rounded-3xl p-6 shadow-sm flex flex-col items-center text-center relative overflow-hidden">
+                <div className={`absolute top-0 right-0 w-24 h-24 -mr-8 -mt-8 rounded-full opacity-5 ${lancamento.tipo === 'entrada' ? 'bg-bank-truth-green' : 'bg-alert-red'}`} />
+                
+                <div className={`w-14 h-14 rounded-2xl flex items-center justify-center mb-4 ${
+                  lancamento.tipo === 'entrada' ? 'bg-bank-truth-green/10 text-bank-truth-green' : 'bg-alert-red/10 text-alert-red'
+                }`}>
+                  <Wallet className="w-7 h-7" />
+                </div>
+
+                <div className="space-y-1">
+                  <span className="text-[10px] font-black uppercase tracking-widest text-secondary">
+                    {lancamento.tipo === 'entrada' ? 'Total a Receber' : 'Total a Pagar'}
+                  </span>
+                  <h3 className={`text-3xl font-black ${lancamento.tipo === 'entrada' ? 'text-bank-truth-green' : 'text-alert-red'}`}>
+                    {formatBRL(lancamento.valor_previsto)}
+                  </h3>
+                </div>
+
+                <div className="mt-6 flex items-center gap-3">
+                  <div className={`flex items-center gap-1.5 px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-widest ${
+                    lancamento.status_pagamento === 'pago' ? 'bg-bank-truth-green text-white' : 'bg-pending-amber/10 text-pending-amber border border-pending-amber/20'
+                  }`}>
+                    {lancamento.status_pagamento === 'pago' ? <CheckCircle2 className="w-3 h-3" /> : <Clock className="w-3 h-3" />}
+                    {lancamento.status_pagamento === 'pago' ? 'Liquidado' : 'Em Aberto'}
+                  </div>
+                  <div className="flex items-center gap-1.5 px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-widest bg-neutral-900 text-white">
+                    {lancamento.status_aprovacao === 'confirmado_master' ? <CheckCircle2 className="w-3 h-3" /> : <Clock className="w-3 h-3" />}
+                    {lancamento.status_aprovacao.replace('_', ' ')}
+                  </div>
+                </div>
               </div>
 
-              {/* Paper receipt container */}
-              <div className="bg-[#fcfbf7] border border-amber-100 rounded-lg p-5 shadow-md border-dashed border-2 relative overflow-hidden text-neutral-800">
-                {/* Soft shadow accent for depth */}
-                <div className="text-center border-b border-dashed border-neutral-300 pb-4 mb-4">
-                  <h3 className="text-lg font-black tracking-tight text-neutral-900 uppercase">Gestão 360</h3>
-                  <span className="text-[10px] uppercase font-black tracking-wider text-amber-700 block">Verdade Bancária</span>
-                  <div className="text-[10px] text-neutral-500 font-mono mt-1.5 space-y-0.5">
-                    <p>CNPJ: 00.000.000/0001-00</p>
-                    <p>Data: {dataHora}</p>
-                  </div>
+              {/* Grid de Informações */}
+              <div className="grid grid-cols-2 gap-4">
+                <div className="bg-white p-4 rounded-2xl border border-neutral-100 space-y-1.5">
+                  <span className="text-[9px] font-black uppercase text-secondary tracking-widest flex items-center gap-1.5">
+                    <User className="w-3 h-3" /> Entidade
+                  </span>
+                  <p className="text-xs font-black text-on-surface truncate">{entidade?.nome_razao_social || 'N/A'}</p>
                 </div>
-
-                {/* Receipt Core details */}
-                <div className="space-y-4">
-                  <div className="text-center">
-                    <span className="text-[10px] bg-neutral-200 text-neutral-700 px-2 py-0.5 rounded font-bold uppercase tracking-wider">
-                      Comprovante de Conciliação
-                    </span>
-                  </div>
-
-                  {/* Attributes block */}
-                  <div className="space-y-2 text-[11px] font-mono border-b border-dashed border-neutral-300 pb-3">
-                    <div className="flex justify-between">
-                      <span className="text-neutral-500">ID Transação:</span>
-                      <span className="font-extrabold text-neutral-950">{idTransacao}</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-neutral-500">Conta:</span>
-                      <span className="font-semibold text-neutral-900">{conta}</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-neutral-500">Responsável:</span>
-                      <span className="font-semibold text-neutral-900">{responsavel}</span>
-                    </div>
-                  </div>
-
-                  {/* Values block with thermal layout */}
-                  <div className="space-y-2 text-xs font-mono py-1">
-                    <div className="flex justify-between">
-                      <span className="uppercase text-neutral-500 text-[10px] font-bold">Valor Transacionado</span>
-                      <span className="font-bold text-neutral-900">{formatBRL(valorTransacionado)}</span>
-                    </div>
-                    <div className="flex justify-between text-red-600">
-                      <span className="uppercase text-[10px] font-bold">Taxa</span>
-                      <span className="font-bold">-{formatBRL(taxa)}</span>
-                    </div>
-                    <div className="flex justify-between border-t border-dashed border-neutral-300 pt-2.5 text-sm font-black text-neutral-950">
-                      <span className="uppercase text-[11px]">Total Conciliado</span>
-                      <span>{formatBRL(totalConciliado)}</span>
-                    </div>
-                  </div>
-
-                  {/* Status Indicator */}
-                  <div className="pt-2 text-center flex justify-center">
-                    <span className="inline-flex items-center gap-1.5 bg-emerald-600 text-white text-[10px] font-black px-3 py-1 rounded-full uppercase tracking-wider shadow-xs animate-pulse">
-                      <span className="w-1.5 h-1.5 bg-white rounded-full" />
-                      Confirmado
-                    </span>
-                  </div>
+                <div className="bg-white p-4 rounded-2xl border border-neutral-100 space-y-1.5">
+                  <span className="text-[9px] font-black uppercase text-secondary tracking-widest flex items-center gap-1.5">
+                    <Tag className="w-3 h-3" /> Categoria
+                  </span>
+                  <p className="text-xs font-black text-on-surface truncate">{categoria?.nome || 'N/A'}</p>
                 </div>
-
-                {/* Receipt Footer */}
-                <div className="mt-6 pt-4 border-t border-dashed border-neutral-300 text-center text-[9px] text-neutral-400 font-mono leading-relaxed">
-                  <p>Documento impresso via sistema Gestão 360.</p>
-                  <p className="truncate" title="8f92a1b3-4c5d-6e7f">Autenticação: 8f92a1b3-4c5d-6e7f</p>
+                <div className="bg-white p-4 rounded-2xl border border-neutral-100 space-y-1.5">
+                  <span className="text-[9px] font-black uppercase text-secondary tracking-widest flex items-center gap-1.5">
+                    <Calendar className="w-3 h-3" /> Vencimento
+                  </span>
+                  <p className="text-xs font-black text-on-surface">{formatDate(lancamento.data_vencimento)}</p>
                 </div>
+                <div className="bg-white p-4 rounded-2xl border border-neutral-100 space-y-1.5">
+                  <span className="text-[9px] font-black uppercase text-secondary tracking-widest flex items-center gap-1.5">
+                    <FileText className="w-3 h-3" /> Conta Bancária
+                  </span>
+                  <p className="text-xs font-black text-on-surface truncate">{conta?.nome_banco || 'N/A'}</p>
+                </div>
+              </div>
+
+              {/* Observações */}
+              {lancamento.observacoes && (
+                <div className="bg-white p-5 rounded-3xl border border-neutral-100 space-y-3">
+                  <span className="text-[9px] font-black uppercase text-secondary tracking-widest flex items-center gap-1.5">
+                    <Hash className="w-3 h-3" /> Observações Contábeis
+                  </span>
+                  <p className="text-xs font-medium text-on-surface leading-relaxed">
+                    {lancamento.observacoes}
+                  </p>
+                </div>
+              )}
+
+              {/* Anexos */}
+              <div className="space-y-3">
+                <span className="text-[9px] font-black uppercase text-secondary tracking-widest flex items-center gap-1.5 ml-2">
+                  <ExternalLink className="w-3 h-3" /> Documentos e Anexos ({anexos.length})
+                </span>
+                {anexos.length > 0 ? (
+                  <div className="grid grid-cols-1 gap-2">
+                    {anexos.map((anexo: any) => (
+                      <a
+                        key={anexo.id}
+                        href={anexo.url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="bg-white p-4 rounded-2xl border border-neutral-100 hover:border-primary transition-all flex items-center justify-between group"
+                      >
+                        <div className="flex items-center gap-3">
+                          <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center text-primary group-hover:bg-primary group-hover:text-white transition-all">
+                            <FileText className="w-4 h-4" />
+                          </div>
+                          <div>
+                            <p className="text-xs font-black text-on-surface truncate max-w-[200px]">{anexo.nome}</p>
+                            <p className="text-[9px] font-bold text-secondary uppercase tracking-widest">{(anexo.tamanho / 1024 / 1024).toFixed(2)} MB</p>
+                          </div>
+                        </div>
+                        <Download className="w-4 h-4 text-neutral-300 group-hover:text-primary transition-all" />
+                      </a>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="bg-neutral-100 border-2 border-dashed border-neutral-200 p-6 rounded-3xl text-center">
+                    <FileText className="w-8 h-8 mx-auto text-neutral-300 mb-2" />
+                    <p className="text-[10px] font-bold text-neutral-400 uppercase tracking-widest">Nenhum anexo vinculado</p>
+                  </div>
+                )}
               </div>
             </div>
 
-            {/* Drawer CTAs / Interaction buttons */}
-            <div className="p-6 bg-surface border-t border-surface-border space-y-3 shrink-0">
-              <button 
+            <div className="p-6 bg-white border-t border-surface-border grid grid-cols-2 gap-3 shrink-0">
+              <button
                 type="button"
-                onClick={() => alert(`Imprimindo comprovante ${idTransacao} via impressora térmica pareada...`)}
-                className="w-full h-11 bg-[#f3b233] hover:bg-[#e2a225] text-on-background font-extrabold text-xs rounded-lg select-all flex items-center justify-center gap-2 transition-all border border-[#d69614]"
+                className="h-12 bg-neutral-900 text-white font-black text-xs uppercase tracking-[0.2em] rounded-xl flex items-center justify-center gap-2 hover:bg-black transition-all"
               >
-                <Bluetooth className="w-4 h-4" />
-                Imprimir via Bluetooth (58mm/80mm)
+                <Printer className="w-4 h-4" />
+                Imprimir
               </button>
-              
-              <button 
+              <button
                 type="button"
-                onClick={() => alert(`Download do comprovante PDF em formato A4 iniciado para ${idTransacao}.`)}
-                className="w-full h-11 bg-neutral-900 hover:bg-neutral-800 text-white font-extrabold text-xs rounded-lg select-all flex items-center justify-center gap-2 transition-all"
+                className="h-12 bg-primary text-white font-black text-xs uppercase tracking-[0.2em] rounded-xl flex items-center justify-center gap-2 hover:brightness-110 transition-all shadow-md"
               >
                 <Download className="w-4 h-4" />
-                Baixar em PDF (A4)
-              </button>
-
-              <button 
-                type="button"
-                onClick={onClose}
-                className="w-full pt-2 pb-1 text-center text-xs font-bold text-on-surface-variant hover:text-on-surface hover:underline"
-              >
-                Cancelar
+                Baixar PDF
               </button>
             </div>
           </motion.div>
@@ -171,3 +198,4 @@ export default function ComprovanteDrawer({ isOpen, onClose, data }: Comprovante
     </AnimatePresence>
   );
 }
+
