@@ -47,7 +47,33 @@ export default function Relatorios() {
   const { data: categorias = [] } = useCategorias();
   const { data: centros = [] } = useCentrosCusto();
 
+  // Export CSV logic
+  const handleExportCSV = () => {
+    const periodItems = lancamentos.filter(l =>
+      l.data_vencimento >= dateRange.start &&
+      l.data_vencimento <= dateRange.end &&
+      (selectedCostCenter === 'all' || l.centro_custo_id === selectedCostCenter)
+    );
+
+    const headers = 'ID,Tipo,Vencimento,Entidade,Categoria,Valor,StatusPag\n';
+    const csvContent = periodItems.map(l => {
+      const ent = entidades.find(e => e.id === l.entidade_id)?.nome_razao_social || 'N/A';
+      const cat = categorias.find(c => c.id === l.categoria_id)?.nome || 'N/A';
+      return `"${l.id}","${l.tipo}","${l.data_vencimento}","${ent}","${cat}",${l.valor_previsto},"${l.status_pagamento}"`;
+    }).join('\n');
+
+    const blob = new Blob([headers + csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.setAttribute('href', url);
+    link.setAttribute('download', `relatorio_gestao360_${dateRange.start}_a_${dateRange.end}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
   // Filters
+
   const [dateRange, setDateRange] = useState({
     start: format(startOfMonth(new Date()), 'yyyy-MM-dd'),
     end: format(endOfMonth(new Date()), 'yyyy-MM-dd')
@@ -210,9 +236,13 @@ export default function Relatorios() {
             {centros.map(c => <option key={c.id} value={c.id}>{c.nome}</option>)}
           </select>
 
-          <button className="h-12 w-12 flex items-center justify-center bg-neutral-900 text-white rounded-2xl hover:bg-black transition-all shadow-lg active:scale-95">
+          <button
+            onClick={handleExportCSV}
+            className="h-12 w-12 flex items-center justify-center bg-neutral-900 text-white rounded-2xl hover:bg-black transition-all shadow-lg active:scale-95"
+          >
             <Download className="w-5 h-5" />
           </button>
+
         </div>
       </header>
 

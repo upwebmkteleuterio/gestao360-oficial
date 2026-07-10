@@ -63,25 +63,36 @@ export default function Dashboard() {
 
   const filteredLancamentos = useMemo(() => {
     return lancamentos.filter(item => {
+      // Period filter
+      let periodMatch = true;
       if (periodFilter === 'este-mes') {
         const now = new Date();
         const yearMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
-        return item.data_vencimento.startsWith(yearMonth);
-      }
-      if (periodFilter === '90-dias') {
+        periodMatch = item.data_vencimento.startsWith(yearMonth);
+      } else if (periodFilter === '90-dias') {
         const now = new Date();
         const ninetyDaysAgo = new Date();
         ninetyDaysAgo.setDate(now.getDate() - 90);
         const dateStr = item.data_vencimento;
         const launchDate = new Date(dateStr);
-        return launchDate >= ninetyDaysAgo && launchDate <= now;
+        periodMatch = launchDate >= ninetyDaysAgo && launchDate <= now;
+      } else if (periodFilter === '2023-10') {
+        periodMatch = item.data_vencimento.startsWith('2023-10');
+      } else if (periodFilter === '2026-06') {
+        periodMatch = item.data_vencimento.startsWith('2026-06');
+      } else if (customStart && customEnd) {
+        periodMatch = item.data_vencimento >= customStart && item.data_vencimento <= customEnd;
       }
-      if (periodFilter === '2023-10') return item.data_vencimento.startsWith('2023-10');
-      if (periodFilter === '2026-06') return item.data_vencimento.startsWith('2026-06');
-      if (customStart && customEnd) return item.data_vencimento >= customStart && item.data_vencimento <= customEnd;
-      return true;
+
+      // Account filter
+      const accountMatch = selectedAccountId ? item.conta_bancaria_id === selectedAccountId : true;
+
+      // Cost center filter
+      const ccMatch = selectedCCId ? item.centro_custo_id === selectedCCId : true;
+
+      return periodMatch && accountMatch && ccMatch;
     });
-  }, [lancamentos, periodFilter, customStart, customEnd]);
+  }, [lancamentos, periodFilter, customStart, customEnd, selectedAccountId, selectedCCId]);
 
   const valueFormatter = (val: number) => {
     return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(val);
@@ -184,12 +195,32 @@ export default function Dashboard() {
             </section>
 
             <section className="space-y-4">
-              <h4 className="text-xs font-black uppercase tracking-wider text-secondary flex items-center gap-2"><Building2 className="w-5 h-5 text-secondary" /> SALDO POR CONTA</h4>
+              <div className="flex items-center justify-between">
+                <h4 className="text-xs font-black uppercase tracking-wider text-secondary flex items-center gap-2"><Building2 className="w-5 h-5 text-secondary" /> SALDO POR CONTA</h4>
+                {selectedAccountId && (
+                  <button
+                    onClick={() => setSelectedAccountId(null)}
+                    className="text-[10px] font-black text-primary uppercase tracking-widest hover:underline"
+                  >
+                    Limpar Filtro Conta
+                  </button>
+                )}
+              </div>
               <div ref={dragScrollAccounts.ref} {...dragScrollAccounts.props} className="flex gap-4 overflow-x-auto pb-2 scroll-smooth select-none">
                 {accountsBalances.map((acc, i) => (
-                  <div key={acc.id} className="flex-shrink-0 w-64 bg-white dark:bg-surface p-4 border border-surface-border rounded-lg flex items-center justify-between group cursor-pointer hover:border-primary transition-colors">
+                  <div
+                    key={acc.id}
+                    onClick={() => setSelectedAccountId(acc.id === selectedAccountId ? null : acc.id)}
+                    className={`flex-shrink-0 w-64 bg-white dark:bg-surface p-4 border rounded-lg flex items-center justify-between group cursor-pointer transition-all ${
+                      selectedAccountId === acc.id ? 'border-primary ring-2 ring-primary/20 shadow-md scale-[1.02]' : 'border-surface-border hover:border-primary shadow-sm'
+                    }`}
+                  >
                     <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center font-bold text-primary uppercase">{(acc.nome || '').substring(0, 2)}</div>
+                      <div className={`w-10 h-10 rounded-lg flex items-center justify-center font-bold uppercase transition-colors ${
+                        selectedAccountId === acc.id ? 'bg-primary text-white' : 'bg-primary/10 text-primary'
+                      }`}>
+                        {(acc.nome || '').substring(0, 2)}
+                      </div>
                       <div><p className="text-sm font-bold text-on-surface truncate w-24">{acc.nome}</p><p className="text-xs text-secondary">{acc.agencia} {acc.conta}</p></div>
                     </div>
                     <p className="text-sm font-bold font-mono text-on-surface">{valueFormatter(acc.consolidated || 0)}</p>
@@ -200,22 +231,40 @@ export default function Dashboard() {
 
             <section className="grid grid-cols-1 lg:grid-cols-3 gap-6 animate-fade-in">
               <div className="lg:col-span-2 bg-white dark:bg-surface p-6 rounded-xl border border-surface-border shadow-sm">
-                <h4 className="text-sm font-bold uppercase tracking-wider text-on-surface mb-6">Performance por Centro de Custo</h4>
+                <div className="flex items-center justify-between mb-6">
+                  <h4 className="text-sm font-bold uppercase tracking-wider text-on-surface">Performance por Centro de Custo</h4>
+                  {selectedCCId && (
+                    <button
+                      onClick={() => setSelectedCCId(null)}
+                      className="text-[10px] font-black text-primary uppercase tracking-widest hover:underline"
+                    >
+                      Limpar Filtro Centro
+                    </button>
+                  )}
+                </div>
                 <div className="relative h-64 w-full flex items-end justify-around gap-2 px-4 border-b border-surface-border pt-10">
                   {costCenterBreakdown.map((cc, i) => {
                     const maxVal = Math.max(...costCenterBreakdown.map(c => Math.max(c.entradas, c.saidas, 1))) * 1.1;
+                    const isSelected = selectedCCId === cc.id;
                     return (
-                      <div key={cc.id} className="flex flex-col items-center gap-1 flex-1 h-full justify-end group">
+                      <div
+                        key={cc.id}
+                        onClick={() => setSelectedCCId(isSelected ? null : cc.id)}
+                        className={`flex flex-col items-center gap-1 flex-1 h-full justify-end group cursor-pointer transition-all ${
+                          isSelected ? 'opacity-100 scale-105' : selectedCCId ? 'opacity-30 grayscale' : 'opacity-100'
+                        }`}
+                      >
                         <div className="w-full flex justify-center items-end gap-1.5 h-44">
                           <div className="bg-bank-truth-green w-6 rounded-t-sm relative transition-all duration-300" style={{ height: `${(cc.entradas / maxVal) * 100}%` }} />
                           <div className="bg-alert-red w-6 rounded-t-sm relative transition-all duration-300" style={{ height: `${(cc.saidas / maxVal) * 100}%` }} />
                         </div>
-                        <span className="text-[10px] font-bold text-secondary mt-2 truncate max-w-full">{cc.nome}</span>
+                        <span className={`text-[10px] font-bold mt-2 truncate max-w-full ${isSelected ? 'text-primary' : 'text-secondary'}`}>{cc.nome}</span>
                       </div>
                     );
                   })}
                 </div>
               </div>
+
               <div className="bg-white dark:bg-surface p-6 rounded-xl border border-surface-border shadow-sm flex flex-col h-full">
                 <h4 className="text-sm font-bold uppercase tracking-wider text-on-surface mb-6">Status da Carteira</h4>
                 <div className="flex-1 flex flex-col items-center justify-center space-y-6">

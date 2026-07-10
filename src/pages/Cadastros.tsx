@@ -27,8 +27,10 @@ import {
   Edit2,
   Upload,
   Camera,
-  Image as ImageIcon
+  Image as ImageIcon,
+  Search
 } from 'lucide-react';
+
 import { useContas, useCentrosCusto, useCategorias } from '../hooks/useData';
 import { useAuth } from '../hooks/useAuth';
 import { useDragScroll } from '../hooks/useDragScroll';
@@ -73,6 +75,8 @@ export default function Cadastros() {
   const [ccDesc, setCCDesc] = useState('');
   const [catName, setCatName] = useState('');
   const [catType, setCatType] = useState<'entrada' | 'saida'>('entrada');
+
+  const [searchTerm, setSearchTerm] = useState('');
 
   const valueFormatter = (val: number) => new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(val);
 
@@ -182,16 +186,26 @@ export default function Cadastros() {
 
   const paginatedData = useMemo(() => {
     const rawData = activeSubTab === 'contas' ? contas : activeSubTab === 'centros' ? centrosCusto : categorias;
-    const data = rawData.filter((item: any) => item.status !== 'excluido');
+    const data = rawData.filter((item: any) => {
+      const isNotExcluido = item.status !== 'excluido';
+      const name = (item.nome_banco || item.nome || '').toLowerCase();
+      const matchesSearch = name.includes(searchTerm.toLowerCase());
+      return isNotExcluido && matchesSearch;
+    });
     const start = (currentPage - 1) * itemsPerPage;
     return data.slice(start, start + itemsPerPage);
-  }, [activeSubTab, contas, centrosCusto, categorias, currentPage, itemsPerPage]);
+  }, [activeSubTab, contas, centrosCusto, categorias, currentPage, itemsPerPage, searchTerm]);
 
   const totalPages = useMemo(() => {
     const rawData = activeSubTab === 'contas' ? contas : activeSubTab === 'centros' ? centrosCusto : categorias;
-    const data = rawData.filter((item: any) => item.status !== 'excluido');
+    const data = rawData.filter((item: any) => {
+      const isNotExcluido = item.status !== 'excluido';
+      const name = (item.nome_banco || item.nome || '').toLowerCase();
+      const matchesSearch = name.includes(searchTerm.toLowerCase());
+      return isNotExcluido && matchesSearch;
+    });
     return Math.max(Math.ceil(data.length / itemsPerPage), 1);
-  }, [activeSubTab, contas, centrosCusto, categorias, itemsPerPage]);
+  }, [activeSubTab, contas, centrosCusto, categorias, itemsPerPage, searchTerm]);
 
   return (
     <div className="space-y-6">
@@ -217,12 +231,25 @@ export default function Cadastros() {
       </div>
 
       <div ref={dragScrollTabs.ref} {...dragScrollTabs.props} className="flex border-b border-neutral-200 overflow-x-auto scrollbar-none whitespace-nowrap">
-        <button onClick={() => { setActiveSubTab('contas'); setCurrentPage(1); }} className={`px-8 py-4 text-[10px] font-black uppercase tracking-widest border-b-4 transition-all ${activeSubTab === 'contas' ? 'border-primary text-primary' : 'border-transparent text-neutral-400 hover:text-neutral-900'}`}>Contas Bancárias</button>
-        <button onClick={() => { setActiveSubTab('centros'); setCurrentPage(1); }} className={`px-8 py-4 text-[10px] font-black uppercase tracking-widest border-b-4 transition-all ${activeSubTab === 'centros' ? 'border-primary text-primary' : 'border-transparent text-neutral-400 hover:text-neutral-900'}`}>Centros de Custo</button>
-        <button onClick={() => { setActiveSubTab('categorias'); setCurrentPage(1); }} className={`px-8 py-4 text-[10px] font-black uppercase tracking-widest border-b-4 transition-all ${activeSubTab === 'categorias' ? 'border-primary text-primary' : 'border-transparent text-neutral-400 hover:text-neutral-900'}`}>Categorias</button>
+        <button onClick={() => { setActiveSubTab('contas'); setCurrentPage(1); setSearchTerm(''); }} className={`px-8 py-4 text-[10px] font-black uppercase tracking-widest border-b-4 transition-all ${activeSubTab === 'contas' ? 'border-primary text-primary' : 'border-transparent text-neutral-400 hover:text-neutral-900'}`}>Contas Bancárias</button>
+        <button onClick={() => { setActiveSubTab('centros'); setCurrentPage(1); setSearchTerm(''); }} className={`px-8 py-4 text-[10px] font-black uppercase tracking-widest border-b-4 transition-all ${activeSubTab === 'centros' ? 'border-primary text-primary' : 'border-transparent text-neutral-400 hover:text-neutral-900'}`}>Centros de Custo</button>
+        <button onClick={() => { setActiveSubTab('categorias'); setCurrentPage(1); setSearchTerm(''); }} className={`px-8 py-4 text-[10px] font-black uppercase tracking-widest border-b-4 transition-all ${activeSubTab === 'categorias' ? 'border-primary text-primary' : 'border-transparent text-neutral-400 hover:text-neutral-900'}`}>Categorias</button>
       </div>
 
       <div className="bg-white border-2 border-neutral-100 rounded-3xl overflow-hidden shadow-sm">
+        <div className="p-4 bg-neutral-50/50 border-b border-neutral-100">
+          <div className="relative max-w-md">
+            <Search className="w-4 h-4 absolute left-4 top-1/2 -translate-y-1/2 text-neutral-400" />
+            <input
+              type="text"
+              placeholder="Pesquisar..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="w-full h-10 pl-11 pr-4 bg-white border-2 border-neutral-100 rounded-xl text-xs font-bold outline-none focus:border-primary transition-all"
+            />
+          </div>
+        </div>
+
         {activeSubTab === 'contas' && (
           <div className="overflow-x-auto">
             <table className="w-full text-left border-collapse">
