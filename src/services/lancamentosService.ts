@@ -283,7 +283,68 @@ export const lancamentosService = {
     }
   },
 
+  estornarLancamento: async (id: string): Promise<boolean> => {
+    // 1. Get the record to be reversed
+    const { data: current, error: getError } = await supabase
+      .from('lancamentos_financeiros')
+      .select('*')
+      .eq('id', id)
+      .single();
+    
+    if (getError) throw getError;
+    if (current.status_pagamento === 'aberto') throw new Error('Não é possível estornar um lançamento que já está em aberto.');
+
+    if (current.vinculo_residuo_id) {
+      // It's a partial payment record. We need to restore the value to the parent and delete this one.
+      const { data: parent, error: parentError } = await supabase
+        .from('lancamentos_financeiros')
+        .select('valor_previsto, observacoes')
+        .eq('id', current.vinculo_residuo_id)
+        .single();
+
+      if (!parentError && parent) {
+        const valorARestaurar = (current.valor_previsto || 0) + (current.desconto_valor || 0) - (current.acrescimo_valor || 0);
+        
+        await supabase
+          .from('lancamentos_financeiros')
+          .update({
+            valor_previsto: parent.valor_previsto + valorARestaurar,
+            observacoes: (parent.observacoes || '') + `\n[Estorno de pagamento parcial de R$ ${current.valor_previsto} realizado em ${new Date().toLocaleDateString('pt-BR')}]`
+          })
+          .eq('id', current.vinculo_residuo_id);
+      }
+
+      // Delete the paid record
+      const { error: deleteError } = await supabase
+        .from('lancamentos_financeiros')
+        .delete()
+        .eq('id', id);
+      
+      if (deleteError) throw deleteError;
+    } else {
+      // It's a full payment record. Just mark it as open again.
+      const { error: updateError } = await supabase
+        .from('lancamentos_financeiros')
+        .update({
+          status_pagamento: 'aberto',
+          valor_recebido: 0,
+          data_pagamento: null,
+          tipo_baixa: 'financeira',
+          desconto_valor: 0,
+          acrescimo_valor: 0,
+          motivo_ajuste: null,
+          observacoes: (current.observacoes || '') + `\n[Estorno de quitação realizado em ${new Date().toLocaleDateString('pt-BR')}]`
+        })
+        .eq('id', id);
+
+      if (updateError) throw updateError;
+    }
+
+    return true;
+  },
+
     getAnexos: async (lancamentoId: string): Promise<any[]> => {
+
       const { data, error } = await supabase
         .from('lancamento_anexos')
         .select('*')

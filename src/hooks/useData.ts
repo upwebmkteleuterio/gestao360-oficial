@@ -301,14 +301,24 @@ export function useLancamentos(filters?: any) {
     }
   });
 
+  const estornoMutation = useMutation({
+    mutationFn: (id: string) => lancamentosService.estornarLancamento(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['lancamentos'] });
+      queryClient.invalidateQueries({ queryKey: ['auditoriaLogs'] });
+    }
+  });
+
   return {
     ...query,
     createLancamento: createMutation.mutateAsync,
     updateLancamento: updateMutation.mutateAsync,
     deleteLancamento: deleteMutation.mutateAsync,
     baixaLancamento: baixaMutation.mutateAsync,
+    estornarLancamento: estornoMutation.mutateAsync,
     batchApprove: batchApproveMutation.mutateAsync,
     isCreating: createMutation.isPending,
+
     isUpdating: updateMutation.isPending,
     isDeleting: deleteMutation.isPending,
     isBatchApproving: batchApproveMutation.isPending
