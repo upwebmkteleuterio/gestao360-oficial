@@ -75,7 +75,7 @@ export default function ComprovanteDrawer() {
             transition={{ type: 'spring', damping: 25, stiffness: 200 }}
             className="absolute inset-y-0 right-0 max-w-xl w-full bg-surface shadow-2xl flex flex-col h-full transform transition-transform duration-300"
           >
-            <div className="px-6 py-5 border-b border-surface-border flex items-center justify-between bg-white shrink-0">
+            <div className="px-6 py-5 border-b border-surface-border flex items-center justify-between bg-white shrink-0 print:border-none">
               <div className="flex items-center gap-3">
                 <div className="w-10 h-10 bg-neutral-900 rounded-xl flex items-center justify-center text-white font-black text-lg">
                   G
@@ -87,21 +87,21 @@ export default function ComprovanteDrawer() {
               </div>
               <button
                 onClick={handleClose}
-                className="p-2 rounded-xl text-secondary hover:bg-neutral-100 transition-all"
+                className="p-2 rounded-xl text-secondary hover:bg-neutral-100 transition-all print:hidden"
               >
                 <X className="w-6 h-6" />
               </button>
             </div>
 
-            <div className="flex-1 overflow-y-auto bg-neutral-50/50 p-6 space-y-6">
-              {/* Header de Status e QR Code Visual */}
+            <div className="flex-1 overflow-y-auto bg-neutral-50/50 p-6 space-y-6 print:bg-white print:p-0 print:overflow-visible">
+              {/* Header de Status */}
               <div className="flex gap-4">
-                <div className="flex-1 bg-white border border-neutral-100 rounded-3xl p-6 shadow-sm flex flex-col items-center text-center relative overflow-hidden">
+                <div className="flex-1 bg-white border border-neutral-100 rounded-3xl p-6 shadow-sm flex flex-col items-center text-center relative overflow-hidden print:border-neutral-200 print:shadow-none">
                   <div className={`absolute top-0 right-0 w-24 h-24 -mr-8 -mt-8 rounded-full opacity-5 ${lancamento.tipo === 'entrada' ? 'bg-bank-truth-green' : 'bg-alert-red'}`} />
                   
                   <div className={`w-14 h-14 rounded-2xl flex items-center justify-center mb-4 ${
                     lancamento.tipo === 'entrada' ? 'bg-bank-truth-green/10 text-bank-truth-green' : 'bg-alert-red/10 text-alert-red'
-                  }`}>
+                  } print:border print:border-neutral-100`}>
                     <Wallet className="w-7 h-7" />
                   </div>
 
@@ -126,11 +126,6 @@ export default function ComprovanteDrawer() {
                       {lancamento.status_aprovacao.replace('_', ' ')}
                     </div>
                   </div>
-                </div>
-                
-                <div className="w-32 bg-white border border-neutral-100 rounded-3xl p-4 shadow-sm flex flex-col items-center justify-center gap-2">
-                   <QrCode className="w-16 h-16 text-neutral-200" />
-                   <span className="text-[8px] font-black text-neutral-300 uppercase tracking-widest">Autenticidade</span>
                 </div>
               </div>
 
@@ -251,7 +246,7 @@ export default function ComprovanteDrawer() {
                <p className="text-[8px] font-bold text-neutral-400 uppercase tracking-[0.3em]">ID de Rastreabilidade: {lancamento.id}</p>
             </div>
 
-            <div className="p-6 bg-white border-t border-surface-border grid grid-cols-2 gap-3 shrink-0">
+            <div className="p-6 bg-white border-t border-surface-border grid grid-cols-2 gap-3 shrink-0 print:hidden">
               <button
                 type="button"
                 onClick={() => window.print()}
@@ -269,6 +264,7 @@ export default function ComprovanteDrawer() {
                 Gerar PDF
               </button>
             </div>
+
           </motion.div>
         </div>
       )}
