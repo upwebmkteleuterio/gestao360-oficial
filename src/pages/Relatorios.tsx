@@ -297,9 +297,6 @@ export default function Relatorios() {
               <div className={`w-12 h-12 rounded-2xl ${kpi.bg} ${kpi.color} flex items-center justify-center`}>
                 <kpi.icon className="w-6 h-6" />
               </div>
-              <span className={`text-[10px] font-black ${kpi.trend.startsWith('+') ? 'text-bank-truth-green' : 'text-alert-red'} bg-neutral-50 px-2 py-1 rounded-lg`}>
-                {kpi.trend}
-              </span>
             </div>
             <p className="text-[10px] font-black uppercase text-secondary tracking-widest mb-1">{kpi.label}</p>
             <h3 className={`text-2xl font-black ${kpi.color}`}>{kpi.value}</h3>

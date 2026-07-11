@@ -420,35 +420,6 @@ export default function CRM() {
                   </div>
                 </div>
 
-                {/* Professionalized Timeline */}
-                <div className="space-y-6">
-                  <h3 className="text-[10px] font-black uppercase tracking-[0.2em] text-primary flex items-center gap-2">
-                    <History className="w-4 h-4" /> Timeline de Relacionamento
-                  </h3>
-                  <div className="space-y-6 relative before:absolute before:left-[11px] before:top-2 before:bottom-2 before:w-0.5 before:bg-neutral-100">
-                    <div className="relative pl-8">
-                      <div className="absolute left-0 top-1.5 w-6 h-6 rounded-full bg-emerald-50 border-4 border-white flex items-center justify-center shadow-sm z-10"><CheckCircle2 className="w-3 h-3 text-emerald-500" /></div>
-                      <div>
-                        <p className="text-[10px] font-black uppercase tracking-tight text-neutral-900">Conciliação Concluída</p>
-                        <p className="text-[9px] text-neutral-400">Há 2 horas • Fatura #88293 quitada via Itaú</p>
-                      </div>
-                    </div>
-                    <div className="relative pl-8">
-                      <div className="absolute left-0 top-1.5 w-6 h-6 rounded-full bg-blue-50 border-4 border-white flex items-center justify-center shadow-sm z-10"><Clock className="w-3 h-3 text-blue-500" /></div>
-                      <div>
-                        <p className="text-[10px] font-black uppercase tracking-tight text-neutral-900">Novo Lançamento Criado</p>
-                        <p className="text-[9px] text-neutral-400">Ontem às 14:20 • R$ 12.450,00 (Venc. 15/10)</p>
-                      </div>
-                    </div>
-                    <div className="relative pl-8">
-                      <div className="absolute left-0 top-1.5 w-6 h-6 rounded-full bg-neutral-50 border-4 border-white flex items-center justify-center shadow-sm z-10"><Plus className="w-3 h-3 text-neutral-400" /></div>
-                      <div>
-                        <p className="text-[10px] font-black uppercase tracking-tight text-neutral-900">Cadastro Realizado</p>
-                        <p className="text-[9px] text-neutral-400">12 Out 2023 • Via CRM Interface</p>
-                      </div>
-                    </div>
-                  </div>
-                </div>
               </div>
 
               <footer className="px-10 py-8 border-t border-neutral-100 bg-neutral-50/50 flex justify-end gap-3 shrink-0">
