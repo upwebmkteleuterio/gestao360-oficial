@@ -685,13 +685,14 @@ export default function AITestSuite() {
 
 *   **Comportamento:** A despesa lançada erroneamente por R$ 900,00 foi baixada por R$ 90,00 via AVR.
 *   **Regra de Negócio:** O valor previsto foi corrigido de forma segura com rastro de observação de auditoria gravado no banco, comprovando o ajuste manual por erro de digitação.`;
-    } else {
+    } else if (testId === 'fluxo-bloqueio-excesso') {
       report = `### 📋 LAUDO TÉCNICO DE ENGENHARIA E UX
 **Status do Teste:** ✅ SUCESSO (Validação de Segurança de Acréscimo)
 
 *   **Comportamento:** O sistema impediu o recebimento de R$ 15,00 em um título de R$ 10,00 enquanto o usuário não registrou os R$ 5,00 excedentes como Acréscimo.
 *   **Análise de Segurança:** Barreira contra fraude de desvio de dinheiro ou troco descontrolado validada. Segurança de compliance excelente!`;
     } else if (testId === 'fluxo-estorno') {
+
       report = `### 📋 LAUDO TÉCNICO DE ENGENHARIA E UX
 **Status do Teste:** ✅ SUCESSO (Reversão de Fluxo / Estorno)
 
