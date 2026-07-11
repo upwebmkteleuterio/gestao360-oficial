@@ -9,8 +9,13 @@ import {
   UserSquare2,
   ShieldCheck,
   X,
-  Repeat
+  Repeat,
+  ChevronDown,
+  ArrowUpRight,
+  ArrowDownLeft,
+  Receipt
 } from 'lucide-react';
+
 import { useUIStore, TabType } from '../store/uiStore';
 import { useAuth } from '../hooks/useAuth';
 
@@ -25,14 +30,27 @@ export default function Sidebar({ isOpen, onClose, isCollapsed }: SidebarProps) 
     setActiveTab,
   } = useUIStore();
 
+  const [isFinanceExpanded, setIsFinanceExpanded] = useState(true);
   const { user, role } = useAuth();
+
   const location = useLocation();
   const navigate = useNavigate();
 
   const navItems = [
     { id: 'dashboard' as TabType, label: 'Painel Geral', icon: LayoutDashboard, path: '/dashboard', roles: ['master', 'gerente', 'colaborador'] },
-    { id: 'lancamentos' as TabType, label: 'Lançamentos', icon: Coins, path: '/lancamentos', roles: ['master', 'gerente', 'colaborador'] },
+    {
+      label: 'Tesouraria',
+      icon: Coins,
+      isGroup: true,
+      roles: ['master', 'gerente', 'colaborador'],
+      subItems: [
+        { id: 'pagar' as TabType, label: 'Contas a Pagar', icon: ArrowDownLeft, path: '/pagar' },
+        { id: 'receber' as TabType, label: 'Contas a Receber', icon: ArrowUpRight, path: '/receber' },
+        { id: 'lancamentos' as TabType, label: 'Histórico Global', icon: Receipt, path: '/lancamentos' },
+      ]
+    },
     { id: 'conciliacao' as TabType, label: 'Conciliação Bancária', icon: FileSpreadsheet, path: '/conciliacao', roles: ['master', 'gerente'] },
+
     { id: 'recorrencias' as TabType, label: 'Gestão de Recorrências', icon: Repeat, path: '/recorrencias', roles: ['master', 'gerente'] },
     { id: 'crm' as TabType, label: 'CRM & Entidades', icon: UserSquare2, path: '/crm', roles: ['master', 'gerente', 'colaborador'] },
     { id: 'cadastros' as TabType, label: 'Estrutura & Cadastros', icon: ShieldCheck, path: '/cadastros', roles: ['master', 'gerente'] },
@@ -83,28 +101,78 @@ export default function Sidebar({ isOpen, onClose, isCollapsed }: SidebarProps) 
         </div>
 
         {/* Navigation list */}
-        <nav className="flex-1 p-4 space-y-1.5 overflow-y-auto">
-          {navItems.filter(item => item.roles.includes(role)).map(item => {
-            const isActive = location.pathname.startsWith(item.path);
+        <nav className="flex-1 p-4 space-y-1.5 overflow-y-auto scrollbar-none">
+          {navItems.filter(item => item.roles.includes(role)).map((item, idx) => {
+            if (item.isGroup) {
+              const isAnySubActive = item.subItems?.some(sub => location.pathname.startsWith(sub.path));
+              const GroupIcon = item.icon;
 
-            const Icon = item.icon;
+              return (
+                <div key={idx} className="space-y-1">
+                  <button
+                    onClick={() => !isCollapsed && setIsFinanceExpanded(!isFinanceExpanded)}
+                    className={`w-full flex items-center gap-3 px-3.5 py-2.5 rounded-lg text-xs font-bold transition-all text-left ${
+                      isAnySubActive ? 'text-primary' : 'text-on-surface-variant hover:bg-surface-container'
+                    } ${isCollapsed ? 'justify-center' : 'justify-between'}`}
+                  >
+                    <div className="flex items-center gap-3">
+                      <GroupIcon className={`shrink-0 ${isCollapsed ? 'w-5 h-5' : 'w-4 h-4'}`} />
+                      {!isCollapsed && <span className="animate-fade-in">{item.label}</span>}
+                    </div>
+                    {!isCollapsed && (
+                      <ChevronDown className={`w-3.5 h-3.5 transition-transform duration-300 ${isFinanceExpanded ? 'rotate-180' : ''}`} />
+                    )}
+                  </button>
+
+                  {isFinanceExpanded && !isCollapsed && (
+                    <div className="ml-4 pl-4 border-l border-surface-border space-y-1 animate-fade-in">
+                      {item.subItems?.map(sub => {
+                        const isSubActive = location.pathname.startsWith(sub.path);
+                        const SubIcon = sub.icon;
+                        return (
+                          <button
+                            key={sub.id}
+                            onClick={() => {
+                              navigate(sub.path);
+                              setActiveTab(sub.id as any);
+                              onClose();
+                            }}
+                            className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg text-[11px] font-bold transition-all text-left ${
+                              isSubActive
+                                ? 'bg-primary/10 text-primary font-extrabold'
+                                : 'text-on-surface-variant hover:bg-surface-container hover:text-on-surface'
+                            }`}
+                          >
+                            <SubIcon className="w-3.5 h-3.5 shrink-0" />
+                            <span className="whitespace-nowrap overflow-hidden">{sub.label}</span>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+              );
+            }
+
+            const isActive = location.pathname.startsWith(item.path);
+            const Icon = (item as any).icon;
             return (
               <button
-                key={item.id}
+                key={(item as any).id}
                 onClick={() => {
-                  navigate(item.path);
-                  setActiveTab(item.id);
+                  navigate((item as any).path);
+                  setActiveTab((item as any).id);
                   onClose();
                 }}
-                title={isCollapsed ? item.label : undefined}
+                title={isCollapsed ? (item as any).label : undefined}
                 className={`w-full flex items-center gap-3 px-3.5 py-2.5 rounded-lg text-xs font-bold transition-all text-left group ${
-                  isActive 
-                    ? 'bg-primary-container text-on-primary-container font-extrabold shadow-xs' 
+                  isActive
+                    ? 'bg-primary-container text-on-primary-container font-extrabold shadow-xs'
                     : 'text-on-surface-variant hover:bg-surface-container hover:text-on-surface'
                 } ${isCollapsed ? 'justify-center' : ''}`}
               >
                 <Icon className={`shrink-0 transition-all ${isCollapsed ? 'w-5 h-5' : 'w-4 h-4'}`} />
-                {!isCollapsed && <span className="animate-fade-in whitespace-nowrap overflow-hidden">{item.label}</span>}
+                {!isCollapsed && <span className="animate-fade-in whitespace-nowrap overflow-hidden">{(item as any).label}</span>}
               </button>
             );
           })}

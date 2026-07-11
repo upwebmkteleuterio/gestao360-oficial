@@ -32,6 +32,8 @@ import Cadastros from './pages/Cadastros';
 import Relatorios from './pages/Relatorios';
 import Configuracoes from './pages/Configuracoes';
 import Notificacoes from './pages/Notificacoes';
+import Pagar from './pages/Pagar';
+import Receber from './pages/Receber';
 
 // Create a client for React Query caching
 const queryClient = new QueryClient({
@@ -219,8 +221,10 @@ function AppContent() {
                       <Route path="/" element={<Navigate to="/dashboard" replace />} />
                       <Route path="/dashboard" element={<Dashboard />} />
                       <Route path="/lancamentos" element={<Lancamentos />} />
+                      <Route path="/pagar" element={<Pagar />} />
+                      <Route path="/receber" element={<Receber />} />
                       <Route path="/crm" element={<CRM />} />
-                      
+
                       {/* Rotas restritas a Master e Gerente */}
                       <Route path="/conciliacao" element={<Conciliacao />} />
                       <Route path="/recorrencias" element={<Recorrencias />} />

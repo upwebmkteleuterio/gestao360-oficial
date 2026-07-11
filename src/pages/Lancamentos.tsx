@@ -27,7 +27,12 @@ import { LancamentoFinanceiro } from '../types';
 import { motion, AnimatePresence } from 'motion/react';
 import Button from '../components/Button';
 
-export default function Lancamentos() {
+interface LancamentosProps {
+  typeOverride?: 'entrada' | 'saida';
+  titleOverride?: string;
+}
+
+export default function Lancamentos({ typeOverride, titleOverride }: LancamentosProps) {
   const { role } = useAuth();
   // Filter States
 
@@ -47,8 +52,15 @@ export default function Lancamentos() {
   });
   
   const [approvalStatus, setApprovalStatus] = useState('all');
-  const [typeFilter, setTypeFilter] = useState<'all' | 'entrada' | 'saida'>('all');
+  const [typeFilter, setTypeFilter] = useState<'all' | 'entrada' | 'saida'>(typeOverride || 'all');
   const [isFilterPanelOpen, setIsFilterPanelOpen] = useState(false);
+
+  // Sync typeFilter if typeOverride changes
+  useEffect(() => {
+    if (typeOverride) {
+      setTypeFilter(typeOverride);
+    }
+  }, [typeOverride]);
 
   const hasActiveFilters = searchTerm !== '' || approvalStatus !== 'all' || typeFilter !== 'all';
 
@@ -306,9 +318,18 @@ export default function Lancamentos() {
       {/* Header */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
-          <h1 className="text-headline-lg font-bold tracking-tight text-on-surface uppercase">Gestão de Lançamentos</h1>
-          <p className="text-body-md text-on-surface-variant mt-1 font-medium">Gerencie e aprove operações financeiras com precisão.</p>
+          <h1 className="text-headline-lg font-bold tracking-tight text-on-surface uppercase">
+            {titleOverride || 'Gestão de Lançamentos'}
+          </h1>
+          <p className="text-body-md text-on-surface-variant mt-1 font-medium">
+            {typeOverride === 'saida'
+              ? 'Gerencie e liquide suas obrigações financeiras.'
+              : typeOverride === 'entrada'
+                ? 'Monitore e confirme o recebimento de valores.'
+                : 'Gerencie e aprove operações financeiras com precisão.'}
+          </p>
         </div>
+
         <div className="flex flex-wrap items-center gap-3">
           <Button
             onClick={() => handleExportCSV()}
@@ -699,15 +720,32 @@ export default function Lancamentos() {
 
                           {/* Action trigger menu */}
                           <td className="py-3 px-4 text-right relative" onClick={(e) => e.stopPropagation()}>
-                            <button
-                              type="button"
-                              onClick={(e) => handleActionMenuToggle(item.id, e)}
-                              className="text-secondary hover:text-primary transition-colors p-1.5 rounded-lg hover:bg-neutral-100"
-                            >
-                              <MoreVertical className="w-5 h-5" />
-                            </button>
+                            <div className="flex items-center justify-end gap-2">
+                              {item.status_pagamento === 'aberto' && (
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    setSelectedLancamentoIdForModal(item.id);
+                                    setModalOpen('isBaixaLancamentoOpen', true);
+                                  }}
+                                  className="h-8 px-3 bg-bank-truth-green text-white text-[9px] font-black uppercase tracking-widest rounded-lg hover:brightness-110 transition-all shadow-sm flex items-center gap-1.5"
+                                  title={item.tipo === 'saida' ? 'Quitar Pagamento' : 'Confirmar Recebimento'}
+                                >
+                                  {item.tipo === 'saida' ? 'Quitar' : 'Receber'}
+                                  <CheckCircle2 className="w-3.5 h-3.5" />
+                                </button>
+                              )}
+                              <button
+                                type="button"
+                                onClick={(e) => handleActionMenuToggle(item.id, e)}
+                                className="text-secondary hover:text-primary transition-colors p-1.5 rounded-lg hover:bg-neutral-100"
+                              >
+                                <MoreVertical className="w-5 h-5" />
+                              </button>
+                            </div>
 
                             {activeMenuId === item.id && (
+
                               <div className="absolute right-12 top-0 mt-0 bg-white border border-surface-border rounded-lg shadow-xl z-[100] py-2 w-36 animate-fade-in text-left">
                                 <button
                                   type="button"

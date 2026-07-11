@@ -2,7 +2,18 @@ import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { LancamentoFinanceiro } from '../types';
 
-export type TabType = 'dashboard' | 'lancamentos' | 'conciliacao' | 'recorrencias' | 'crm' | 'cadastros' | 'relatorios' | 'configuracoes';
+export type TabType =
+  | 'dashboard'
+  | 'lancamentos'
+  | 'pagar'
+  | 'receber'
+  | 'conciliacao'
+  | 'recorrencias'
+  | 'crm'
+  | 'cadastros'
+  | 'relatorios'
+  | 'configuracoes'
+  | 'notificacoes';
 
 interface UIState {
   // Theme and routing
