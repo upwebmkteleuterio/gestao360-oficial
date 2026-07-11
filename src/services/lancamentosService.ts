@@ -218,6 +218,8 @@ export const lancamentosService = {
     const isPartial = data.valor_pago < subtotal;
     const isBPI = data.tipo_baixa === 'bpi';
     const isAVR = data.tipo_baixa === 'avr';
+    const dataPagamentoVal = data.data_pagamento || new Date().toISOString().split('T')[0];
+    const contaBancariaVal = data.conta_bancaria_id || current.conta_bancaria_id;
 
     if (isPartial) {
       const saldoRestante = subtotal - data.valor_pago;
@@ -227,7 +229,7 @@ export const lancamentosService = {
         .from('lancamentos_financeiros')
         .update({
           valor_previsto: saldoRestante,
-          observacoes: (current.observacoes || '') + `\n[Abatido pagamento parcial de R$ ${data.valor_pago} em ${data.data_pagamento.split('-').reverse().join('/')}]`
+          observacoes: (current.observacoes || '') + `\n[Abatido pagamento parcial de R$ ${data.valor_pago} em ${dataPagamentoVal.split('-').reverse().join('/')}]`
         })
         .eq('id', id)
         .select()
@@ -244,8 +246,8 @@ export const lancamentosService = {
           valor_previsto: data.valor_pago,
           valor_recebido: data.valor_pago,
           status_pagamento: isBPI ? 'bpi' : 'pago',
-          data_pagamento: data.data_pagamento,
-          conta_bancaria_id: data.conta_bancaria_id,
+          data_pagamento: dataPagamentoVal,
+          conta_bancaria_id: contaBancariaVal,
           tipo_baixa: data.tipo_baixa || 'financeira',
           desconto_valor: data.valor_desconto || 0,
           acrescimo_valor: data.valor_acrescimo || 0,
@@ -263,8 +265,8 @@ export const lancamentosService = {
         .update({
           valor_recebido: isBPI ? 0 : data.valor_pago,
           status_pagamento: isBPI ? 'bpi' : 'pago',
-          data_pagamento: data.data_pagamento,
-          conta_bancaria_id: data.conta_bancaria_id,
+          data_pagamento: dataPagamentoVal,
+          conta_bancaria_id: contaBancariaVal,
           tipo_baixa: data.tipo_baixa || 'financeira',
           desconto_valor: data.valor_desconto || 0,
           acrescimo_valor: data.valor_acrescimo || 0,

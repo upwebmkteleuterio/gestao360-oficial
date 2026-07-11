@@ -20,6 +20,8 @@ import {
 import { useNavigate } from 'react-router-dom';
 import { useUIStore } from '../store/uiStore';
 import { useLancamentos, useEntidades, useContas, useCategorias } from '../hooks/useData';
+import { supabase } from '@/integrations/supabase/client';
+import { useQueryClient } from '@tanstack/react-query';
 
 interface Step {
   description: string;
@@ -36,8 +38,9 @@ interface TestCase {
 
 export default function AITestSuite() {
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const { setModalOpen, setSelectedLancamentoIdForModal, setActiveTab } = useUIStore();
-  const { createLancamento, data: lancamentos = [], deleteLancamento } = useLancamentos();
+  const { createLancamento, deleteLancamento } = useLancamentos();
   const { data: entidades = [] } = useEntidades();
   const { data: contas = [] } = useContas();
   const { data: categorias = [] } = useCategorias();
@@ -102,6 +105,7 @@ export default function AITestSuite() {
                 observacoes: 'PROVA DE JORNADA: Teste de Despesa para Liquidação Parcial'
               }
             });
+            await queryClient.invalidateQueries({ queryKey: ['lancamentos'] });
             await delay(1500);
           }
         },
@@ -127,6 +131,7 @@ export default function AITestSuite() {
                 observacoes: 'PROVA DE JORNADA: Teste de Receita para Liquidação Integral'
               }
             });
+            await queryClient.invalidateQueries({ queryKey: ['lancamentos'] });
             await delay(1500);
           }
         },
@@ -142,9 +147,16 @@ export default function AITestSuite() {
         {
           description: 'Abrir o Modal de Baixa da despesa de R$ 50,00',
           run: async () => {
-            const despesaTeste = lancamentos.find(
-              l => l.tipo === 'saida' && l.valor_previsto === 50 && l.status_pagamento === 'aberto'
-            );
+            // Sênior direct database query to locate the record instantly
+            const { data: dbItems } = await supabase
+              .from('lancamentos_financeiros')
+              .select('id')
+              .eq('tipo', 'saida')
+              .eq('valor_previsto', 50)
+              .eq('status_pagamento', 'aberto')
+              .order('created_at', { ascending: false });
+
+            const despesaTeste = dbItems?.[0];
             if (!despesaTeste) throw new Error('Despesa de teste não localizada no banco.');
             
             setSelectedLancamentoIdForModal(despesaTeste.id);
@@ -164,9 +176,15 @@ export default function AITestSuite() {
         {
           description: 'Confirmar baixa parcial e gerar resíduo de R$ 30,00',
           run: async () => {
-            const despesaTeste = lancamentos.find(
-              l => l.tipo === 'saida' && l.valor_previsto === 50 && l.status_pagamento === 'aberto'
-            );
+            const { data: dbItems } = await supabase
+              .from('lancamentos_financeiros')
+              .select('id')
+              .eq('tipo', 'saida')
+              .eq('valor_previsto', 50)
+              .eq('status_pagamento', 'aberto')
+              .order('created_at', { ascending: false });
+
+            const despesaTeste = dbItems?.[0];
             if (!despesaTeste) throw new Error('Lançamento para baixa não encontrado.');
 
             // Call API
@@ -178,6 +196,7 @@ export default function AITestSuite() {
               motivo_ajuste: 'Pagamento parcial de R$ 20 de teste do assistente.'
             });
 
+            await queryClient.invalidateQueries({ queryKey: ['lancamentos'] });
             setModalOpen('isBaixaLancamentoOpen', false);
             setSelectedLancamentoIdForModal(null);
             addLog('Baixa parcial salva! O título de R$ 30,00 deve permanecer na lista.');
@@ -196,9 +215,15 @@ export default function AITestSuite() {
         {
           description: 'Abrir o Modal de Recebimento da receita de R$ 100,00',
           run: async () => {
-            const receitaTeste = lancamentos.find(
-              l => l.tipo === 'entrada' && l.valor_previsto === 100 && l.status_pagamento === 'aberto'
-            );
+            const { data: dbItems } = await supabase
+              .from('lancamentos_financeiros')
+              .select('id')
+              .eq('tipo', 'entrada')
+              .eq('valor_previsto', 100)
+              .eq('status_pagamento', 'aberto')
+              .order('created_at', { ascending: false });
+
+            const receitaTeste = dbItems?.[0];
             if (!receitaTeste) throw new Error('Receita de teste não localizada no banco.');
 
             setSelectedLancamentoIdForModal(receitaTeste.id);
@@ -210,9 +235,15 @@ export default function AITestSuite() {
         {
           description: 'Confirmar quitação INTEGRAL de R$ 100,00',
           run: async () => {
-            const receitaTeste = lancamentos.find(
-              l => l.tipo === 'entrada' && l.valor_previsto === 100 && l.status_pagamento === 'aberto'
-            );
+            const { data: dbItems } = await supabase
+              .from('lancamentos_financeiros')
+              .select('id')
+              .eq('tipo', 'entrada')
+              .eq('valor_previsto', 100)
+              .eq('status_pagamento', 'aberto')
+              .order('created_at', { ascending: false });
+
+            const receitaTeste = dbItems?.[0];
             if (!receitaTeste) throw new Error('Lançamento para baixa não encontrado.');
 
             await baixaLancamentoAction(receitaTeste.id, {
@@ -223,6 +254,7 @@ export default function AITestSuite() {
               motivo_ajuste: 'Recebimento integral de teste.'
             });
 
+            await queryClient.invalidateQueries({ queryKey: ['lancamentos'] });
             setModalOpen('isBaixaLancamentoOpen', false);
             setSelectedLancamentoIdForModal(null);
             addLog('Quitação completa realizada com sucesso!');
@@ -251,7 +283,7 @@ export default function AITestSuite() {
                 valor_previsto: 350.00,
                 data_emissao: new Date().toISOString().split('T')[0],
                 data_vencimento: new Date().toISOString().split('T')[0],
-                entidade_id: entidade,
+                entidade_id: toneCheck(entidade),
                 categoria_id: categoriaEntrada,
                 conta_bancaria_id: conta,
                 status_pagamento: 'aberto',
@@ -259,6 +291,7 @@ export default function AITestSuite() {
                 observacoes: 'TESTE BPI: Conta incobrável que será extinguida por inatividade.'
               }
             });
+            await queryClient.invalidateQueries({ queryKey: ['lancamentos'] });
             await delay(1500);
           }
         },
@@ -267,11 +300,17 @@ export default function AITestSuite() {
           run: async () => {
             navigate('/receber');
             setActiveTab('receber');
-            await delay(1200);
+            await delay(1500);
 
-            const contaBpi = lancamentos.find(
-              l => l.tipo === 'entrada' && l.valor_previsto === 350 && l.status_pagamento === 'aberto'
-            );
+            const { data: dbItems } = await supabase
+              .from('lancamentos_financeiros')
+              .select('id')
+              .eq('tipo', 'entrada')
+              .eq('valor_previsto', 350)
+              .eq('status_pagamento', 'aberto')
+              .order('created_at', { ascending: false });
+
+            const contaBpi = dbItems?.[0];
             if (!contaBpi) throw new Error('Conta para BPI não localizada.');
 
             setSelectedLancamentoIdForModal(contaBpi.id);
@@ -290,9 +329,15 @@ export default function AITestSuite() {
         {
           description: 'Salvar BPI (Verificar que o valor não entra no fluxo de caixa real)',
           run: async () => {
-            const contaBpi = lancamentos.find(
-              l => l.tipo === 'entrada' && l.valor_previsto === 350 && l.status_pagamento === 'aberto'
-            );
+            const { data: dbItems } = await supabase
+              .from('lancamentos_financeiros')
+              .select('id')
+              .eq('tipo', 'entrada')
+              .eq('valor_previsto', 350)
+              .eq('status_pagamento', 'aberto')
+              .order('created_at', { ascending: false });
+
+            const contaBpi = dbItems?.[0];
             if (!contaBpi) throw new Error('Conta não localizada para persistência.');
 
             await baixaLancamentoAction(contaBpi.id, {
@@ -303,6 +348,7 @@ export default function AITestSuite() {
               motivo_ajuste: 'BPI: Cliente declarou falência. Dívida baixada por inatividade.'
             });
 
+            await queryClient.invalidateQueries({ queryKey: ['lancamentos'] });
             setModalOpen('isBaixaLancamentoOpen', false);
             setSelectedLancamentoIdForModal(null);
             addLog('Baixa BPI gravada. O título foi excluído das pendências operacionais.');
@@ -339,6 +385,7 @@ export default function AITestSuite() {
                 observacoes: 'ERRO DIGITAÇÃO: Lançamento de R$ 900 que deveria ser R$ 90.'
               }
             });
+            await queryClient.invalidateQueries({ queryKey: ['lancamentos'] });
             await delay(1500);
           }
         },
@@ -347,11 +394,17 @@ export default function AITestSuite() {
           run: async () => {
             navigate('/pagar');
             setActiveTab('pagar');
-            await delay(1200);
+            await delay(1500);
 
-            const contaErro = lancamentos.find(
-              l => l.tipo === 'saida' && l.valor_previsto === 900 && l.status_pagamento === 'aberto'
-            );
+            const { data: dbItems } = await supabase
+              .from('lancamentos_financeiros')
+              .select('id')
+              .eq('tipo', 'saida')
+              .eq('valor_previsto', 900)
+              .eq('status_pagamento', 'aberto')
+              .order('created_at', { ascending: false });
+
+            const contaErro = dbItems?.[0];
             if (!contaErro) throw new Error('Lançamento incorreto não localizado.');
 
             setSelectedLancamentoIdForModal(contaErro.id);
@@ -362,9 +415,15 @@ export default function AITestSuite() {
         {
           description: 'Selecionar AVR, alterar valor pago para R$ 90,00 e salvar justificativa',
           run: async () => {
-            const contaErro = lancamentos.find(
-              l => l.tipo === 'saida' && l.valor_previsto === 900 && l.status_pagamento === 'aberto'
-            );
+            const { data: dbItems } = await supabase
+              .from('lancamentos_financeiros')
+              .select('id')
+              .eq('tipo', 'saida')
+              .eq('valor_previsto', 900)
+              .eq('status_pagamento', 'aberto')
+              .order('created_at', { ascending: false });
+
+            const contaErro = dbItems?.[0];
             if (!contaErro) throw new Error('Lançamento não localizado.');
 
             await baixaLancamentoAction(contaErro.id, {
@@ -375,6 +434,7 @@ export default function AITestSuite() {
               motivo_ajuste: 'AVR: Correção de erro de digitação. O valor correto era R$ 90,00.'
             });
 
+            await queryClient.invalidateQueries({ queryKey: ['lancamentos'] });
             setModalOpen('isBaixaLancamentoOpen', false);
             setSelectedLancamentoIdForModal(null);
             addLog('Ajuste AVR concluído! Valor contábil corrigido com sucesso.');
@@ -411,6 +471,7 @@ export default function AITestSuite() {
                 observacoes: 'TESTE SEGURANÇA: Prova de bloqueio de valor excedente.'
               }
             });
+            await queryClient.invalidateQueries({ queryKey: ['lancamentos'] });
             await delay(1500);
           }
         },
@@ -419,11 +480,17 @@ export default function AITestSuite() {
           run: async () => {
             navigate('/pagar');
             setActiveTab('pagar');
-            await delay(1200);
+            await delay(1500);
 
-            const contaExcesso = lancamentos.find(
-              l => l.tipo === 'saida' && l.valor_previsto === 10 && l.status_pagamento === 'aberto'
-            );
+            const { data: dbItems } = await supabase
+              .from('lancamentos_financeiros')
+              .select('id')
+              .eq('tipo', 'saida')
+              .eq('valor_previsto', 10)
+              .eq('status_pagamento', 'aberto')
+              .order('created_at', { ascending: false });
+
+            const contaExcesso = dbItems?.[0];
             if (!contaExcesso) throw new Error('Conta de teste não localizada.');
 
             setSelectedLancamentoIdForModal(contaExcesso.id);
@@ -436,9 +503,15 @@ export default function AITestSuite() {
         {
           description: 'Justificar o R$ 5,00 excedente como Acréscimo/Juros por atraso e salvar',
           run: async () => {
-            const contaExcesso = lancamentos.find(
-              l => l.tipo === 'saida' && l.valor_previsto === 10 && l.status_pagamento === 'aberto'
-            );
+            const { data: dbItems } = await supabase
+              .from('lancamentos_financeiros')
+              .select('id')
+              .eq('tipo', 'saida')
+              .eq('valor_previsto', 10)
+              .eq('status_pagamento', 'aberto')
+              .order('created_at', { ascending: false });
+
+            const contaExcesso = dbItems?.[0];
             if (!contaExcesso) throw new Error('Conta de teste não localizada.');
 
             addLog('Adicionando R$ 5,00 no campo Acréscimo e informando motivo "Juros por atraso"...');
@@ -452,6 +525,7 @@ export default function AITestSuite() {
               motivo_ajuste: 'Juros de R$ 5,00 cobrados por atraso no boleto.'
             });
 
+            await queryClient.invalidateQueries({ queryKey: ['lancamentos'] });
             setModalOpen('isBaixaLancamentoOpen', false);
             setSelectedLancamentoIdForModal(null);
             addLog('Sucesso! O sistema permitiu a baixa pois o excedente foi lançado como Juros.');
@@ -461,6 +535,9 @@ export default function AITestSuite() {
       ]
     }
   ];
+
+  // Utility to handle potentially undefined entities
+  const toneCheck = (val: any) => val || null;
 
   // Helper local function to bridge state mutations to DB
   const { baixaLancamento } = useLancamentos();
