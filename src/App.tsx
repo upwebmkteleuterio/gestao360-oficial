@@ -246,7 +246,7 @@ function AppContent() {
               <ComprovanteDrawer />
               <CadastroRapidoModal />
               <BaixaLancamentoModal />
-              <AITestSuite />
+              {/* <AITestSuite /> */}
             </div>
 
           </PrivateRoute>
