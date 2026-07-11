@@ -104,13 +104,34 @@ export default function Dashboard() {
     const bpiSum = filteredLancamentos.filter(l => l.status_pagamento === 'bpi').length;
     const totalStatusCount = paidSum + unpaidSum + bpiSum || 1;
 
+    // Real juros and discounts metrics
+    const jurosPagos = filteredLancamentos
+      .filter(l => l.tipo === 'saida' && l.status_pagamento === 'pago')
+      .reduce((acc, l) => acc + (Number(l.acrescimo_valor) || 0), 0);
+
+    const descontosObtidos = filteredLancamentos
+      .filter(l => l.tipo === 'saida' && l.status_pagamento === 'pago')
+      .reduce((acc, l) => acc + (Number(l.desconto_valor) || 0), 0);
+
+    const jurosRecebidos = filteredLancamentos
+      .filter(l => l.tipo === 'entrada' && l.status_pagamento === 'pago')
+      .reduce((acc, l) => acc + (Number(l.acrescimo_valor) || 0), 0);
+
+    const descontosConcedidos = filteredLancamentos
+      .filter(l => l.tipo === 'entrada' && l.status_pagamento === 'pago')
+      .reduce((acc, l) => acc + (Number(l.desconto_valor) || 0), 0);
+
     return {
       paidPercent: Math.round((paidSum / totalStatusCount) * 100),
       unpaidPercent: Math.round((unpaidSum / totalStatusCount) * 100),
       bpiPercent: Math.round((bpiSum / totalStatusCount) * 100),
       paidCount: paidSum,
       unpaidCount: unpaidSum,
-      bpiCount: bpiSum
+      bpiCount: bpiSum,
+      jurosPagos,
+      descontosObtidos,
+      jurosRecebidos,
+      descontosConcedidos
     };
   }, [filteredLancamentos]);
 
@@ -265,31 +286,45 @@ export default function Dashboard() {
                 </div>
               </div>
 
-              <div className="bg-white dark:bg-surface p-6 rounded-xl border border-surface-border shadow-sm flex flex-col h-full">
-                <h4 className="text-sm font-bold uppercase tracking-wider text-on-surface mb-6">Status da Carteira</h4>
-                <div className="flex-1 flex flex-col items-center justify-center space-y-6">
-                  <div
-                    className="relative w-40 h-40 rounded-full flex items-center justify-center"
-                    style={{
-                      background: `conic-gradient(
-                        #2E7D32 0% ${totals.paidPercent}%,
-                        #D32F2F ${totals.paidPercent}% ${totals.paidPercent + totals.unpaidPercent}%,
-                        #EEEEEE ${totals.paidPercent + totals.unpaidPercent}% 100%
-                      )`
-                    }}
-                  >
-                    <div className="absolute inset-4 bg-white dark:bg-surface rounded-full shadow-inner" />
-                    <div className="text-center z-10">
-                      <p className="text-2xl font-black text-on-surface">{totals.paidPercent}%</p>
-                      <p className="text-[10px] font-bold text-secondary uppercase tracking-widest">Liquidados</p>
+              <div className="bg-white dark:bg-surface p-6 rounded-xl border border-surface-border shadow-sm flex flex-col h-full justify-between">
+                <div>
+                  <h4 className="text-sm font-bold uppercase tracking-wider text-on-surface mb-2">Desempenho & Desperdício</h4>
+                  <p className="text-[10px] font-bold text-secondary uppercase tracking-widest mb-4">Acompanhamento de Juros e Descontos</p>
+                </div>
+                
+                <div className="space-y-4 my-2">
+                  <div className="p-3 bg-red-50 dark:bg-red-950/20 border border-red-100 dark:border-red-900 rounded-xl flex items-center justify-between">
+                    <div>
+                      <span className="text-[9px] font-black text-red-500 uppercase tracking-widest block">Juros Pagos (Desperdício)</span>
+                      <span className="text-sm font-mono font-black text-red-600 dark:text-red-400">{valueFormatter(totals.jurosPagos)}</span>
+                    </div>
+                    <div className="text-[9px] font-black text-red-500 bg-red-100/50 dark:bg-red-900/50 px-2 py-1 rounded-lg">
+                      Evite Atrasos
                     </div>
                   </div>
-                  <div className="w-full space-y-2">
-                    <div className="flex justify-between text-xs font-bold"><span>Pagos</span><span className="text-bank-truth-green">{totals.paidPercent}%</span></div>
-                    <div className="flex justify-between text-xs font-bold"><span>Atrasados</span><span className="text-alert-red">{totals.unpaidPercent}%</span></div>
+
+                  <div className="p-3 bg-emerald-50 dark:bg-emerald-950/20 border border-emerald-100 dark:border-emerald-900 rounded-xl flex items-center justify-between">
+                    <div>
+                      <span className="text-[9px] font-black text-emerald-500 uppercase tracking-widest block">Descontos Obtidos (Economia)</span>
+                      <span className="text-sm font-mono font-black text-emerald-600 dark:text-emerald-400">{valueFormatter(totals.descontosObtidos)}</span>
+                    </div>
+                    <div className="text-[9px] font-black text-emerald-500 bg-emerald-100/50 dark:bg-emerald-900/50 px-2 py-1 rounded-lg">
+                      Excelente!
+                    </div>
+                  </div>
+                </div>
+
+                <div className="pt-4 border-t border-surface-border">
+                  <div className="flex justify-between text-[10px] font-black uppercase text-secondary mb-1">
+                    <span>Eficiência de Pagamento</span>
+                    <span className="text-on-surface">{totals.paidPercent}% Liquidados</span>
+                  </div>
+                  <div className="w-full h-2 bg-neutral-100 dark:bg-surface-container rounded-full overflow-hidden">
+                    <div className="h-full bg-bank-truth-green transition-all duration-500" style={{ width: `${totals.paidPercent}%` }} />
                   </div>
                 </div>
               </div>
+
             </section>
           </>
         )}

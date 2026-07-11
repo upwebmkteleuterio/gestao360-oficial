@@ -285,7 +285,15 @@ export function useLancamentos(filters?: any) {
   });
 
   const baixaMutation = useMutation({
-    mutationFn: ({ id, data }: { id: string, data: { valor_pago: number, data_pagamento: string, conta_bancaria_id: string } }) =>
+    mutationFn: ({ id, data }: { id: string, data: {
+      valor_pago: number,
+      data_pagamento: string,
+      conta_bancaria_id: string,
+      tipo_baixa?: 'financeira' | 'bpi' | 'avr',
+      valor_desconto?: number,
+      valor_acrescimo?: number,
+      motivo_ajuste?: string
+    } }) =>
       lancamentosService.baixaLancamento(id, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['lancamentos'] });

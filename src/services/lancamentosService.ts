@@ -193,7 +193,15 @@ export const lancamentosService = {
     return true;
   },
 
-  baixaLancamento: async (id: string, data: { valor_pago: number, data_pagamento: string, conta_bancaria_id: string }): Promise<LancamentoFinanceiro> => {
+  baixaLancamento: async (id: string, data: {
+    valor_pago: number,
+    data_pagamento: string,
+    conta_bancaria_id: string,
+    tipo_baixa?: 'financeira' | 'bpi' | 'avr',
+    valor_desconto?: number,
+    valor_acrescimo?: number,
+    motivo_ajuste?: string
+  }): Promise<LancamentoFinanceiro> => {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) throw new Error('Usuário não autenticado');
 
@@ -206,20 +214,20 @@ export const lancamentosService = {
     
     if (getError) throw getError;
 
-    const isPartial = data.valor_pago < current.valor_previsto;
+    const subtotal = current.valor_previsto - (data.valor_desconto || 0) + (data.valor_acrescimo || 0);
+    const isPartial = data.valor_pago < subtotal;
+    const isBPI = data.tipo_baixa === 'bpi';
+    const isAVR = data.tipo_baixa === 'avr';
 
     if (isPartial) {
-      const saldoRestante = current.valor_previsto - data.valor_pago;
+      const saldoRestante = subtotal - data.valor_pago;
 
-      // Update current to paid amount
-      const { data: updated, error: updateError } = await supabase
+      // Keep original record ID as "aberto" (unpaid) but with the remaining amount (the resíduo)
+      const { data: updatedOriginal, error: updateError } = await supabase
         .from('lancamentos_financeiros')
         .update({
-          valor_previsto: data.valor_pago,
-          valor_recebido: data.valor_pago,
-          status_pagamento: 'pago',
-          data_pagamento: data.data_pagamento,
-          conta_bancaria_id: data.conta_bancaria_id
+          valor_previsto: saldoRestante,
+          observacoes: (current.observacoes || '') + `\n[Abatido pagamento parcial de R$ ${data.valor_pago} em ${data.data_pagamento.split('-').reverse().join('/')}]`
         })
         .eq('id', id)
         .select()
@@ -227,43 +235,52 @@ export const lancamentosService = {
 
       if (updateError) throw updateError;
 
-      // Create new one for remainder
-      // We strip ID and created_at/updated_at
+      // Create a NEW record for the paid portion
       const { id: _, created_at: __, updated_at: ___, ...rest } = current;
       const { error: insertError } = await supabase
         .from('lancamentos_financeiros')
         .insert([{
           ...rest,
-          valor_previsto: saldoRestante,
-          valor_recebido: 0,
-          status_pagamento: 'aberto',
-          data_pagamento: null,
-          user_id: user.id,
-          usuario_criador_id: user.id,
-          observacoes: (current.observacoes || '') + `\n[Saldo remanescente de baixa parcial de R$ ${data.valor_pago}]`
+          valor_previsto: data.valor_pago,
+          valor_recebido: data.valor_pago,
+          status_pagamento: isBPI ? 'bpi' : 'pago',
+          data_pagamento: data.data_pagamento,
+          conta_bancaria_id: data.conta_bancaria_id,
+          tipo_baixa: data.tipo_baixa || 'financeira',
+          desconto_valor: data.valor_desconto || 0,
+          acrescimo_valor: data.valor_acrescimo || 0,
+          motivo_ajuste: data.motivo_ajuste || null,
+          vinculo_residuo_id: id,
+          observacoes: (current.observacoes || '') + `\n[Pagamento parcial quitado. Referente à cobrança original de R$ ${current.valor_previsto}]`
         }]);
 
       if (insertError) throw insertError;
-      return updated as LancamentoFinanceiro;
+      return updatedOriginal as LancamentoFinanceiro;
     } else {
-      // Full payment
+      // Full payment (or BPI / AVR)
       const { data: updated, error: updateError } = await supabase
         .from('lancamentos_financeiros')
         .update({
-          valor_recebido: data.valor_pago,
-          status_pagamento: 'pago',
+          valor_recebido: isBPI ? 0 : data.valor_pago,
+          status_pagamento: isBPI ? 'bpi' : 'pago',
           data_pagamento: data.data_pagamento,
-          conta_bancaria_id: data.conta_bancaria_id
+          conta_bancaria_id: data.conta_bancaria_id,
+          tipo_baixa: data.tipo_baixa || 'financeira',
+          desconto_valor: data.valor_desconto || 0,
+          acrescimo_valor: data.valor_acrescimo || 0,
+          motivo_ajuste: data.motivo_ajuste || null,
+          // If AVR, adjust the final value
+          valor_previsto: isAVR ? data.valor_pago : (isBPI ? current.valor_previsto : subtotal)
         })
         .eq('id', id)
         .select()
         .single();
 
       if (updateError) throw updateError;
-        return updated as LancamentoFinanceiro;
-      }
-    },
-  
+      return updated as LancamentoFinanceiro;
+    }
+  },
+
     getAnexos: async (lancamentoId: string): Promise<any[]> => {
       const { data, error } = await supabase
         .from('lancamento_anexos')

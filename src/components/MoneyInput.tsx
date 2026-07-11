@@ -7,9 +7,10 @@ interface MoneyInputProps {
   placeholder?: string;
   required?: boolean;
   autoFocus?: boolean;
+  disabled?: boolean;
 }
 
-export default function MoneyInput({ value, onChange, className, placeholder, required, autoFocus }: MoneyInputProps) {
+export default function MoneyInput({ value, onChange, className, placeholder, required, autoFocus, disabled }: MoneyInputProps) {
   const inputRef = useRef<HTMLInputElement>(null);
 
   const formatValue = (val: string) => {
@@ -54,7 +55,9 @@ export default function MoneyInput({ value, onChange, className, placeholder, re
       placeholder={placeholder}
       required={required}
       autoFocus={autoFocus}
+      disabled={disabled}
       inputMode="numeric"
     />
   );
+
 }

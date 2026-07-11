@@ -54,7 +54,7 @@ export interface LancamentoFinanceiro {
   id: string;
   tipo: 'entrada' | 'saida';
   valor_previsto: number;
-  valor_recebido: number;
+  valor_recebido?: number;
   data_vencimento: string;
   data_emissao: string;
   data_competencia?: string;
@@ -71,7 +71,7 @@ export interface LancamentoFinanceiro {
   status_aprovacao: StatusAprovacao;
   status_pagamento: StatusPagamento;
   usuario_criador_id: string;
-  status_sincronizacao: boolean;
+  status_sincronizacao?: boolean;
   created_at: string;
   updated_at: string;
 }
