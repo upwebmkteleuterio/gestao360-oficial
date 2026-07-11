@@ -209,8 +209,9 @@ export default function ComprovanteDrawer() {
               )}
 
               {/* Anexos */}
-              <div className="space-y-3">
+              <div className="space-y-3 print:hidden">
                 <span className="text-[9px] font-black uppercase text-secondary tracking-widest flex items-center gap-1.5 ml-2">
+
                   <ExternalLink className="w-3 h-3" /> Documentos e Anexos Digitais ({anexos.length})
                 </span>
                 {anexos.length > 0 ? (
