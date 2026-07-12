@@ -367,7 +367,7 @@ export default function Lancamentos({ typeOverride, titleOverride }: Lancamentos
           {hasActiveFilters && (
             <button
               onClick={clearFiltersShortcut}
-              className="absolute -top-7 right-0 flex items-center gap-1.5 px-2.5 py-1 bg-neutral-900 text-white rounded-full text-[9px] font-black uppercase tracking-widest shadow-lg hover:bg-black transition-all animate-bounce"
+              className="absolute -top-7 right-0 flex items-center gap-1.5 px-2.5 py-1 bg-neutral-900 text-white rounded-full text-[9px] font-black uppercase tracking-widest shadow-lg hover:bg-black transition-all"
             >
               <Eraser className="w-3 h-3" />
               Limpar Filtros

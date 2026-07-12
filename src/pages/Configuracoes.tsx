@@ -272,12 +272,10 @@ export default function Configuracoes() {
       {/* Tabs */}
       <div ref={dragScrollTabs.ref} {...dragScrollTabs.props} className="flex border-b border-neutral-200 overflow-x-auto scrollbar-none whitespace-nowrap">
         <button onClick={() => setActiveConfigSubTab('equipe')} className={`px-8 py-4 text-[10px] font-black uppercase tracking-widest border-b-4 transition-all ${activeConfigSubTab === 'equipe' ? 'border-primary text-primary' : 'border-transparent text-neutral-400 hover:text-neutral-900'}`}>Equipe</button>
-        <button onClick={() => setActiveConfigSubTab('auditoria')} className={`px-8 py-4 text-[10px] font-black uppercase tracking-widest border-b-4 transition-all ${activeConfigSubTab === 'auditoria' ? 'border-primary text-primary' : 'border-transparent text-neutral-400 hover:text-neutral-900'}`}>Auditoria</button>
-        <button onClick={() => setActiveConfigSubTab('legacy')} className={`px-8 py-4 text-[10px] font-black uppercase tracking-widest border-b-4 transition-all ${activeConfigSubTab === 'legacy' ? 'border-primary text-primary' : 'border-transparent text-neutral-400 hover:text-neutral-900'}`}>Integrações</button>
       </div>
 
       {/* Team tab */}
-      {activeConfigSubTab === 'equipe' && (
+      {(activeConfigSubTab === 'equipe' || true) && (
         <div className="space-y-6">
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
             <h1 className="text-2xl font-black uppercase tracking-tighter text-neutral-900">Gestão de Equipe</h1>
@@ -303,38 +301,6 @@ export default function Configuracoes() {
                   ))}
                 </tbody>
 
-              </table>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Audit tab */}
-      {activeConfigSubTab === 'auditoria' && (
-        <div className="space-y-6">
-          <h1 className="text-2xl font-black uppercase tracking-tighter text-neutral-900">Histórico de Auditoria</h1>
-          <div className="bg-white border-2 border-neutral-100 p-6 rounded-3xl space-y-6">
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              <div className="space-y-2"><label className="text-[10px] font-black uppercase text-neutral-400 tracking-widest">Início</label><input type="date" value={auditStartDate} onChange={(e) => setAuditStartDate(e.target.value)} className="w-full h-11 bg-neutral-50 border-2 border-neutral-100 rounded-xl px-4 text-xs font-black outline-none focus:border-primary" /></div>
-              <div className="space-y-2"><label className="text-[10px] font-black uppercase text-neutral-400 tracking-widest">Ação</label><select value={auditSearchAction} onChange={(e) => setAuditSearchAction(e.target.value)} className="w-full h-11 bg-neutral-50 border-2 border-neutral-100 rounded-xl px-4 text-xs font-black outline-none focus:border-primary appearance-none"><option value="all">Todas</option><option value="UPDATE">Alteração</option><option value="DELETE">Exclusão</option><option value="INSERT">Inclusão</option></select></div>
-              <div className="flex items-end"><button onClick={() => { setAuditSearchAction('all'); setAuditStartDate('2023-10-01'); }} className="h-11 px-8 bg-neutral-900 text-white font-black text-[10px] uppercase tracking-widest rounded-xl w-full">Limpar</button></div>
-            </div>
-          </div>
-          <div className="bg-white border-2 border-neutral-100 rounded-3xl overflow-hidden">
-            <div className="overflow-x-auto">
-              <table className="w-full text-left border-collapse">
-                <thead><tr className="bg-neutral-50 text-neutral-400 border-b border-neutral-100 text-[9px] font-black uppercase tracking-widest"><th className="py-4 px-8">Data / Hora</th><th className="py-4 px-8">Ação</th><th className="py-4 px-8">Registro</th><th className="py-4 px-8 text-right">Detalhes</th></tr></thead>
-                <tbody className="text-[11px] font-bold">
-                  {paginatedAuditLogs.length === 0 ? <tr><td colSpan={4} className="py-20 text-center opacity-40 uppercase tracking-widest">Sem registros</td></tr> : 
-                  paginatedAuditLogs.map((log) => (
-                    <tr key={log.id} className="border-b border-neutral-50">
-                      <td className="py-4 px-8 font-mono text-neutral-500">{log.data_hora}</td>
-                      <td className="py-4 px-8"><span className={`inline-flex items-center gap-2 px-3 py-1 rounded-full ${log.acao_badge_color} font-black uppercase text-[9px]`}><span className={`w-1.5 h-1.5 rounded-full ${log.acao_dot_color}`} />{log.acao_label}</span></td>
-                      <td className="py-4 px-8 uppercase tracking-widest text-neutral-400">{log.tabela_afetada}</td>
-                      <td className="py-4 px-8 text-right"><button onClick={() => setSelectedAuditLog(log as any)} className="px-4 py-2 bg-neutral-100 hover:bg-neutral-900 hover:text-white rounded-lg transition-all font-black text-[9px] uppercase tracking-widest">Inspecionar</button></td>
-                    </tr>
-                  ))}
-                </tbody>
               </table>
             </div>
           </div>
