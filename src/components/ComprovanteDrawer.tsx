@@ -123,7 +123,7 @@ export default function ComprovanteDrawer() {
                     </div>
                     <div className="flex items-center gap-1.5 px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-widest bg-neutral-900 text-white">
                       {lancamento.status_aprovacao === 'confirmado_master' ? <CheckCircle2 className="w-3 h-3" /> : <Clock className="w-3 h-3" />}
-                      {lancamento.status_aprovacao.replace('_', ' ')}
+                      {lancamento.status_aprovacao === 'confirmado_master' ? 'Confirmado Master' : 'Pendente'}
                     </div>
                   </div>
                 </div>

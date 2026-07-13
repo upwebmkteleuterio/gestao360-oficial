@@ -659,7 +659,7 @@ export default function NovoLancamentoDrawer() {
                   <div className="p-4 bg-pending-amber/10 border-2 border-pending-amber/20 rounded-xl text-xs text-on-surface-variant flex gap-3">
                     <AlertCircle className="w-5 h-5 text-pending-amber shrink-0" />
                     <span className="font-semibold">
-                      <strong>Edição de Recorrência:</strong> Aplicando no modo: <span className="uppercase text-pending-amber font-black">{selectedRecorrenciaAction === 'all' ? 'Esta e Futuras' : 'Apenas esta'}</span>.
+                      <strong>Pendente de Aprovação:</strong> Este registro ainda não foi validado pelo nível Master.
                     </span>
                   </div>
                 )}

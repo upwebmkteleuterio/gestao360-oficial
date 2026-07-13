@@ -826,7 +826,7 @@ export default function Lancamentos({ typeOverride, titleOverride }: Lancamentos
                           <td className="py-3 px-4 text-center whitespace-nowrap">
                             {item.status_aprovacao === 'pendente_digital' && (
                               <span className="inline-flex items-center px-2.5 py-0.5 rounded bg-neutral-100 text-neutral-600 font-bold border border-neutral-200 text-[9px] uppercase tracking-tighter">
-                                Pendente Digital
+                                Pendente
                               </span>
                             )}
                             {item.status_aprovacao === 'digital' && (
