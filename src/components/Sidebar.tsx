@@ -109,7 +109,7 @@ export default function Sidebar({ isOpen, onClose, isCollapsed }: SidebarProps) 
               const GroupIcon = item.icon;
 
               return (
-                <div key={idx} className="space-y-1">
+                <div key={idx} className="space-y-1 relative group/nav">
                   <button
                     onClick={() => !isCollapsed && setIsFinanceExpanded(!isFinanceExpanded)}
                     className={`w-full flex items-center gap-3 px-3.5 py-2.5 rounded-lg text-xs font-bold transition-all text-left ${
@@ -124,6 +124,35 @@ export default function Sidebar({ isOpen, onClose, isCollapsed }: SidebarProps) 
                       <ChevronDown className={`w-3.5 h-3.5 transition-transform duration-300 ${isFinanceExpanded ? 'rotate-180' : ''}`} />
                     )}
                   </button>
+
+                  {/* Popover Card for Collapsed Sidebar */}
+                  {isCollapsed && (
+                    <div className="absolute left-full top-0 ml-2 w-48 bg-white border border-surface-border rounded-xl shadow-2xl overflow-hidden hidden group-hover/nav:block animate-fade-in z-50">
+                      <div className="px-4 py-2 bg-neutral-50 border-b border-surface-border">
+                        <span className="text-[10px] font-black uppercase text-secondary tracking-widest">{item.label}</span>
+                      </div>
+                      <div className="p-1.5 space-y-0.5">
+                        {item.subItems?.map(sub => (
+                          <button
+                            key={sub.id}
+                            onClick={() => {
+                              navigate(sub.path);
+                              setActiveTab(sub.id as any);
+                              onClose();
+                            }}
+                            className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg text-[11px] font-bold transition-all text-left ${
+                              location.pathname.startsWith(sub.path)
+                                ? 'bg-primary/10 text-primary'
+                                : 'text-on-surface-variant hover:bg-surface-container hover:text-on-surface'
+                            }`}
+                          >
+                            <sub.icon className="w-3.5 h-3.5" />
+                            {sub.label}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  )}
 
                   {isFinanceExpanded && !isCollapsed && (
                     <div className="ml-4 pl-4 border-l border-surface-border space-y-1 animate-fade-in">

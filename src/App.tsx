@@ -54,8 +54,6 @@ const queryClient = new QueryClient({
 
 function NotificationDropdown() {
   // Safe way to call useNotifications without throwing context error if outside AuthProvider
-  // Wait, NotificationDropdown is INSIDE AppContent, which IS inside AuthProvider.
-  // So it should work!
   const { notifications, unreadCount, markAsRead, markAllAsRead } = useNotifications();
   const [isOpen, setIsOpen] = useState(false);
   const navigate = useNavigate();
@@ -157,7 +155,7 @@ function PrivateRoute({ children }: { children: React.ReactNode }) {
 
 function AppContent() {
   const { setModalOpen, isSidebarCollapsed, setSidebarCollapsed } = useUIStore();
-  const { signOut } = useAuth(); // This is fine since AppContent is inside AuthProvider
+  const { signOut } = useAuth();
   const [isMobileSidebarOpen, setMobileSidebarOpen] = useState(false);
 
   return (
@@ -167,15 +165,15 @@ function AppContent() {
         path="*"
         element={
           <PrivateRoute>
-            <div className={`flex min-h-screen bg-background text-on-background relative transition-all duration-300`}>
+            <div className={`flex h-screen bg-background text-on-background relative transition-all duration-300 overflow-hidden`}>
               {/* Nav rails */}
               <Sidebar isOpen={isMobileSidebarOpen} onClose={() => setMobileSidebarOpen(false)} isCollapsed={isSidebarCollapsed} />
 
               {/* Content body space */}
-              <div className="flex-1 flex flex-col min-w-0">
+              <div className="flex-1 flex flex-col min-w-0 h-full overflow-hidden">
                 
-                {/* Top Bar with actions */}
-                <header className="h-16 bg-surface border-b border-surface-border flex items-center justify-between px-4 md:px-6 shrink-0 print:hidden select-none">
+                {/* Fixed Top Bar */}
+                <header className="h-16 bg-surface border-b border-surface-border flex items-center justify-between px-4 md:px-6 shrink-0 print:hidden select-none sticky top-0 z-40 shadow-sm">
                   <div className="flex items-center gap-3">
                     {/* Menu Toggle for desktop collapse */}
                     <button
@@ -215,7 +213,7 @@ function AppContent() {
 
                 </header>
 
-                {/* Core Page layout content container */}
+                {/* Core Page layout content container - SCROLLABLE AREA */}
                 <main className="flex-1 overflow-y-auto p-4 sm:p-6 md:p-8">
                   <div className="max-w-7xl mx-auto space-y-6">
                     <Routes>
@@ -246,7 +244,7 @@ function AppContent() {
               <ComprovanteDrawer />
               <CadastroRapidoModal />
               <BaixaLancamentoModal />
-              {/* <AITestSuite /> - Hidden but kept in code for future use */}
+              {/* <AITestSuite /> */}
             </div>
 
           </PrivateRoute>
