@@ -18,13 +18,18 @@ import {
   X
 } from 'lucide-react';
 import { useLancamentos, useContas, useCentrosCusto, useAuditoriaLogs, useEntidades } from '../hooks/useData';
+import { useAuth } from '../hooks/useAuth';
 import { useUIStore } from '../store/uiStore';
+
 import { useDragScroll } from '../hooks/useDragScroll';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 
 export default function Dashboard() {
+  const { role } = useAuth();
+  const isMaster = role === 'master';
   const dragScrollAccounts = useDragScroll();
+
   const dragScrollTabs = useDragScroll();
 
   const [currentTab, setCurrentTab] = useState<'general' | 'cashflow' | 'audit'>('general');
@@ -174,8 +179,11 @@ export default function Dashboard() {
             <nav ref={dragScrollTabs.ref} {...dragScrollTabs.props} className="flex gap-4 sm:gap-6 select-none overflow-x-auto scrollbar-none whitespace-nowrap scroll-smooth pb-0.5">
               <button type="button" onClick={() => setCurrentTab('general')} className={`text-xs font-bold pb-2 transition-colors border-b-2 ${currentTab === 'general' ? 'text-primary border-primary' : 'text-secondary hover:text-primary border-transparent'}`}>Visão Geral</button>
               <button type="button" onClick={() => setCurrentTab('cashflow')} className={`text-xs font-bold pb-2 transition-colors border-b-2 ${currentTab === 'cashflow' ? 'text-primary border-primary' : 'text-secondary hover:text-primary border-transparent'}`}>Fluxo de Caixa</button>
-              <button type="button" onClick={() => setCurrentTab('audit')} className={`text-xs font-bold pb-2 transition-colors border-b-2 ${currentTab === 'audit' ? 'text-primary border-primary' : 'text-secondary hover:text-primary border-transparent'}`}>Auditoria</button>
+              {isMaster && (
+                <button type="button" onClick={() => setCurrentTab('audit')} className={`text-xs font-bold pb-2 transition-colors border-b-2 ${currentTab === 'audit' ? 'text-primary border-primary' : 'text-secondary hover:text-primary border-transparent'}`}>Auditoria</button>
+              )}
             </nav>
+
           </div>
         </div>
 
@@ -193,26 +201,28 @@ export default function Dashboard() {
               }} className="flex items-center gap-2 px-4 py-2 bg-secondary hover:bg-neutral-700 text-white rounded-lg text-sm font-semibold transition-all"><Download className="w-5 h-5" /> Exportar CSV</button>
             </section>
 
-            <section className="grid grid-cols-1 md:grid-cols-3 gap-6 animate-fade-in">
-              <div className="bg-white dark:bg-surface p-6 rounded-xl border border-surface-border shadow-sm relative overflow-hidden group">
-                <div className="absolute top-0 left-0 w-1 h-full bg-bank-truth-green"></div>
-                <div className="flex justify-between items-start mb-4"><span className="text-xs font-bold text-secondary uppercase tracking-wider">Saldo Atual Consolidado</span><Landmark className="w-5 h-5 text-bank-truth-green" /></div>
-                <h3 className="text-2xl font-bold font-mono text-on-surface">{valueFormatter(stats?.total_consolidado || 0)}</h3>
-                <div className="text-xs font-semibold mt-2 text-bank-truth-green flex items-center gap-1"><TrendingUp className="w-4 h-4" /> Dados em tempo real</div>
-              </div>
-              <div className="bg-white dark:bg-surface p-6 rounded-xl border border-surface-border shadow-sm relative overflow-hidden group">
-                <div className="absolute top-0 left-0 w-1 h-full bg-primary"></div>
-                <div className="flex justify-between items-start mb-4"><span className="text-xs font-bold text-secondary uppercase tracking-wider">Expectativa Final</span><LineChart className="w-5 h-5 text-primary" /></div>
-                <h3 className="text-2xl font-bold font-mono text-on-surface">{valueFormatter(stats?.total_simulado || 0)}</h3>
-                <p className="text-xs text-secondary mt-2">Cenário previsto para final do período</p>
-              </div>
-              <div className="bg-white dark:bg-surface p-6 rounded-xl border border-surface-border shadow-sm relative overflow-hidden group">
-                <div className="absolute top-0 left-0 w-1 h-full bg-[#FFA000]"></div>
-                <div className="flex justify-between items-start mb-4"><span className="text-xs font-bold text-secondary uppercase tracking-wider">Pendentes Master</span><AlertTriangle className="w-5 h-5 text-[#FFA000]" /></div>
-                <h3 className="text-2xl font-bold font-mono text-on-surface">{valueFormatter(stats?.total_pendente_master || 0)}</h3>
-                <p className="text-xs text-[#FFA000] mt-2 font-semibold">Aguardando aprovação</p>
-              </div>
-            </section>
+            {isMaster && (
+              <section className="grid grid-cols-1 md:grid-cols-3 gap-6 animate-fade-in">
+                <div className="bg-white dark:bg-surface p-6 rounded-xl border border-surface-border shadow-sm relative overflow-hidden group">
+                  <div className="absolute top-0 left-0 w-1 h-full bg-bank-truth-green"></div>
+                  <div className="flex justify-between items-start mb-4"><span className="text-xs font-bold text-secondary uppercase tracking-wider">Saldo Atual Consolidado</span><Landmark className="w-5 h-5 text-bank-truth-green" /></div>
+                  <h3 className="text-2xl font-bold font-mono text-on-surface">{valueFormatter(stats?.total_consolidado || 0)}</h3>
+                  <div className="text-xs font-semibold mt-2 text-bank-truth-green flex items-center gap-1"><TrendingUp className="w-4 h-4" /> Dados em tempo real</div>
+                </div>
+                <div className="bg-white dark:bg-surface p-6 rounded-xl border border-surface-border shadow-sm relative overflow-hidden group">
+                  <div className="absolute top-0 left-0 w-1 h-full bg-primary"></div>
+                  <div className="flex justify-between items-start mb-4"><span className="text-xs font-bold text-secondary uppercase tracking-wider">Expectativa Final</span><LineChart className="w-5 h-5 text-primary" /></div>
+                  <h3 className="text-2xl font-bold font-mono text-on-surface">{valueFormatter(stats?.total_simulado || 0)}</h3>
+                  <p className="text-xs text-secondary mt-2">Cenário previsto para final do período</p>
+                </div>
+                <div className="bg-white dark:bg-surface p-6 rounded-xl border border-surface-border shadow-sm relative overflow-hidden group">
+                  <div className="absolute top-0 left-0 w-1 h-full bg-[#FFA000]"></div>
+                  <div className="flex justify-between items-start mb-4"><span className="text-xs font-bold text-secondary uppercase tracking-wider">Pendentes Master</span><AlertTriangle className="w-5 h-5 text-[#FFA000]" /></div>
+                  <h3 className="text-2xl font-bold font-mono text-on-surface">{valueFormatter(stats?.total_pendente_master || 0)}</h3>
+                  <p className="text-xs text-[#FFA000] mt-2 font-semibold">Aguardando aprovação</p>
+                </div>
+              </section>
+            )}
 
             <section className="space-y-4">
               <div className="flex items-center justify-between">

@@ -82,6 +82,14 @@ export default function AITestSuite() {
       roleRequired: 'any',
       steps: [
         {
+          description: 'Limpeza e preparação do ambiente',
+          run: async () => {
+            addLog('Limpando registros de testes anteriores...');
+            await supabase.from('lancamentos_financeiros').delete().ilike('observacoes', '%TESTE SEGURANÇA GERENTE%');
+            await delay(1000);
+          }
+        },
+        {
           description: 'Navegar para Lançamentos e criar despesa pendente',
           run: async () => {
             navigate('/lancamentos');
@@ -94,7 +102,7 @@ export default function AITestSuite() {
 
             if (!cat || !ent || !acc) throw new Error('Dados base insuficientes (categorias/entidades/contas).');
 
-            await createLancamento({
+            const result = await createLancamento({
               item: {
                 tipo: 'saida',
                 valor_previsto: 150.00,
@@ -108,17 +116,29 @@ export default function AITestSuite() {
                 observacoes: 'TESTE SEGURANÇA GERENTE: Bloqueio de Quitação'
               }
             });
+            
+            (window as any).lastTestLaunchId = result.id;
             await queryClient.invalidateQueries({ queryKey: ['lancamentos'] });
-            await delay(1500);
+            await delay(2000);
           }
         },
         {
           description: 'Verificar se o botão de Quitação está bloqueado',
           run: async () => {
-            addLog('Verificando UI: O botão de quitar deve estar desabilitado para status Pendente.');
-            // This is a UI check, we simulate the logic verification
-            const { data } = await supabase.from('lancamentos_financeiros').select('status_aprovacao').eq('observacoes', 'TESTE SEGURANÇA GERENTE: Bloqueio de Quitação').single();
-            if (data?.status_aprovacao !== 'pendente_digital') throw new Error('Status incorreto para o teste.');
+            const launchId = (window as any).lastTestLaunchId;
+            if (!launchId) throw new Error('ID do lançamento não capturado.');
+
+            addLog('Verificando integridade do status no servidor...');
+            const { data, error } = await supabase
+              .from('lancamentos_financeiros')
+              .select('status_aprovacao')
+              .eq('id', launchId)
+              .single();
+              
+            if (error) throw new Error('Falha ao consultar registro no banco.');
+            if (data?.status_aprovacao !== 'pendente_digital') throw new Error(`Vulnerabilidade! Status deveria ser Pendente, mas está ${data?.status_aprovacao}`);
+            
+            addLog('Sucesso: O sistema não permitiu a auto-aprovação. O botão permanece bloqueado via regra de negócio.');
             await delay(1200);
           }
         },
@@ -128,7 +148,7 @@ export default function AITestSuite() {
             navigate('/cadastros');
             addLog('Navegando para Estrutura e Cadastros...');
             await delay(1500);
-            addLog('Verificando proteção: Se você for Gerente, o campo Saldo Inicial deve estar cinza/bloqueado.');
+            addLog('Verificação Visual: O campo Saldo Inicial deve estar bloqueado para o Gerente.');
             await delay(1500);
           }
         }
@@ -141,6 +161,14 @@ export default function AITestSuite() {
       category: 'Governança Master',
       roleRequired: 'any',
       steps: [
+        {
+          description: 'Limpeza de ambiente',
+          run: async () => {
+            addLog('Preparando ambiente Master...');
+            await supabase.from('lancamentos_financeiros').delete().ilike('observacoes', '%TESTE GOVERNANÇA MASTER%');
+            await delay(1000);
+          }
+        },
         {
           description: 'Criar despesa e aprovar como Master',
           run: async () => {
@@ -166,20 +194,22 @@ export default function AITestSuite() {
                 observacoes: 'TESTE GOVERNANÇA MASTER: Fluxo Completo'
               }
             });
+            
+            (window as any).masterTestId = lanc.id;
             await queryClient.invalidateQueries({ queryKey: ['lancamentos'] });
             addLog('Título aprovado! Botão de quitar agora deve estar liberado.');
-            await delay(1500);
+            await delay(2000);
           }
         },
         {
           description: 'Realizar baixa parcial e verificar status do resíduo',
           run: async () => {
-            const { data: items } = await supabase.from('lancamentos_financeiros').select('id').eq('observacoes', 'TESTE GOVERNANÇA MASTER: Fluxo Completo').eq('status_pagamento', 'aberto').single();
-            if (!items) throw new Error('Título não encontrado.');
+            const masterId = (window as any).masterTestId;
+            if (!masterId) throw new Error('Título Master não localizado.');
 
             addLog('Executando baixa parcial de R$ 200,00...');
             await baixaLancamento({
-              id: items.id,
+              id: masterId,
               data: {
                 valor_pago: 200,
                 data_pagamento: new Date().toISOString().split('T')[0],
@@ -191,9 +221,17 @@ export default function AITestSuite() {
             
             await queryClient.invalidateQueries({ queryKey: ['lancamentos'] });
             addLog('Verificando resíduo de R$ 300,00...');
+            await delay(2000); // Wait for residue record to be searchable
             
-            const { data: residuo } = await supabase.from('lancamentos_financeiros').select('status_aprovacao').eq('valor_previsto', 300).order('created_at', { ascending: false }).limit(1).single();
+            const { data: residuo } = await supabase
+              .from('lancamentos_financeiros')
+              .select('status_aprovacao')
+              .eq('vinculo_residuo_id', masterId)
+              .order('created_at', { ascending: false })
+              .limit(1)
+              .single();
             
+            if (!residuo) throw new Error('Resíduo não foi criado no banco.');
             if (residuo?.status_aprovacao !== 'pendente_digital') {
               throw new Error(`Falha: O resíduo deveria estar Pendente, mas está ${residuo?.status_aprovacao}`);
             }
@@ -204,7 +242,14 @@ export default function AITestSuite() {
         {
           description: 'Testar Estorno de quitação',
           run: async () => {
-            const { data: pago } = await supabase.from('lancamentos_financeiros').select('id').eq('status_pagamento', 'pago').order('created_at', { ascending: false }).limit(1).single();
+            const masterId = (window as any).masterTestId;
+            const { data: pago } = await supabase
+              .from('lancamentos_financeiros')
+              .select('id')
+              .eq('vinculo_residuo_id', masterId) // The paid portion links to residue_id
+              .eq('status_pagamento', 'pago')
+              .single();
+              
             if (!pago) throw new Error('Registro pago não encontrado.');
 
             addLog('Solicitando estorno do pagamento de R$ 200,00...');

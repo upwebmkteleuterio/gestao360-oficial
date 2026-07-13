@@ -246,7 +246,7 @@ function AppContent() {
               <ComprovanteDrawer />
               <CadastroRapidoModal />
               <BaixaLancamentoModal />
-              <AITestSuite />
+              {/* <AITestSuite /> - Hidden but kept in code for future use */}
             </div>
 
           </PrivateRoute>
