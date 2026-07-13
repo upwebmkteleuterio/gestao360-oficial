@@ -1,16 +1,16 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { 
-  Play, 
-  Pause, 
-  RotateCcw, 
-  CheckCircle2, 
-  XCircle, 
-  Loader2, 
-  ChevronRight, 
-  X, 
-  Terminal, 
-  Minimize2, 
+import {
+  Play,
+  Pause,
+  RotateCcw,
+  CheckCircle2,
+  XCircle,
+  Loader2,
+  ChevronRight,
+  X,
+  Terminal,
+  Minimize2,
   Maximize2,
   FileText,
   Clock,
@@ -19,8 +19,10 @@ import {
   Shield,
   UserCheck,
   Lock,
-  Unlock
+  Unlock,
+  GripVertical
 } from 'lucide-react';
+
 import { useNavigate } from 'react-router-dom';
 import { useUIStore } from '../store/uiStore';
 import { useLancamentos, useEntidades, useContas, useCategorias, useCategoriasAjuste } from '../hooks/useData';
@@ -282,16 +284,27 @@ export default function AITestSuite() {
 
   return (
     <>
-      {/* Floating Toggle Button */}
-      <div className="fixed bottom-6 left-6 z-[200] print:hidden">
-        <button
-          onClick={() => setIsOpen(!isOpen)}
-          className="flex items-center gap-2 px-5 h-12 bg-neutral-900 text-white rounded-full hover:bg-black transition-all shadow-2xl border border-neutral-800"
-        >
-          <Shield className="w-5 h-5 text-amber-500 animate-pulse" />
-          <span className="text-[10px] font-black uppercase tracking-widest">Simulação de Governança & Segurança</span>
-        </button>
-      </div>
+      {/* Floating Draggable Toggle Button */}
+      <motion.div
+        drag
+        dragMomentum={false}
+        className="fixed bottom-6 left-6 z-[200] print:hidden touch-none"
+      >
+        <div className="flex items-center bg-neutral-900 rounded-full shadow-2xl border border-neutral-800 overflow-hidden">
+          {/* Drag Handle */}
+          <div className="pl-3 pr-1 py-3 cursor-grab active:cursor-grabbing text-neutral-600 hover:text-neutral-400 transition-colors border-r border-neutral-800">
+            <GripVertical className="w-4 h-4" />
+          </div>
+          
+          <button
+            onClick={() => setIsOpen(!isOpen)}
+            className="flex items-center gap-2 px-4 h-12 text-white hover:bg-black transition-all"
+          >
+            <Shield className="w-4 h-4 text-amber-500 animate-pulse" />
+            <span className="text-[9px] font-black uppercase tracking-widest whitespace-nowrap">Simulação de Governança</span>
+          </button>
+        </div>
+      </motion.div>
 
       <AnimatePresence>
         {isOpen && (
