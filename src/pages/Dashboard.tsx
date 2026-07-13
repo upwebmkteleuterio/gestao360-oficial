@@ -1,4 +1,7 @@
+"use client";
+
 import React, { useState, useMemo } from 'react';
+import { useNavigate } from 'react-router-dom';
 import {
   TrendingUp,
   TrendingDown,
@@ -27,13 +30,14 @@ import { supabase } from '@/integrations/supabase/client';
 
 export default function Dashboard() {
   const { role } = useAuth();
+  const navigate = useNavigate();
   const isMaster = role === 'master';
   const dragScrollAccounts = useDragScroll();
 
   const dragScrollTabs = useDragScroll();
 
   const [currentTab, setCurrentTab] = useState<'general' | 'cashflow' | 'audit'>('general');
-  const [showAdvancedFilters, setShowAdvancedFilters] = useState(false);
+  const [showAdvancedFilters, setShowAdvancedFiltersAdvancedFilters] = useState(false);
   const [selectedAccountId, setSelectedAccountId] = useState<string | null>(null);
   const [selectedCCId, setSelectedCCId] = useState<string | null>(null);
 
@@ -228,10 +232,13 @@ export default function Dashboard() {
                   </div>
                   
                   <div className="space-y-3">
-                    <div className="flex items-center justify-between">
+                    <div 
+                      onClick={() => navigate('/pagar')}
+                      className="flex items-center justify-between cursor-pointer hover:bg-neutral-50 p-2 -mx-2 rounded-lg transition-colors group"
+                    >
                       <div className="flex flex-col">
                         <span className="text-[9px] font-black text-alert-red uppercase">A Pagar (Saída)</span>
-                        <span className="text-lg font-bold font-mono text-on-surface">{valueFormatter(stats?.pendente_saida_valor || 0)}</span>
+                        <span className="text-lg font-bold font-mono text-on-surface group-hover:text-primary">{valueFormatter(stats?.pendente_saida_valor || 0)}</span>
                       </div>
                       <div className="text-right">
                         <span className="bg-red-50 text-alert-red text-[10px] font-black px-2 py-1 rounded-lg border border-red-100">
@@ -242,10 +249,13 @@ export default function Dashboard() {
                     
                     <div className="h-px bg-surface-border/50 w-full"></div>
 
-                    <div className="flex items-center justify-between">
+                    <div 
+                      onClick={() => navigate('/receber')}
+                      className="flex items-center justify-between cursor-pointer hover:bg-neutral-50 p-2 -mx-2 rounded-lg transition-colors group"
+                    >
                       <div className="flex flex-col">
                         <span className="text-[9px] font-black text-bank-truth-green uppercase">A Receber (Entrada)</span>
-                        <span className="text-lg font-bold font-mono text-on-surface">{valueFormatter(stats?.pendente_entrada_valor || 0)}</span>
+                        <span className="text-lg font-bold font-mono text-on-surface group-hover:text-primary">{valueFormatter(stats?.pendente_entrada_valor || 0)}</span>
                       </div>
                       <div className="text-right">
                         <span className="bg-emerald-50 text-bank-truth-green text-[10px] font-black px-2 py-1 rounded-lg border border-emerald-100">

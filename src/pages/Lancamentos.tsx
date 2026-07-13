@@ -1,3 +1,5 @@
+"use client";
+
 import React, { useState, useMemo, useEffect } from 'react';
 import {
   Search,
@@ -237,11 +239,15 @@ export default function Lancamentos({ typeOverride, titleOverride }: Lancamentos
 
   const totalPages = Math.max(Math.ceil(lancamentos.length / itemsPerPage), 1);
 
+  // Filterable items that can be selected (not already confirmed by master)
+  const selectableItemsOnPage = useMemo(() => {
+    return paginatedGroups.flatMap(g => g.items).filter(l => l.status_aprovacao !== 'confirmado_master');
+  }, [paginatedGroups]);
+
   // Checkbox Handlers
   const handleSelectAll = (checked: boolean) => {
-    const currentPageItems = paginatedGroups.flatMap(g => g.items);
     if (checked) {
-      setSelectedIds(currentPageItems.map(l => l.id));
+      setSelectedIds(selectableItemsOnPage.map(l => l.id));
     } else {
       setSelectedIds([]);
     }
@@ -690,7 +696,7 @@ export default function Lancamentos({ typeOverride, titleOverride }: Lancamentos
                   <input
                     type="checkbox"
                     className="rounded border-surface-border text-primary focus:ring-primary cursor-pointer w-4 h-4 align-middle"
-                    checked={paginatedGroups.length > 0 && paginatedGroups.flatMap(g => g.items).every(l => selectedIds.includes(l.id))}
+                    checked={selectableItemsOnPage.length > 0 && selectableItemsOnPage.every(l => selectedIds.includes(l.id))}
                     onChange={(e) => handleSelectAll(e.target.checked)}
                   />
                 </th>
@@ -742,6 +748,7 @@ export default function Lancamentos({ typeOverride, titleOverride }: Lancamentos
                     
                     {group.items.map(item => {
                       const isChecked = selectedIds.includes(item.id);
+                      const isConfirmed = item.status_aprovacao === 'confirmado_master';
                       return (
                         <tr
                           key={item.id}
@@ -757,7 +764,8 @@ export default function Lancamentos({ typeOverride, titleOverride }: Lancamentos
                           <td className="py-3 px-4 text-center" onClick={(e) => e.stopPropagation()}>
                             <input
                               type="checkbox"
-                              className="rounded border-surface-border text-primary focus:ring-primary cursor-pointer w-4 h-4 align-middle"
+                              disabled={isConfirmed}
+                              className={`rounded border-surface-border text-primary focus:ring-primary w-4 h-4 align-middle ${isConfirmed ? 'opacity-30 cursor-not-allowed' : 'cursor-pointer'}`}
                               checked={isChecked}
                               onChange={(e) => handleSelectOne(item.id, e.target.checked)}
                             />
