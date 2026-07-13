@@ -226,8 +226,9 @@ export default function Dashboard() {
                   </button>
                 )}
               </div>
-              <div ref={dragScrollAccounts.ref} {...dragScrollAccounts.props} className="flex gap-4 overflow-x-auto pb-2 scroll-smooth select-none">
+              <div ref={dragScrollAccounts.ref} {...dragScrollAccounts.props} className="flex gap-4 overflow-x-auto pb-2 scroll-smooth select-none px-0.5">
                 {/* Card Todas as Contas */}
+
                 <div
                   onClick={() => setSelectedAccountId(null)}
                   className={`flex-shrink-0 w-64 bg-white dark:bg-surface p-4 border rounded-lg flex items-center justify-between group cursor-pointer transition-all ${

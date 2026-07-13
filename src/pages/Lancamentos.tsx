@@ -410,8 +410,9 @@ export default function Lancamentos({ typeOverride, titleOverride }: Lancamentos
             )}
           </div>
         </div>
-        <div ref={dragScrollAccounts.ref} {...dragScrollAccounts.props} className="flex gap-4 overflow-x-auto pb-4 scrollbar-none select-none">
+        <div ref={dragScrollAccounts.ref} {...dragScrollAccounts.props} className="flex gap-4 overflow-x-auto pb-4 scrollbar-none select-none px-0.5">
           {/* Card Todas as Contas */}
+
           <div
             onClick={() => setSelectedAccountId(null)}
             className={`flex-shrink-0 w-64 bg-white dark:bg-surface p-4 border-2 rounded-2xl flex items-center justify-between group cursor-pointer transition-all ${
