@@ -102,7 +102,7 @@ export default function Sidebar({ isOpen, onClose, isCollapsed }: SidebarProps) 
         </div>
 
         {/* Navigation list */}
-        <nav className="flex-1 p-4 space-y-1.5 overflow-y-auto scrollbar-none">
+        <nav className={`flex-1 p-4 space-y-1.5 scrollbar-none ${isCollapsed ? 'overflow-visible' : 'overflow-y-auto'}`}>
           {navItems.filter(item => item.roles.includes(role)).map((item, idx) => {
             if (item.isGroup) {
               const isAnySubActive = item.subItems?.some(sub => location.pathname.startsWith(sub.path));
@@ -127,7 +127,7 @@ export default function Sidebar({ isOpen, onClose, isCollapsed }: SidebarProps) 
 
                   {/* Popover Card for Collapsed Sidebar */}
                   {isCollapsed && (
-                    <div className="absolute left-full top-0 ml-2 w-48 bg-white border border-surface-border rounded-xl shadow-2xl overflow-hidden hidden group-hover/nav:block animate-fade-in z-50">
+                    <div className="absolute left-full top-0 ml-2 w-48 bg-white border border-surface-border rounded-xl shadow-2xl overflow-hidden hidden group-hover/nav:block animate-fade-in z-[100]">
                       <div className="px-4 py-2 bg-neutral-50 border-b border-surface-border">
                         <span className="text-[10px] font-black uppercase text-secondary tracking-widest">{item.label}</span>
                       </div>
