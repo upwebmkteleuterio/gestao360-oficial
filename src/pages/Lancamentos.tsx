@@ -411,7 +411,38 @@ export default function Lancamentos({ typeOverride, titleOverride }: Lancamentos
           </div>
         </div>
         <div ref={dragScrollAccounts.ref} {...dragScrollAccounts.props} className="flex gap-4 overflow-x-auto pb-4 scrollbar-none select-none">
+          {/* Card Todas as Contas */}
+          <div
+            onClick={() => setSelectedAccountId(null)}
+            className={`flex-shrink-0 w-64 bg-white dark:bg-surface p-4 border-2 rounded-2xl flex items-center justify-between group cursor-pointer transition-all ${
+              selectedAccountId === null
+                ? 'border-primary ring-4 ring-primary/5 shadow-xl scale-[1.02]'
+                : 'border-surface-border hover:border-neutral-200 shadow-sm'
+            }`}
+          >
+            <div className="flex items-center gap-3">
+              <div className={`w-10 h-10 rounded-xl flex items-center justify-center transition-all ${
+                selectedAccountId === null ? 'bg-primary' : 'bg-neutral-50'
+              }`}>
+                <Landmark className={`w-5 h-5 ${selectedAccountId === null ? 'text-white' : 'text-secondary'}`} />
+              </div>
+              <div className="min-w-0">
+                <p className="text-xs font-black text-on-surface truncate w-24 uppercase tracking-tight">Todas as Contas</p>
+                <p className="text-[9px] font-bold text-secondary uppercase tracking-widest">Visão Consolidada</p>
+              </div>
+            </div>
+            <div className="text-right">
+              <p className={`text-[10px] font-black font-mono transition-colors ${
+                selectedAccountId === null ? 'text-primary' : 'text-on-surface'
+              }`}>
+                {formatCurrency(accountsWithBalances.reduce((sum, acc) => sum + (acc.saldo_real || 0), 0))}
+              </p>
+              <span className="text-[8px] font-black uppercase text-secondary/40">Total</span>
+            </div>
+          </div>
+
           {accountsWithBalances.map((acc) => (
+
             <div
               key={acc.id}
               onClick={() => setSelectedAccountId(acc.id === selectedAccountId ? null : acc.id)}

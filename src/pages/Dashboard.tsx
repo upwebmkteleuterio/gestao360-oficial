@@ -227,7 +227,31 @@ export default function Dashboard() {
                 )}
               </div>
               <div ref={dragScrollAccounts.ref} {...dragScrollAccounts.props} className="flex gap-4 overflow-x-auto pb-2 scroll-smooth select-none">
+                {/* Card Todas as Contas */}
+                <div
+                  onClick={() => setSelectedAccountId(null)}
+                  className={`flex-shrink-0 w-64 bg-white dark:bg-surface p-4 border rounded-lg flex items-center justify-between group cursor-pointer transition-all ${
+                    selectedAccountId === null ? 'border-primary ring-2 ring-primary/20 shadow-md scale-[1.02]' : 'border-surface-border hover:border-primary shadow-sm'
+                  }`}
+                >
+                  <div className="flex items-center gap-3">
+                    <div className={`w-10 h-10 rounded-lg flex items-center justify-center font-bold uppercase transition-colors ${
+                      selectedAccountId === null ? 'bg-primary text-white' : 'bg-primary/10 text-primary'
+                    }`}>
+                      <Landmark className="w-5 h-5" />
+                    </div>
+                    <div>
+                      <p className="text-sm font-bold text-on-surface truncate w-24">Todas as Contas</p>
+                      <p className="text-xs text-secondary">Geral</p>
+                    </div>
+                  </div>
+                  <p className="text-sm font-bold font-mono text-on-surface">
+                    {valueFormatter(accountsBalances.reduce((sum, acc) => sum + (acc.consolidated || 0), 0))}
+                  </p>
+                </div>
+
                 {accountsBalances.map((acc, i) => (
+
                   <div
                     key={acc.id}
                     onClick={() => setSelectedAccountId(acc.id === selectedAccountId ? null : acc.id)}
