@@ -31,14 +31,14 @@ import {
   Search
 } from 'lucide-react';
 
-import { useContas, useCentrosCusto, useCategorias } from '../hooks/useData';
+import { useContas, useCentrosCusto, useCategorias, useCategoriasAjuste } from '../hooks/useData';
 import { useAuth } from '../hooks/useAuth';
 import { useDragScroll } from '../hooks/useDragScroll';
 import MoneyInput from '../components/MoneyInput';
 import Button from '../components/Button';
 import { supabase } from '@/integrations/supabase/client';
 
-type SubTabType = 'contas' | 'centros' | 'categorias';
+type SubTabType = 'contas' | 'centros' | 'categorias' | 'ajustes';
 
 export default function Cadastros() {
   const { hasRole } = useAuth();
@@ -46,6 +46,7 @@ export default function Cadastros() {
   const { data: contas = [], createAccount, updateAccount, deleteAccount } = useContas();
   const { data: centrosCusto = [], createCC, updateCC, deleteCC } = useCentrosCusto();
   const { data: categorias = [], createCategory, updateCategory, deleteCategory } = useCategorias();
+  const { categoriasAjuste = [], createCategoriaAjuste, updateCategoriaAjuste, deleteCategoriaAjuste } = useCategoriasAjuste();
 
   const [activeSubTab, setActiveSubTab] = useState<SubTabType>('contas');
 
@@ -63,8 +64,11 @@ export default function Cadastros() {
   const [isNewCatOpen, setIsNewCatOpen] = useState(false);
   const [editingCat, setEditingCat] = useState<any>(null);
 
+  const [isNewAjusteOpen, setIsNewAjusteOpen] = useState(false);
+  const [editingAjuste, setEditingAjuste] = useState<any>(null);
+
   // Deletion Confirmation
-  const [deleteConfirm, setDeleteConfirm] = useState<{ id: string, type: 'conta' | 'cc' | 'categoria', name: string } | null>(null);
+  const [deleteConfirm, setDeleteConfirm] = useState<{ id: string, type: 'conta' | 'cc' | 'categoria' | 'ajuste', name: string } | null>(null);
 
   // Form states
   const [bankName, setBankName] = useState('');
@@ -75,6 +79,8 @@ export default function Cadastros() {
   const [ccDesc, setCCDesc] = useState('');
   const [catName, setCatName] = useState('');
   const [catType, setCatType] = useState<'entrada' | 'saida'>('entrada');
+  const [ajusteName, setAjusteName] = useState('');
+  const [ajusteType, setAjusteType] = useState<'desconto' | 'acrescimo'>('desconto');
 
   const [searchTerm, setSearchTerm] = useState('');
 
@@ -102,7 +108,15 @@ export default function Cadastros() {
     setIsNewCatOpen(true);
   };
 
+  const openEditAjuste = (aj: any) => {
+    setEditingAjuste(aj);
+    setAjusteName(aj.nome);
+    setAjusteType(aj.tipo as any);
+    setIsNewAjusteOpen(true);
+  };
+
   const handleAccountSubmit = async (e: React.FormEvent) => {
+
     e.preventDefault();
     try {
       const saldo = parseFloat(bankInitial.replace(/\D/g, '')) / 100 || 0;
@@ -164,7 +178,22 @@ export default function Cadastros() {
     } catch (err) { alert('Erro ao salvar categoria'); }
   };
 
+  const handleAjusteSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    try {
+      if (editingAjuste) {
+        await updateCategoriaAjuste({ id: editingAjuste.id, data: { nome: ajusteName, tipo: ajusteType }});
+      } else {
+        await createCategoriaAjuste({ nome: ajusteName, tipo: ajusteType });
+      }
+      setIsNewAjusteOpen(false);
+      setEditingAjuste(null);
+      setAjusteName('');
+    } catch (err) { alert('Erro ao salvar categoria de ajuste'); }
+  };
+
   const confirmDelete = async () => {
+
     if (!deleteConfirm) return;
     try {
       if (deleteConfirm.type === 'conta') {
@@ -173,8 +202,11 @@ export default function Cadastros() {
         await deleteCC(deleteConfirm.id);
       } else if (deleteConfirm.type === 'categoria') {
         await deleteCategory(deleteConfirm.id);
+      } else if (deleteConfirm.type === 'ajuste') {
+        await deleteCategoriaAjuste(deleteConfirm.id);
       }
       setDeleteConfirm(null);
+
     } catch (err: any) {
       if (err?.code === '23503') {
         alert('Este registro não pode ser inativado pois existem movimentos críticos vinculados. Recomendamos revisão contábil.');
@@ -185,7 +217,9 @@ export default function Cadastros() {
   };
 
   const paginatedData = useMemo(() => {
-    const rawData = activeSubTab === 'contas' ? contas : activeSubTab === 'centros' ? centrosCusto : categorias;
+    const rawData = activeSubTab === 'contas' ? contas :
+                   activeSubTab === 'centros' ? centrosCusto :
+                   activeSubTab === 'categorias' ? categorias : categoriasAjuste;
     const data = rawData.filter((item: any) => {
       const isNotExcluido = item.status !== 'excluido';
       const name = (item.nome_banco || item.nome || '').toLowerCase();
@@ -194,10 +228,12 @@ export default function Cadastros() {
     });
     const start = (currentPage - 1) * itemsPerPage;
     return data.slice(start, start + itemsPerPage);
-  }, [activeSubTab, contas, centrosCusto, categorias, currentPage, itemsPerPage, searchTerm]);
+  }, [activeSubTab, contas, centrosCusto, categorias, categoriasAjuste, currentPage, itemsPerPage, searchTerm]);
 
   const totalPages = useMemo(() => {
-    const rawData = activeSubTab === 'contas' ? contas : activeSubTab === 'centros' ? centrosCusto : categorias;
+    const rawData = activeSubTab === 'contas' ? contas :
+                   activeSubTab === 'centros' ? centrosCusto :
+                   activeSubTab === 'categorias' ? categorias : categoriasAjuste;
     const data = rawData.filter((item: any) => {
       const isNotExcluido = item.status !== 'excluido';
       const name = (item.nome_banco || item.nome || '').toLowerCase();
@@ -205,7 +241,7 @@ export default function Cadastros() {
       return isNotExcluido && matchesSearch;
     });
     return Math.max(Math.ceil(data.length / itemsPerPage), 1);
-  }, [activeSubTab, contas, centrosCusto, categorias, itemsPerPage, searchTerm]);
+  }, [activeSubTab, contas, centrosCusto, categorias, categoriasAjuste, itemsPerPage, searchTerm]);
 
   return (
     <div className="space-y-6">
@@ -234,6 +270,7 @@ export default function Cadastros() {
         <button onClick={() => { setActiveSubTab('contas'); setCurrentPage(1); setSearchTerm(''); }} className={`px-8 py-4 text-[10px] font-black uppercase tracking-widest border-b-4 transition-all ${activeSubTab === 'contas' ? 'border-primary text-primary' : 'border-transparent text-neutral-400 hover:text-neutral-900'}`}>Contas Bancárias</button>
         <button onClick={() => { setActiveSubTab('centros'); setCurrentPage(1); setSearchTerm(''); }} className={`px-8 py-4 text-[10px] font-black uppercase tracking-widest border-b-4 transition-all ${activeSubTab === 'centros' ? 'border-primary text-primary' : 'border-transparent text-neutral-400 hover:text-neutral-900'}`}>Centros de Custo</button>
         <button onClick={() => { setActiveSubTab('categorias'); setCurrentPage(1); setSearchTerm(''); }} className={`px-8 py-4 text-[10px] font-black uppercase tracking-widest border-b-4 transition-all ${activeSubTab === 'categorias' ? 'border-primary text-primary' : 'border-transparent text-neutral-400 hover:text-neutral-900'}`}>Categorias</button>
+        <button onClick={() => { setActiveSubTab('ajustes'); setCurrentPage(1); setSearchTerm(''); }} className={`px-8 py-4 text-[10px] font-black uppercase tracking-widest border-b-4 transition-all ${activeSubTab === 'ajustes' ? 'border-primary text-primary' : 'border-transparent text-neutral-400 hover:text-neutral-900'}`}>Motivos de Ajuste</button>
       </div>
 
       <div className="bg-white border-2 border-neutral-100 rounded-3xl overflow-hidden shadow-sm">
@@ -338,7 +375,37 @@ export default function Cadastros() {
           </div>
         )}
 
+        {activeSubTab === 'ajustes' && (
+          <div className="overflow-x-auto">
+            <table className="w-full text-left border-collapse">
+              <thead><tr className="bg-neutral-50 text-neutral-400 border-b border-neutral-100 text-[9px] font-black uppercase tracking-widest"><th className="py-4 px-8">Motivo de Ajuste</th><th className="py-4 px-8 text-center">Tipo</th><th className="py-4 px-8 text-right">Ações</th></tr></thead>
+              <tbody className="text-[11px] font-bold">
+                {paginatedData.length === 0 ? <tr><td colSpan={3} className="py-20 text-center opacity-40 uppercase tracking-widest">Nenhum motivo encontrado</td></tr> :
+                (paginatedData as any[]).map(aj => (
+                  <tr key={aj.id} className="border-b border-neutral-50 hover:bg-neutral-50/50 transition-all">
+                    <td className="py-4 px-8 font-black uppercase tracking-tighter text-neutral-900">{aj.nome}</td>
+                    <td className="py-4 px-8 text-center">
+                      <span className={`rounded-lg px-3 py-1.5 uppercase font-black text-[9px] tracking-widest ${aj.tipo === 'desconto' ? 'bg-emerald-50 text-bank-truth-green' : 'bg-red-50 text-alert-red'}`}>
+                        {aj.tipo}
+                      </span>
+                    </td>
+                    <td className="py-4 px-8 text-right">
+                      <div className="flex items-center justify-end gap-2">
+                        <button onClick={() => openEditAjuste(aj)} className="p-2 hover:bg-neutral-100 text-neutral-400 hover:text-neutral-900 rounded-xl transition-all"><Edit2 className="w-4 h-4" /></button>
+                        {hasRole(['master']) && (
+                          <button onClick={() => setDeleteConfirm({ id: aj.id, type: 'ajuste', name: aj.nome })} className="p-2 hover:bg-red-50 text-neutral-300 hover:text-alert-red rounded-xl transition-all"><Trash2 className="w-4 h-4" /></button>
+                        )}
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+
         {/* Pagination bar */}
+
         <div className="bg-neutral-50/50 px-8 py-4 border-t border-neutral-100 flex items-center justify-between">
           <span className="text-neutral-400 font-bold text-[9px] uppercase tracking-widest">
             Exibindo registros da página {currentPage} de {totalPages}
@@ -496,7 +563,29 @@ export default function Cadastros() {
           </div>
         )}
 
+        {/* Modal Novo/Edita Categoria Ajuste */}
+        {isNewAjusteOpen && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 overflow-hidden">
+            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setIsNewAjusteOpen(false)} className="absolute inset-0 bg-black/60 backdrop-blur-xs" />
+            <motion.form initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.9, opacity: 0 }} onSubmit={handleAjusteSubmit} className="bg-white w-full max-w-[440px] rounded-3xl shadow-2xl border-2 border-neutral-100 flex flex-col relative z-20 overflow-hidden">
+              <header className="px-8 py-6 border-b border-neutral-50 flex justify-between items-center bg-neutral-50/50"><h2 className="text-sm font-black uppercase tracking-widest text-neutral-900">{editingAjuste ? 'Editar Motivo' : 'Novo Motivo de Ajuste'}</h2><button type="button" onClick={() => setIsNewAjusteOpen(false)} className="p-2 hover:bg-neutral-200 rounded-xl transition-colors"><X className="w-6 h-6" /></button></header>
+              <div className="p-10 space-y-6">
+                <div className="space-y-2"><label className="text-[10px] font-black uppercase text-neutral-400 tracking-widest">Nome do Motivo</label><input type="text" required value={ajusteName} onChange={(e) => setAjusteName(e.target.value)} className="w-full h-12 bg-neutral-50 border-2 border-neutral-100 rounded-2xl px-5 text-xs font-black focus:border-primary outline-none" placeholder="Ex: Pagamento Antecipado" /></div>
+                <div className="space-y-2"><label className="text-[10px] font-black uppercase text-neutral-400 tracking-widest">Tipo de Ajuste</label><select value={ajusteType} onChange={(e) => setAjusteType(e.target.value as any)} className="w-full h-12 bg-neutral-50 border-2 border-neutral-100 rounded-2xl px-5 text-xs font-black outline-none cursor-pointer appearance-none"><option value="desconto">Desconto</option><option value="acrescimo">Acréscimo / Juros</option></select></div>
+              </div>
+              <footer className="px-10 py-8 border-t border-neutral-50 bg-neutral-50/50 flex justify-end gap-3">
+                <button type="button" onClick={() => setIsNewAjusteOpen(false)} className="px-6 py-2 font-black text-[10px] uppercase tracking-widest text-neutral-500">Cancelar</button>
+                <Button type="submit">
+                  Salvar
+                  <CheckCircle2 className="w-4 h-4" />
+                </Button>
+              </footer>
+            </motion.form>
+          </div>
+        )}
+
         {/* Confirmation Modal */}
+
         {deleteConfirm && (
           <div className="fixed inset-0 z-50 flex items-center justify-center p-4 overflow-hidden">
             <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setDeleteConfirm(null)} className="absolute inset-0 bg-black/60 backdrop-blur-xs" />

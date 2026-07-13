@@ -200,8 +200,11 @@ export const lancamentosService = {
     tipo_baixa?: 'financeira' | 'bpi' | 'avr',
     valor_desconto?: number,
     valor_acrescimo?: number,
-    motivo_ajuste?: string
+    motivo_ajuste?: string,
+    motivo_desconto_id?: string,
+    motivo_acrescimo_id?: string
   }): Promise<LancamentoFinanceiro> => {
+
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) throw new Error('Usuário não autenticado');
 
@@ -252,6 +255,8 @@ export const lancamentosService = {
           desconto_valor: data.valor_desconto || 0,
           acrescimo_valor: data.valor_acrescimo || 0,
           motivo_ajuste: data.motivo_ajuste || null,
+          motivo_desconto_id: data.motivo_desconto_id || null,
+          motivo_acrescimo_id: data.motivo_acrescimo_id || null,
           vinculo_residuo_id: id,
           observacoes: (current.observacoes || '') + `\n[Pagamento parcial quitado. Referente à cobrança original de R$ ${current.valor_previsto}]`
         }]);
@@ -271,9 +276,12 @@ export const lancamentosService = {
           desconto_valor: data.valor_desconto || 0,
           acrescimo_valor: data.valor_acrescimo || 0,
           motivo_ajuste: data.motivo_ajuste || null,
+          motivo_desconto_id: data.motivo_desconto_id || null,
+          motivo_acrescimo_id: data.motivo_acrescimo_id || null,
           // If AVR, adjust the final value
           valor_previsto: isAVR ? data.valor_pago : (isBPI ? current.valor_previsto : subtotal)
         })
+
         .eq('id', id)
         .select()
         .single();

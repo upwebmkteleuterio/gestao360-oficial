@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { 
-  X, 
-  CheckCircle2, 
-  AlertTriangle, 
+import {
+  X,
+  CheckCircle2,
+  AlertTriangle,
   Loader2,
   DollarSign,
   Calendar,
@@ -12,10 +12,14 @@ import {
   TrendingUp,
   TrendingDown,
   Info,
-  ChevronDown
+  ChevronDown,
+  Plus,
+  User,
+  Tag,
+  CreditCard
 } from 'lucide-react';
 import { useUIStore } from '../store/uiStore';
-import { useLancamentos, useContas } from '../hooks/useData';
+import { useLancamentos, useContas, useEntidades, useCategorias, useCategoriasAjuste } from '../hooks/useData';
 import { useAuth } from '../hooks/useAuth';
 import MoneyInput from './MoneyInput';
 import Button from './Button';
@@ -49,6 +53,9 @@ export default function BaixaLancamentoModal() {
   const { role } = useAuth();
   const { data: lancamentos = [], baixaLancamento } = useLancamentos();
   const { data: contas = [] } = useContas();
+  const { data: entidades = [] } = useEntidades();
+  const { data: categorias = [] } = useCategorias();
+  const { categoriasAjuste, createCategoriaAjuste } = useCategoriasAjuste();
 
   const [loading, setLoading] = useState(false);
   
@@ -60,12 +67,19 @@ export default function BaixaLancamentoModal() {
   
   const [descontoValor, setDescontoValor] = useState('');
   const [descontoTipo, setDescontoTipo] = useState<'valor' | 'porcentagem'>('valor');
+  const [motivoDescontoId, setMotivoDescontoId] = useState('');
   
   const [acrescimoValor, setAcrescimoValor] = useState('');
   const [acrescimoTipo, setAcrescimoTipo] = useState<'valor' | 'porcentagem'>('valor');
+  const [motivoAcrescimoId, setMotivoAcrescimoId] = useState('');
   
   const [valorPago, setValorPago] = useState('');
   const [observacao, setObservacao] = useState('');
+
+  // Quick add states
+  const [isQuickAddOpen, setIsQuickAddOpen] = useState(false);
+  const [quickAddType, setQuickAddType] = useState<'desconto' | 'acrescimo'>('desconto');
+  const [quickAddName, setQuickAddName] = useState('');
 
   const lancamento = lancamentos.find(l => l.id === selectedLancamentoIdForModal);
 
@@ -76,8 +90,10 @@ export default function BaixaLancamentoModal() {
       // Reset details
       setDescontoValor('');
       setDescontoTipo('valor');
+      setMotivoDescontoId('');
       setAcrescimoValor('');
       setAcrescimoTipo('valor');
+      setMotivoAcrescimoId('');
       setObservacao('');
       setTipoBaixa('financeira');
     }
@@ -117,11 +133,25 @@ export default function BaixaLancamentoModal() {
   
   // Validation for Save button active state
   const isBpiOrAvr = tipoBaixa === 'bpi' || tipoBaixa === 'avr';
+  
+  // Adjustment Reasons Logic
+  const discReasons = (categoriasAjuste || []).filter(c => c.tipo === 'desconto');
+  const incrReasons = (categoriasAjuste || []).filter(c => c.tipo === 'acrescimo');
+
+  const isDescontoReasonRequired = calculatedDesconto > 0;
+  const isAcrescimoReasonRequired = calculatedAcrescimo > 0;
+  
+  const isDescontoReasonSelected = !!motivoDescontoId;
+  const isAcrescimoReasonSelected = !!motivoAcrescimoId;
+
   const hasChanges = calculatedDesconto > 0 || calculatedAcrescimo > 0 || isBpiOrAvr;
   const isObsRequired = hasChanges;
   const isObsFilled = observacao.trim().length > 0;
   
-  const canSave = (!isObsRequired || isObsFilled) && !isOverpaid && valorDigitado > 0;
+  const canSave = (!isObsRequired || isObsFilled) &&
+                  (!isDescontoReasonRequired || isDescontoReasonSelected) &&
+                  (!isAcrescimoReasonRequired || isAcrescimoReasonSelected) &&
+                  !isOverpaid && valorDigitado > 0;
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -138,6 +168,8 @@ export default function BaixaLancamentoModal() {
           tipo_baixa: tipoBaixa,
           valor_desconto: calculatedDesconto,
           valor_acrescimo: calculatedAcrescimo,
+          motivo_desconto_id: motivoDescontoId || undefined,
+          motivo_acrescimo_id: motivoAcrescimoId || undefined,
           motivo_ajuste: observacao
         }
       });
@@ -149,6 +181,23 @@ export default function BaixaLancamentoModal() {
       setLoading(false);
     }
   };
+
+  const handleQuickAddReason = async (e: React.FormEvent) => {
+    e.preventDefault();
+    try {
+      const result = await createCategoriaAjuste({ nome: quickAddName, tipo: quickAddType });
+      if (quickAddType === 'desconto') setMotivoDescontoId(result.id);
+      else setMotivoAcrescimoId(result.id);
+      setIsQuickAddOpen(false);
+      setQuickAddName('');
+    } catch (err: any) {
+      alert('Erro ao criar categoria: ' + err.message);
+    }
+  };
+
+  const entName = entidades.find(e => e.id === lancamento.entidade_id)?.nome_razao_social || 'Desconhecido';
+  const catName = categorias.find(c => c.id === lancamento.categoria_id)?.nome || 'Sem categoria';
+  const accName = contas.find(c => c.id === lancamento.conta_bancaria_id)?.nome_banco || 'Sem conta';
 
   return (
     <AnimatePresence>
@@ -170,8 +219,18 @@ export default function BaixaLancamentoModal() {
           >
             <header className="px-8 py-6 border-b border-neutral-100 flex justify-between items-center bg-neutral-50/50 shrink-0">
               <div>
-                <h3 className="text-sm font-black uppercase tracking-widest text-neutral-900">Módulo de Liquidação</h3>
-                <p className="text-[10px] font-bold text-secondary uppercase tracking-widest mt-0.5">Operações de Baixa de Título</p>
+                <h3 className="text-sm font-black uppercase tracking-widest text-neutral-900">Operações de Baixa de Título</h3>
+                <div className="flex flex-wrap gap-x-4 gap-y-1 mt-2">
+                  <div className="flex items-center gap-1.5 text-[9px] font-black uppercase text-secondary">
+                    <User className="w-3 h-3" /> {entName}
+                  </div>
+                  <div className="flex items-center gap-1.5 text-[9px] font-black uppercase text-secondary">
+                    <Tag className="w-3 h-3" /> {catName}
+                  </div>
+                  <div className="flex items-center gap-1.5 text-[9px] font-black uppercase text-secondary">
+                    <CreditCard className="w-3 h-3" /> {accName}
+                  </div>
+                </div>
               </div>
               <button onClick={handleClose} className="p-2 hover:bg-neutral-200 rounded-xl transition-all">
                 <X className="w-5 h-5 text-secondary" />
@@ -219,16 +278,13 @@ export default function BaixaLancamentoModal() {
               </div>
 
               {/* Desconto & Acréscimo */}
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-2 gap-6">
                 {/* Desconto */}
-                <div className="space-y-2">
+                <div className="space-y-3">
                   <div className="flex items-center justify-between">
                     <label className="text-[10px] font-black uppercase text-secondary tracking-widest flex items-center gap-1.5">
                       <TrendingDown className="w-3.5 h-3.5 text-bank-truth-green" /> Desconto
                     </label>
-                    {!isGerenteOrMaster && (
-                      <span className="text-[8px] bg-red-50 text-alert-red font-black uppercase px-2 py-0.5 rounded">Gerência</span>
-                    )}
                   </div>
                   <div className="flex bg-neutral-50 border-2 border-neutral-100 rounded-2xl overflow-hidden focus-within:border-primary transition-all">
                     <select
@@ -240,7 +296,7 @@ export default function BaixaLancamentoModal() {
                       <option value="valor">R$</option>
                       <option value="porcentagem">%</option>
                     </select>
-                    <MoneyInput 
+                    <MoneyInput
                       disabled={!isGerenteOrMaster || isBpiOrAvr}
                       value={descontoValor}
                       onChange={setDescontoValor}
@@ -248,10 +304,37 @@ export default function BaixaLancamentoModal() {
                       placeholder="0,00"
                     />
                   </div>
+
+                  {calculatedDesconto > 0 && (
+                    <div className="space-y-1.5 animate-in fade-in slide-in-from-top-1">
+                      <div className="flex justify-between items-center">
+                        <label className="text-[9px] font-black uppercase text-secondary tracking-widest">Motivo Desconto <span className="text-alert-red">*</span></label>
+                        <button
+                          type="button"
+                          onClick={() => { setQuickAddType('desconto'); setIsQuickAddOpen(true); }}
+                          className="text-[8px] font-black uppercase text-primary hover:underline flex items-center gap-1"
+                        >
+                          <Plus className="w-2.5 h-2.5" /> Novo
+                        </button>
+                      </div>
+                      <select
+                        value={motivoDescontoId}
+                        onChange={(e) => setMotivoDescontoId(e.target.value)}
+                        className={`w-full h-10 bg-neutral-50 border-2 rounded-xl px-3 text-[10px] font-bold outline-none appearance-none cursor-pointer transition-all ${
+                          isDescontoReasonSelected ? 'border-neutral-100' : 'border-alert-red/30'
+                        }`}
+                      >
+                        <option value="">Selecione o motivo...</option>
+                        {discReasons.map(r => (
+                          <option key={r.id} value={r.id}>{r.nome}</option>
+                        ))}
+                      </select>
+                    </div>
+                  )}
                 </div>
 
                 {/* Acréscimo */}
-                <div className="space-y-2">
+                <div className="space-y-3">
                   <label className="text-[10px] font-black uppercase text-secondary tracking-widest flex items-center gap-1.5">
                     <TrendingUp className="w-3.5 h-3.5 text-alert-red" /> Acréscimo/Juros
                   </label>
@@ -265,7 +348,7 @@ export default function BaixaLancamentoModal() {
                       <option value="valor">R$</option>
                       <option value="porcentagem">%</option>
                     </select>
-                    <MoneyInput 
+                    <MoneyInput
                       disabled={isBpiOrAvr}
                       value={acrescimoValor}
                       onChange={setAcrescimoValor}
@@ -273,6 +356,33 @@ export default function BaixaLancamentoModal() {
                       placeholder="0,00"
                     />
                   </div>
+
+                  {calculatedAcrescimo > 0 && (
+                    <div className="space-y-1.5 animate-in fade-in slide-in-from-top-1">
+                      <div className="flex justify-between items-center">
+                        <label className="text-[9px] font-black uppercase text-secondary tracking-widest">Motivo Acréscimo <span className="text-alert-red">*</span></label>
+                        <button
+                          type="button"
+                          onClick={() => { setQuickAddType('acrescimo'); setIsQuickAddOpen(true); }}
+                          className="text-[8px] font-black uppercase text-primary hover:underline flex items-center gap-1"
+                        >
+                          <Plus className="w-2.5 h-2.5" /> Novo
+                        </button>
+                      </div>
+                      <select
+                        value={motivoAcrescimoId}
+                        onChange={(e) => setMotivoAcrescimoId(e.target.value)}
+                        className={`w-full h-10 bg-neutral-50 border-2 rounded-xl px-3 text-[10px] font-bold outline-none appearance-none cursor-pointer transition-all ${
+                          isAcrescimoReasonSelected ? 'border-neutral-100' : 'border-alert-red/30'
+                        }`}
+                      >
+                        <option value="">Selecione o motivo...</option>
+                        {incrReasons.map(r => (
+                          <option key={r.id} value={r.id}>{r.nome}</option>
+                        ))}
+                      </select>
+                    </div>
+                  )}
                 </div>
               </div>
 
@@ -412,6 +522,46 @@ export default function BaixaLancamentoModal() {
           </motion.div>
         </div>
       )}
+
+      {/* Quick Add Reason Modal */}
+      <AnimatePresence>
+        {isQuickAddOpen && (
+          <div className="fixed inset-0 z-[400] flex items-center justify-center p-4">
+            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setIsQuickAddOpen(false)} className="absolute inset-0 bg-black/40 backdrop-blur-sm" />
+            <motion.form
+              initial={{ scale: 0.9, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.9, opacity: 0 }}
+              onSubmit={handleQuickAddReason}
+              className="bg-white w-full max-w-[360px] rounded-3xl shadow-2xl relative z-10 overflow-hidden"
+            >
+              <header className="px-6 py-4 border-b border-neutral-100 flex justify-between items-center">
+                <h4 className="text-[10px] font-black uppercase tracking-widest text-neutral-900">Novo Motivo de {quickAddType}</h4>
+                <button type="button" onClick={() => setIsQuickAddOpen(false)}><X className="w-4 h-4 text-neutral-400" /></button>
+              </header>
+              <div className="p-6">
+                <div className="space-y-1.5">
+                  <label className="text-[9px] font-black uppercase text-secondary tracking-widest">Nome do Motivo</label>
+                  <input
+                    type="text"
+                    required
+                    autoFocus
+                    value={quickAddName}
+                    onChange={(e) => setQuickAddName(e.target.value)}
+                    className="w-full h-11 bg-neutral-50 border-2 border-neutral-100 rounded-xl px-4 text-xs font-bold outline-none focus:border-primary"
+                    placeholder="Ex: Pagamento Antecipado"
+                  />
+                </div>
+              </div>
+              <footer className="px-6 py-4 border-t border-neutral-100 bg-neutral-50 flex justify-end gap-2">
+                <button type="button" onClick={() => setIsQuickAddOpen(false)} className="px-4 py-2 text-[9px] font-black uppercase text-secondary">Cancelar</button>
+                <button type="submit" className="px-6 py-2 bg-neutral-900 text-white text-[9px] font-black uppercase tracking-widest rounded-lg">Salvar</button>
+              </footer>
+            </motion.form>
+          </div>
+        )}
+      </AnimatePresence>
     </AnimatePresence>
+
   );
 }

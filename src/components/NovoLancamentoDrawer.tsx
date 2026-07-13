@@ -215,6 +215,9 @@ export default function NovoLancamentoDrawer() {
 
   const { anexos: existingAnexos, deleteAnexo } = useLancamentoAnexos(selectedLancamentoIdForModal);
 
+  // Financial data for real balance calculation
+  const { data: allLancamentos = [] } = useLancamentos();
+
   const [attachments, setAttachments] = useState<LocalFile[]>([]);
 
   const [parcelasManuais, setParcelasManuais] = useState<Array<{ numero: number; data: string; valor: string }>>([]);
@@ -222,9 +225,33 @@ export default function NovoLancamentoDrawer() {
   // Filter out soft-deleted items for new selection
   const centros = useMemo(() => rawCentros.filter((c: any) => c.status !== 'excluido'), [rawCentros]);
   const categorias = useMemo(() => rawCategorias.filter((c: any) => c.status !== 'excluido'), [rawCategorias]);
-  const contas = useMemo(() => rawContas.filter((c: any) => c.status !== 'excluido'), [rawContas]);
+  
+  // Calculate Real Balance for each account
+  const contas = useMemo(() => {
+    const activeRawContas = rawContas.filter((c: any) => c.status !== 'excluido');
+    
+    return activeRawContas.map(conta => {
+      const lancamentosDaConta = allLancamentos.filter(l => l.conta_bancaria_id === conta.id && l.status_pagamento === 'pago');
+      
+      const totalEntradas = lancamentosDaConta
+        .filter(l => l.tipo === 'entrada')
+        .reduce((sum, l) => sum + (l.valor_recebido || 0), 0);
+        
+      const totalSaidas = lancamentosDaConta
+        .filter(l => l.tipo === 'saida')
+        .reduce((sum, l) => sum + (l.valor_recebido || 0), 0);
+        
+      const saldoReal = conta.saldo_inicial + totalEntradas - totalSaidas;
+      
+      return {
+        ...conta,
+        saldo_real: saldoReal
+      };
+    });
+  }, [rawContas, allLancamentos]);
 
   // Toasts state
+
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [toasts, setToasts] = useState<Array<{ id: number; message: string; type: 'success' | 'error' | 'warning' | 'info' }>>([]);
 
@@ -419,7 +446,14 @@ export default function NovoLancamentoDrawer() {
       return;
     }
 
+    if (!lancamentoFormDraft.conta_bancaria_id) {
+      showToast('Por favor, selecione uma conta bancária.', 'warning');
+      setIsSubmitting(false);
+      return;
+    }
+
     const itemDetails = {
+
       tipo: lancamentoFormDraft.tipo,
       valor_previsto: val,
       data_emissao: lancamentoFormDraft.data_emissao,
@@ -869,37 +903,51 @@ export default function NovoLancamentoDrawer() {
                       <button type="button" onClick={() => setIsQuickAccountOpen(true)} className="text-[10px] font-black text-primary hover:underline uppercase tracking-widest flex items-center gap-1"><Plus className="w-3 h-3" /> Nova Conta</button>
                     </div>
                     <div className="grid grid-cols-1 gap-2">
-                      {contas.map(cnt => (
-                        <button
-                          key={cnt.id}
-                          type="button"
-                          onClick={() => setLancamentoFormDraft({ conta_bancaria_id: cnt.id })}
-                          className={`flex items-center gap-3 p-3 rounded-xl border-2 transition-all text-left ${
-                            lancamentoFormDraft.conta_bancaria_id === cnt.id
-                              ? 'border-primary bg-primary/5 shadow-sm'
-                              : 'border-neutral-100 hover:border-neutral-200 bg-white'
-                          }`}
-                        >
-                          <div className="w-8 h-8 rounded-lg bg-neutral-100 flex items-center justify-center overflow-hidden shrink-0 border border-neutral-200">
-                            {cnt.logo_url ? (
-                              <img src={cnt.logo_url} alt="Logo" className="w-full h-full object-cover" />
-                            ) : (
-                              <Banknote className="w-4 h-4 text-neutral-400" />
+                      {contas.length === 0 ? (
+                        <div className="p-4 border-2 border-dashed border-alert-red/30 bg-alert-red/5 rounded-xl text-center">
+                          <p className="text-[10px] font-black text-alert-red uppercase tracking-widest mb-2">Nenhuma conta cadastrada!</p>
+                          <button
+                            type="button"
+                            onClick={() => setIsQuickAccountOpen(true)}
+                            className="text-[9px] font-black text-primary uppercase hover:underline"
+                          >
+                            Clique aqui para criar sua primeira conta
+                          </button>
+                        </div>
+                      ) : (
+                        contas.map(cnt => (
+                          <button
+                            key={cnt.id}
+                            type="button"
+                            onClick={() => setLancamentoFormDraft({ conta_bancaria_id: cnt.id })}
+                            className={`flex items-center gap-3 p-3 rounded-xl border-2 transition-all text-left ${
+                              lancamentoFormDraft.conta_bancaria_id === cnt.id
+                                ? 'border-primary bg-primary/5 shadow-sm'
+                                : 'border-neutral-100 hover:border-neutral-200 bg-white'
+                            }`}
+                          >
+                            <div className="w-8 h-8 rounded-lg bg-neutral-100 flex items-center justify-center overflow-hidden shrink-0 border border-neutral-200">
+                              {cnt.logo_url ? (
+                                <img src={cnt.logo_url} alt="Logo" className="w-full h-full object-cover" />
+                              ) : (
+                                <Banknote className="w-4 h-4 text-neutral-400" />
+                              )}
+                            </div>
+                            <div className="flex flex-col min-w-0">
+                              <span className="text-[10px] font-black uppercase text-neutral-900 truncate">{cnt.nome_banco || cnt.nome}</span>
+                              <span className="text-[8px] font-bold text-neutral-400 uppercase tracking-widest">Saldo Real: R$ {formatBRL((cnt as any).saldo_real)}</span>
+                            </div>
+                            {lancamentoFormDraft.conta_bancaria_id === cnt.id && (
+                              <CheckCircle2 className="w-4 h-4 text-primary ml-auto" />
                             )}
-                          </div>
-                          <div className="flex flex-col min-w-0">
-                            <span className="text-[10px] font-black uppercase text-neutral-900 truncate">{cnt.nome_banco || cnt.nome}</span>
-                            <span className="text-[8px] font-bold text-neutral-400 uppercase tracking-widest">Saldo: R$ {formatBRL(cnt.saldo_inicial)}</span>
-                          </div>
-                          {lancamentoFormDraft.conta_bancaria_id === cnt.id && (
-                            <CheckCircle2 className="w-4 h-4 text-primary ml-auto" />
-                          )}
-                        </button>
-                      ))}
+                          </button>
+                        ))
+                      )}
                     </div>
                   </div>
 
                   <div className="flex flex-col gap-2">
+
                     <label className="text-[10px] font-black text-secondary uppercase tracking-widest">Data de Emissão</label>
                     <input
                       type="date"

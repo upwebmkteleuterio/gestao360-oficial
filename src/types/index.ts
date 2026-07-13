@@ -36,6 +36,13 @@ export interface CategoriaFinanceira {
   tipo: 'entrada' | 'saida';
 }
 
+export interface CategoriaAjuste {
+  id: string;
+  nome: string;
+  tipo: 'desconto' | 'acrescimo';
+  status: 'ativo' | 'inativo';
+}
+
 export interface ContaBancaria {
   id: string;
   nome: string;
@@ -72,6 +79,8 @@ export interface LancamentoFinanceiro {
   status_pagamento: StatusPagamento;
   usuario_criador_id: string;
   status_sincronizacao?: boolean;
+  motivo_desconto_id?: string;
+  motivo_acrescimo_id?: string;
   created_at: string;
   updated_at: string;
 }

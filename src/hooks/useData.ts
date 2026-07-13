@@ -205,7 +205,75 @@ export function useCategorias() {
   };
 }
 
+export function useCategoriasAjuste() {
+  const queryClient = useQueryClient();
+
+  const query = useQuery({
+    queryKey: ['categoriasAjuste'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('categorias_ajuste')
+        .select('*')
+        .order('nome');
+      if (error) throw error;
+      return data;
+    }
+  });
+
+  const createMutation = useMutation({
+    mutationFn: async (data: { nome: string, tipo: 'desconto' | 'acrescimo' }) => {
+      const { data: { user } } = await supabase.auth.getUser();
+      const { data: result, error } = await supabase
+        .from('categorias_ajuste')
+        .insert([{ ...data, user_id: user?.id }])
+        .select()
+        .single();
+      if (error) throw error;
+      return result;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['categoriasAjuste'] });
+    }
+  });
+
+  const updateMutation = useMutation({
+    mutationFn: async ({ id, data }: { id: string, data: any }) => {
+      const { error } = await supabase
+        .from('categorias_ajuste')
+        .update(data)
+        .eq('id', id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['categoriasAjuste'] });
+    }
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase
+        .from('categorias_ajuste')
+        .delete()
+        .eq('id', id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['categoriasAjuste'] });
+    }
+  });
+
+  return {
+    ...query,
+    categoriasAjuste: query.data || [],
+    createCategoriaAjuste: createMutation.mutateAsync,
+    updateCategoriaAjuste: updateMutation.mutateAsync,
+    deleteCategoriaAjuste: deleteMutation.mutateAsync,
+    isCreating: createMutation.isPending
+  };
+}
+
 export function useContas() {
+
   const queryClient = useQueryClient();
 
   const query = useQuery({
@@ -292,9 +360,12 @@ export function useLancamentos(filters?: any) {
       tipo_baixa?: 'financeira' | 'bpi' | 'avr',
       valor_desconto?: number,
       valor_acrescimo?: number,
-      motivo_ajuste?: string
+      motivo_ajuste?: string,
+      motivo_desconto_id?: string,
+      motivo_acrescimo_id?: string
     } }) =>
       lancamentosService.baixaLancamento(id, data),
+
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['lancamentos'] });
       queryClient.invalidateQueries({ queryKey: ['auditoriaLogs'] });

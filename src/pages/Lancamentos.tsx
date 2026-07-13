@@ -17,12 +17,15 @@ import {
   ChevronRight,
   Eraser,
   CheckCircle2,
-  Clock
+  Clock,
+  Landmark,
+  Banknote
 } from 'lucide-react';
 
 import { useLancamentos, useContas, useEntidades, useCategorias } from '../hooks/useData';
 import { useAuth } from '../hooks/useAuth';
 import { useUIStore } from '../store/uiStore';
+import { useDragScroll } from '../hooks/useDragScroll';
 import { LancamentoFinanceiro } from '../types';
 import { motion, AnimatePresence } from 'motion/react';
 import Button from '../components/Button';
@@ -34,11 +37,14 @@ interface LancamentosProps {
 
 export default function Lancamentos({ typeOverride, titleOverride }: LancamentosProps) {
   const { role } = useAuth();
+  const dragScrollAccounts = useDragScroll();
   // Filter States
 
   const [searchTerm, setSearchTerm] = useState('');
+  const [selectedAccountId, setSelectedAccountId] = useState<string | null>(null);
   
   // Track active shortcut
+
   const [activeShortcut, setActiveShortcut] = useState<number | 'este-mes' | null>(15);
 
   // Set default filter to last 15 days
@@ -86,13 +92,14 @@ export default function Lancamentos({ typeOverride, titleOverride }: Lancamentos
     setApprovalStatus('all');
     setTypeFilter('all');
     setSelectedIds([]);
+    setSelectedAccountId(null);
   };
 
   // Query Hooks with server-side filters
-  const { 
-    data: lancamentos = [], 
-    updateLancamento, 
-    deleteLancamento, 
+  const {
+    data: allLancamentos = [],
+    updateLancamento,
+    deleteLancamento,
     batchApprove,
     isUpdating,
     isDeleting,
@@ -105,15 +112,44 @@ export default function Lancamentos({ typeOverride, titleOverride }: Lancamentos
     approvalStatus,
     type: typeFilter === 'all' ? undefined : typeFilter
   });
+
+  // Client-side filtering for Account Card selection
+  const lancamentos = useMemo(() => {
+    if (!selectedAccountId) return allLancamentos;
+    return allLancamentos.filter(l => l.conta_bancaria_id === selectedAccountId);
+  }, [allLancamentos, selectedAccountId]);
   
-  const { data: contas = [] } = useContas();
+  const { data: rawContas = [] } = useContas();
   const { data: entidades = [] } = useEntidades();
   const { data: categorias = [] } = useCategorias();
 
   // For dropdowns, use active only
-  const activeContas = useMemo(() => contas.filter((c: any) => c.status !== 'excluido'), [contas]);
+  const activeContas = useMemo(() => rawContas.filter((c: any) => c.status !== 'excluido'), [rawContas]);
+
+  // Calculate Real Balance for cards
+  const accountsWithBalances = useMemo(() => {
+    return activeContas.map(conta => {
+      const lancamentosDaConta = allLancamentos.filter(l => l.conta_bancaria_id === conta.id && l.status_pagamento === 'pago');
+      
+      const totalEntradas = lancamentosDaConta
+        .filter(l => l.tipo === 'entrada')
+        .reduce((sum, l) => sum + (l.valor_recebido || 0), 0);
+        
+      const totalSaidas = lancamentosDaConta
+        .filter(l => l.tipo === 'saida')
+        .reduce((sum, l) => sum + (l.valor_recebido || 0), 0);
+        
+      const saldoReal = (conta.saldo_inicial || 0) + totalEntradas - totalSaidas;
+      
+      return {
+        ...conta,
+        saldo_real: saldoReal
+      };
+    });
+  }, [activeContas, allLancamentos]);
 
   // Zustand Store
+
   const { 
     setModalOpen,
     setSelectedLancamentoIdForModal,
@@ -145,7 +181,11 @@ export default function Lancamentos({ typeOverride, titleOverride }: Lancamentos
   };
 
   const getContaName = (id: string) => {
-    return contas.find(c => c.id === id)?.nome_banco || 'Sem Conta';
+    return rawContas.find(c => c.id === id)?.nome_banco || 'Sem Conta';
+  };
+
+  const formatCurrency = (val: number) => {
+    return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(val);
   };
 
   // Pagination logic
@@ -350,7 +390,67 @@ export default function Lancamentos({ typeOverride, titleOverride }: Lancamentos
 
       </div>
 
+      {/* Account Balance Cards */}
+      <div className="space-y-4">
+        <div className="flex items-center justify-between">
+          <h4 className="text-[10px] font-black uppercase tracking-widest text-secondary flex items-center gap-2">
+            <Landmark className="w-4 h-4" /> Saldos Reais por Conta
+          </h4>
+          <div className="flex items-center gap-4">
+            <button
+              onClick={() => setSelectedAccountId(null)}
+              className={`text-[9px] font-black uppercase tracking-widest transition-all ${
+                !selectedAccountId ? 'text-primary' : 'text-secondary hover:text-primary'
+              }`}
+            >
+              Todas as Contas
+            </button>
+            {selectedAccountId && (
+              <span className="w-1.5 h-1.5 bg-primary rounded-full animate-pulse" />
+            )}
+          </div>
+        </div>
+        <div ref={dragScrollAccounts.ref} {...dragScrollAccounts.props} className="flex gap-4 overflow-x-auto pb-4 scrollbar-none select-none">
+          {accountsWithBalances.map((acc) => (
+            <div
+              key={acc.id}
+              onClick={() => setSelectedAccountId(acc.id === selectedAccountId ? null : acc.id)}
+              className={`flex-shrink-0 w-64 bg-white dark:bg-surface p-4 border-2 rounded-2xl flex items-center justify-between group cursor-pointer transition-all ${
+                selectedAccountId === acc.id
+                  ? 'border-primary ring-4 ring-primary/5 shadow-xl scale-[1.02]'
+                  : 'border-surface-border hover:border-neutral-200 shadow-sm'
+              }`}
+            >
+              <div className="flex items-center gap-3">
+                <div className={`w-10 h-10 rounded-xl flex items-center justify-center overflow-hidden transition-all ${
+                  selectedAccountId === acc.id ? 'bg-primary' : 'bg-neutral-50'
+                }`}>
+                  {acc.logo_url ? (
+                    <img src={acc.logo_url} alt="Logo" className="w-full h-full object-cover" />
+                  ) : (
+                    <Banknote className={`w-5 h-5 ${selectedAccountId === acc.id ? 'text-white' : 'text-secondary'}`} />
+                  )}
+                </div>
+                <div className="min-w-0">
+                  <p className="text-xs font-black text-on-surface truncate w-24 uppercase tracking-tight">{acc.nome_banco || acc.nome}</p>
+                  <p className="text-[9px] font-bold text-secondary uppercase tracking-widest">{acc.agencia} / {acc.conta}</p>
+                </div>
+              </div>
+              <div className="text-right">
+                <p className={`text-[10px] font-black font-mono transition-colors ${
+                  selectedAccountId === acc.id ? 'text-primary' : 'text-on-surface'
+                }`}>
+                  {formatCurrency(acc.saldo_real || 0)}
+                </p>
+                <span className="text-[8px] font-black uppercase text-secondary/40">Realizado</span>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+
       {/* Unified Search & Filters Bar */}
+
       <div className="bg-white dark:bg-surface border border-surface-border p-4 rounded-xl shadow-sm flex items-center gap-4">
         <div className="flex-1 relative group">
           <Search className="w-5 h-5 absolute left-3.5 top-1/2 -translate-y-1/2 text-secondary group-focus-within:text-primary transition-colors" />

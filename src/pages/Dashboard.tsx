@@ -137,10 +137,9 @@ export default function Dashboard() {
 
   const accountsBalances = useMemo(() => {
     return contas.map(account => {
-      const accLaunches = lancamentos.filter(l => l.conta_bancaria_id === account.id);
+      const accLaunches = lancamentos.filter(l => l.conta_bancaria_id === account.id && l.status_pagamento === 'pago');
       const consolidatedChange = accLaunches
-        .filter(l => l.status_pagamento === 'pago' || l.status_aprovacao === 'confirmado_master')
-        .reduce((acc, item) => item.tipo === 'entrada' ? acc + item.valor_previsto : acc - item.valor_previsto, 0);
+        .reduce((acc, item) => item.tipo === 'entrada' ? acc + (item.valor_recebido || 0) : acc - (item.valor_recebido || 0), 0);
       return { ...account, consolidated: (account.saldo_inicial || 0) + consolidatedChange };
     });
   }, [contas, lancamentos]);
