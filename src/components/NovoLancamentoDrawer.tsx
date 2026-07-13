@@ -24,7 +24,9 @@ import {
 } from 'lucide-react';
 import { useUIStore } from '../store/uiStore';
 import { useLancamentos, useEntidades, useCentrosCusto, useCategorias, useContas, useLancamentoAnexos } from '../hooks/useData';
+import { useAuth } from '../hooks/useAuth';
 import MoneyInput from './MoneyInput';
+
 import { supabase } from '@/integrations/supabase/client';
 import Button from './Button';
 
@@ -191,8 +193,10 @@ interface LocalFile {
 }
 
 export default function NovoLancamentoDrawer() {
+  const { role } = useAuth();
   const {
     isNovoLancamentoOpen,
+
     setModalOpen,
     selectedLancamentoIdForModal,
     setSelectedLancamentoIdForModal,
@@ -417,7 +421,12 @@ export default function NovoLancamentoDrawer() {
     lancamentoFormDraft.valor_recebido
   ]);
 
+  const isApproved = editingItem?.status_aprovacao === 'confirmado_master';
+  const isMaster = role === 'master';
+  const shouldLockFields = isApproved && !isMaster;
+
   const handleClose = () => {
+
     setModalOpen('isNovoLancamentoOpen', false);
     setSelectedLancamentoIdForModal(null);
     setSelectedRecorrenciaAction(null);
@@ -655,26 +664,37 @@ export default function NovoLancamentoDrawer() {
                   </div>
                 )}
 
+                {isApproved && (
+                  <div className="p-4 bg-bank-truth-green/10 border-2 border-bank-truth-green/20 rounded-xl text-xs text-on-surface-variant flex gap-3">
+                    <CheckCircle2 className="w-5 h-5 text-bank-truth-green shrink-0" />
+                    <span className="font-semibold">
+                      <strong>Lançamento Aprovado:</strong> Alguns campos foram bloqueados para garantir a integridade da aprovação do Master.
+                    </span>
+                  </div>
+                )}
+
                 <div className="flex flex-col gap-2">
                   <label className="text-[10px] font-black text-secondary uppercase tracking-widest">Direcionador de Fluxo Contábil</label>
-                  <div className="flex bg-neutral-100 dark:bg-surface-container border-2 border-neutral-100 dark:border-surface-border rounded-xl p-1 h-12 select-none">
-                    <button 
+                  <div className={`flex bg-neutral-100 dark:bg-surface-container border-2 border-neutral-100 dark:border-surface-border rounded-xl p-1 h-12 select-none ${shouldLockFields ? 'opacity-50 pointer-events-none' : ''}`}>
+                    <button
                       type="button"
+                      disabled={shouldLockFields}
                       onClick={() => setLancamentoFormDraft({ tipo: 'entrada' })}
                       className={`flex-1 text-xs font-black rounded-lg transition-all uppercase tracking-tighter ${
-                        lancamentoFormDraft.tipo === 'entrada' 
-                          ? 'bg-white dark:bg-surface text-bank-truth-green shadow-sm' 
+                        lancamentoFormDraft.tipo === 'entrada'
+                          ? 'bg-white dark:bg-surface text-bank-truth-green shadow-sm'
                           : 'text-secondary hover:text-on-surface'
                       }`}
                     >
                       Receita / Entrada
                     </button>
-                    <button 
+                    <button
                       type="button"
+                      disabled={shouldLockFields}
                       onClick={() => setLancamentoFormDraft({ tipo: 'saida' })}
                       className={`flex-1 text-xs font-black rounded-lg transition-all uppercase tracking-tighter ${
-                        lancamentoFormDraft.tipo === 'saida' 
-                          ? 'bg-white dark:bg-surface text-alert-red shadow-sm' 
+                        lancamentoFormDraft.tipo === 'saida'
+                          ? 'bg-white dark:bg-surface text-alert-red shadow-sm'
                           : 'text-secondary hover:text-on-surface'
                       }`}
                     >
@@ -684,27 +704,29 @@ export default function NovoLancamentoDrawer() {
                 </div>
 
                 <div className="flex flex-col gap-2">
-                  <SearchableSelect
-                    label="Entidade / Destinatário"
-                    placeholder="Selecione um cliente / fornecedor"
-                    value={lancamentoFormDraft.entidade_id}
-                    onChange={(val) => setLancamentoFormDraft({ entidade_id: val })}
-                    options={entidades
-                      .filter(e => e.status_base !== 'inativo' && e.status_base !== 'bpi')
-                      .map(e => ({
-                        id: e.id,
-                        label: e.nome_razao_social,
-                        sublabel: e.tipo.toUpperCase()
-                      }))}
-                    required
-                    onAddClick={() => setModalOpen('isCadastroRapidoOpen', true)}
-                  />
+                  <div className={shouldLockFields ? 'opacity-50 pointer-events-none' : ''}>
+                    <SearchableSelect
+                      label="Entidade / Destinatário"
+                      placeholder="Selecione um cliente / fornecedor"
+                      value={lancamentoFormDraft.entidade_id}
+                      onChange={(val) => setLancamentoFormDraft({ entidade_id: val })}
+                      options={entidades
+                        .filter(e => e.status_base !== 'inativo' && e.status_base !== 'bpi')
+                        .map(e => ({
+                          id: e.id,
+                          label: e.nome_razao_social,
+                          sublabel: e.tipo.toUpperCase()
+                        }))}
+                      required
+                      onAddClick={shouldLockFields ? undefined : () => setModalOpen('isCadastroRapidoOpen', true)}
+                    />
+                  </div>
                 </div>
 
                 <div className="grid grid-cols-2 gap-4">
                   <div className="flex flex-col gap-2">
                     <label className="text-[10px] font-black text-secondary uppercase tracking-widest">Valor Estimado <span className="text-alert-red">*</span></label>
-                    <div className="relative group">
+                    <div className={`relative group ${shouldLockFields ? 'opacity-50 pointer-events-none' : ''}`}>
                       <span className="absolute left-4 top-1/2 -translate-y-1/2 text-xs text-secondary font-black">R$</span>
                       <MoneyInput
                         value={lancamentoFormDraft.valor_previsto}
@@ -712,6 +734,7 @@ export default function NovoLancamentoDrawer() {
                         className="w-full h-12 pl-10 pr-4 bg-white border-2 border-neutral-200 rounded-xl font-mono text-sm font-black text-on-surface focus:outline-none focus:border-primary transition-all shadow-xs"
                         placeholder="0,00"
                         required
+                        disabled={shouldLockFields}
                       />
                     </div>
                   </div>
@@ -719,9 +742,10 @@ export default function NovoLancamentoDrawer() {
                   <div className="flex flex-col gap-2">
                     <div className="flex justify-between items-center">
                       <label className="text-[10px] font-black text-secondary uppercase tracking-widest">Condição <span className="text-alert-red">*</span></label>
-                      <label className="flex items-center gap-2 cursor-pointer select-none">
+                      <label className={`flex items-center gap-2 cursor-pointer select-none ${shouldLockFields ? 'opacity-50 pointer-events-none' : ''}`}>
                         <input
                           type="checkbox"
+                          disabled={shouldLockFields}
                           checked={lancamentoFormDraft.recorrencia_repeat}
                           onChange={(e) => setLancamentoFormDraft({ recorrencia_repeat: e.target.checked })}
                           className="rounded-md border-neutral-300 text-primary focus:ring-primary w-4 h-4 transition-all"
@@ -729,9 +753,10 @@ export default function NovoLancamentoDrawer() {
                         <span className="text-[10px] font-black text-secondary uppercase tracking-widest">Repetir</span>
                       </label>
                     </div>
-                    <div className="flex bg-neutral-100 dark:bg-surface-container border-2 border-neutral-100 dark:border-surface-border rounded-xl p-1 h-12 select-none">
+                    <div className={`flex bg-neutral-100 dark:bg-surface-container border-2 border-neutral-100 dark:border-surface-border rounded-xl p-1 h-12 select-none ${shouldLockFields ? 'opacity-50 pointer-events-none' : ''}`}>
                       <button
                         type="button"
+                        disabled={shouldLockFields}
                         onClick={() => setLancamentoFormDraft({ condicao: 'a_vista' })}
                         className={`flex-1 text-[10px] font-black rounded-lg transition-all uppercase tracking-tighter ${
                           lancamentoFormDraft.condicao === 'a_vista'
@@ -743,6 +768,7 @@ export default function NovoLancamentoDrawer() {
                       </button>
                       <button
                         type="button"
+                        disabled={shouldLockFields}
                         onClick={() => setLancamentoFormDraft({ condicao: 'a_prazo' })}
                         className={`flex-1 text-[10px] font-black rounded-lg transition-all uppercase tracking-tighter ${
                           lancamentoFormDraft.condicao === 'a_prazo'
@@ -754,6 +780,7 @@ export default function NovoLancamentoDrawer() {
                       </button>
                     </div>
                   </div>
+
                 </div>
 
                 <div className="p-4 bg-neutral-50 rounded-2xl border-2 border-neutral-100 space-y-4">
@@ -796,22 +823,24 @@ export default function NovoLancamentoDrawer() {
                 <div className="grid grid-cols-2 gap-4">
                   <div className="flex flex-col gap-2">
                     <label className="text-[10px] font-black text-secondary uppercase tracking-widest">Data de Competência</label>
-                    <input 
+                    <input
                       type="date"
+                      disabled={shouldLockFields}
                       value={lancamentoFormDraft.data_competencia}
                       onChange={(e) => setLancamentoFormDraft({ data_competencia: e.target.value })}
-                      className="w-full h-12 bg-white border-2 border-neutral-200 text-sm font-bold rounded-xl focus:outline-none focus:border-primary transition-all px-4 shadow-xs"
+                      className={`w-full h-12 bg-white border-2 border-neutral-200 text-sm font-bold rounded-xl focus:outline-none focus:border-primary transition-all px-4 shadow-xs ${shouldLockFields ? 'opacity-50' : ''}`}
                     />
                   </div>
 
                   <div className="flex flex-col gap-2">
                     <label className="text-[10px] font-black text-secondary uppercase tracking-widest">Data de Vencimento <span className="text-alert-red">*</span></label>
-                    <input 
+                    <input
                       type="date"
                       required
+                      disabled={shouldLockFields}
                       value={lancamentoFormDraft.data_vencimento}
                       onChange={(e) => setLancamentoFormDraft({ data_vencimento: e.target.value })}
-                      className="w-full h-12 bg-white border-2 border-neutral-200 text-sm font-bold rounded-xl focus:outline-none focus:border-primary transition-all px-4 shadow-xs"
+                      className={`w-full h-12 bg-white border-2 border-neutral-200 text-sm font-bold rounded-xl focus:outline-none focus:border-primary transition-all px-4 shadow-xs ${shouldLockFields ? 'opacity-50' : ''}`}
                     />
                   </div>
                 </div>
@@ -867,33 +896,37 @@ export default function NovoLancamentoDrawer() {
                 </div>
 
                 <div className="grid grid-cols-2 gap-4">
-                  <SearchableSelect
-                    label="Categoria Contábil"
-                    placeholder="Selecione..."
-                    value={lancamentoFormDraft.categoria_id}
-                    onChange={(val) => setLancamentoFormDraft({ categoria_id: val })}
-                    options={filteredCategorias.map(c => ({
-                      id: c.id,
-                      label: c.nome
-                    }))}
-                    required
-                    onQuickAddClick={() => setIsQuickCatOpen(true)}
-                    quickAddLabel="Nova Categoria"
-                  />
+                  <div className={shouldLockFields ? 'opacity-50 pointer-events-none' : ''}>
+                    <SearchableSelect
+                      label="Categoria Contábil"
+                      placeholder="Selecione..."
+                      value={lancamentoFormDraft.categoria_id}
+                      onChange={(val) => setLancamentoFormDraft({ categoria_id: val })}
+                      options={filteredCategorias.map(c => ({
+                        id: c.id,
+                        label: c.nome
+                      }))}
+                      required
+                      onQuickAddClick={shouldLockFields ? undefined : () => setIsQuickCatOpen(true)}
+                      quickAddLabel="Nova Categoria"
+                    />
+                  </div>
 
-                  <SearchableSelect
-                    label="Centro de Custo"
-                    placeholder="Selecione..."
-                    value={lancamentoFormDraft.centro_custo_id}
-                    onChange={(val) => setLancamentoFormDraft({ centro_custo_id: val })}
-                    options={centros.map(cc => ({
-                      id: cc.id,
-                      label: cc.nome
-                    }))}
-                    required
-                    onQuickAddClick={() => setIsQuickCCOpen(true)}
-                    quickAddLabel="Novo Centro de Custo"
-                  />
+                  <div className={shouldLockFields ? 'opacity-50 pointer-events-none' : ''}>
+                    <SearchableSelect
+                      label="Centro de Custo"
+                      placeholder="Selecione..."
+                      value={lancamentoFormDraft.centro_custo_id}
+                      onChange={(val) => setLancamentoFormDraft({ centro_custo_id: val })}
+                      options={centros.map(cc => ({
+                        id: cc.id,
+                        label: cc.nome
+                      }))}
+                      required
+                      onQuickAddClick={shouldLockFields ? undefined : () => setIsQuickCCOpen(true)}
+                      quickAddLabel="Novo Centro de Custo"
+                    />
+                  </div>
                 </div>
 
                 <div className="grid grid-cols-2 gap-4">
@@ -947,13 +980,13 @@ export default function NovoLancamentoDrawer() {
                   </div>
 
                   <div className="flex flex-col gap-2">
-
                     <label className="text-[10px] font-black text-secondary uppercase tracking-widest">Data de Emissão</label>
                     <input
                       type="date"
+                      disabled={shouldLockFields}
                       value={lancamentoFormDraft.data_emissao}
                       onChange={(e) => setLancamentoFormDraft({ data_emissao: e.target.value })}
-                      className="w-full h-12 bg-white border-2 border-neutral-200 text-sm font-bold rounded-xl focus:outline-none focus:border-primary transition-all px-4 shadow-xs"
+                      className={`w-full h-12 bg-white border-2 border-neutral-200 text-sm font-bold rounded-xl focus:outline-none focus:border-primary transition-all px-4 shadow-xs ${shouldLockFields ? 'opacity-50' : ''}`}
                     />
                   </div>
                 </div>

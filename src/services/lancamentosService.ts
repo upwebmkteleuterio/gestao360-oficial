@@ -232,8 +232,10 @@ export const lancamentosService = {
         .from('lancamentos_financeiros')
         .update({
           valor_previsto: saldoRestante,
+          status_aprovacao: 'pendente_digital', // Force re-approval for residue
           observacoes: (current.observacoes || '') + `\n[Abatido pagamento parcial de R$ ${data.valor_pago} em ${dataPagamentoVal.split('-').reverse().join('/')}]`
         })
+
         .eq('id', id)
         .select()
         .single();

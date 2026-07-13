@@ -101,11 +101,13 @@ export default function Lancamentos({ typeOverride, titleOverride }: Lancamentos
     updateLancamento,
     deleteLancamento,
     batchApprove,
+    estornarLancamento,
     isUpdating,
     isDeleting,
     isBatchApproving,
     isLoading
   } = useLancamentos({
+
     searchTerm,
     startDate,
     endDate,
@@ -845,15 +847,25 @@ export default function Lancamentos({ typeOverride, titleOverride }: Lancamentos
                               {item.status_pagamento === 'aberto' && (
                                 <button
                                   type="button"
+                                  disabled={item.status_aprovacao !== 'confirmado_master'}
                                   onClick={() => {
                                     setSelectedLancamentoIdForModal(item.id);
                                     setModalOpen('isBaixaLancamentoOpen', true);
                                   }}
-                                  className="h-8 px-3 bg-bank-truth-green text-white text-[9px] font-black uppercase tracking-widest rounded-lg hover:brightness-110 transition-all shadow-sm flex items-center gap-1.5"
-                                  title={item.tipo === 'saida' ? 'Quitar Pagamento' : 'Confirmar Recebimento'}
+                                  className={`h-8 px-3 text-white text-[9px] font-black uppercase tracking-widest rounded-lg transition-all shadow-sm flex items-center gap-1.5 ${
+                                    item.status_aprovacao === 'confirmado_master'
+                                      ? 'bg-bank-truth-green hover:brightness-110'
+                                      : 'bg-neutral-300 cursor-not-allowed opacity-50'
+                                  }`}
+                                  title={
+                                    item.status_aprovacao !== 'confirmado_master'
+                                      ? 'Aguardando aprovação do Master'
+                                      : (item.tipo === 'saida' ? 'Quitar Pagamento' : 'Confirmar Recebimento')
+                                  }
                                 >
+                                  {item.status_aprovacao !== 'confirmado_master' && <Clock className="w-3 h-3" />}
                                   {item.tipo === 'saida' ? 'Quitar' : 'Receber'}
-                                  <CheckCircle2 className="w-3.5 h-3.5" />
+                                  {item.status_aprovacao === 'confirmado_master' && <CheckCircle2 className="w-3.5 h-3.5" />}
                                 </button>
                               )}
                               <button
@@ -876,7 +888,7 @@ export default function Lancamentos({ typeOverride, titleOverride }: Lancamentos
                                   <Edit3 className="w-4 h-4 text-primary" />
                                   Editar
                                 </button>
-                                {item.status_pagamento === 'aberto' && (
+                                {item.status_pagamento === 'aberto' && item.status_aprovacao === 'confirmado_master' && (
                                   <button
                                     type="button"
                                     onClick={() => {
@@ -890,7 +902,7 @@ export default function Lancamentos({ typeOverride, titleOverride }: Lancamentos
                                     Baixar / Receber
                                   </button>
                                 )}
-                                {role === 'master' && (
+                                {role === 'master' && item.status_pagamento !== 'pago' && (
                                   <button
                                     type="button"
                                     onClick={() => handleDeleteClick(item)}
@@ -900,7 +912,29 @@ export default function Lancamentos({ typeOverride, titleOverride }: Lancamentos
                                     Excluir
                                   </button>
                                 )}
+                                {item.status_pagamento === 'pago' && (
+                                  <button
+                                    type="button"
+                                    onClick={async () => {
+                                      if (confirm('Deseja realmente estornar esta quitação? O registro voltará para Aberto.')) {
+                                        try {
+                                          await estornarLancamento(item.id);
+                                          alert('Estorno realizado com sucesso!');
+                                        } catch (err: any) {
+                                          alert('Erro ao estornar: ' + err.message);
+                                        }
+                                        setActiveMenuId(null);
+                                      }
+                                    }}
+                                    className="w-full px-4 py-2 hover:bg-neutral-50 text-left text-xs text-secondary font-bold flex items-center gap-2 border-t border-neutral-100"
+                                  >
+                                    <Clock className="w-4 h-4" />
+                                    Estornar Baixa
+                                  </button>
+                                )}
+
                               </div>
+
                             )}
                           </td>
                         </tr>

@@ -41,9 +41,10 @@ import { supabase } from '@/integrations/supabase/client';
 type SubTabType = 'contas' | 'centros' | 'categorias' | 'ajustes';
 
 export default function Cadastros() {
-  const { hasRole } = useAuth();
+  const { role, hasRole } = useAuth();
   const dragScrollTabs = useDragScroll();
   const { data: contas = [], createAccount, updateAccount, deleteAccount } = useContas();
+
   const { data: centrosCusto = [], createCC, updateCC, deleteCC } = useCentrosCusto();
   const { data: categorias = [], createCategory, updateCategory, deleteCategory } = useCategorias();
   const { categoriasAjuste = [], createCategoriaAjuste, updateCategoriaAjuste, deleteCategoriaAjuste } = useCategoriasAjuste();
@@ -70,7 +71,10 @@ export default function Cadastros() {
   // Deletion Confirmation
   const [deleteConfirm, setDeleteConfirm] = useState<{ id: string, type: 'conta' | 'cc' | 'categoria' | 'ajuste', name: string } | null>(null);
 
+  const isMaster = role === 'master';
+
   // Form states
+
   const [bankName, setBankName] = useState('');
   const [bankInitial, setBankInitial] = useState('');
   const [bankLogoUrl, setBankLogoUrl] = useState('');
@@ -507,7 +511,18 @@ export default function Cadastros() {
                 </div>
 
                 <div className="space-y-2"><label className="text-[10px] font-black uppercase text-neutral-400 tracking-widest">Nome da Conta / Banco</label><input type="text" required value={bankName} onChange={(e) => setBankName(e.target.value)} className="w-full h-12 bg-neutral-50 border-2 border-neutral-100 rounded-2xl px-5 text-xs font-black focus:border-primary outline-none" /></div>
-                <div className="space-y-2"><label className="text-[10px] font-black uppercase text-neutral-400 tracking-widest">Saldo Inicial (R$)</label><MoneyInput value={bankInitial} onChange={setBankInitial} className="w-full h-12 bg-neutral-50 border-2 border-neutral-100 rounded-2xl px-5 text-xs font-black focus:border-primary outline-none" placeholder="0,00" required /></div>
+                <div className="space-y-2">
+                  <label className="text-[10px] font-black uppercase text-neutral-400 tracking-widest">Saldo Inicial (R$)</label>
+                  <MoneyInput
+                    value={bankInitial}
+                    onChange={setBankInitial}
+                    disabled={!isMaster && !!editingAccount}
+                    className={`w-full h-12 bg-neutral-50 border-2 border-neutral-100 rounded-2xl px-5 text-xs font-black focus:border-primary outline-none ${(!isMaster && !!editingAccount) ? 'opacity-50 cursor-not-allowed' : ''}`}
+                    placeholder="0,00"
+                    required
+                  />
+                </div>
+
               </div>
 
               <footer className="px-10 py-8 border-t border-neutral-50 bg-neutral-50/50 flex justify-end gap-3">
