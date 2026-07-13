@@ -195,7 +195,12 @@ export default function Dashboard() {
               </div>
               <button onClick={() => {
                 const headers = 'KPI,Valor\n';
-                const rows = [['Saldo Consolidado', valueFormatter(stats?.total_consolidado || 0)], ['Expectativa Final', valueFormatter(stats?.total_simulado || 0)], ['Pendentes Master', valueFormatter(stats?.total_pendente_master || 0)]].map(r => r.join(',')).join('\n');
+                const rows = [
+                  ['Saldo Consolidado', valueFormatter(stats?.total_consolidado || 0)],
+                  ['Expectativa Final', valueFormatter(stats?.total_simulado || 0)],
+                  ['Pendentes Saida', valueFormatter(stats?.pendente_saida_valor || 0)],
+                  ['Pendentes Entrada', valueFormatter(stats?.pendente_entrada_valor || 0)]
+                ].map(r => r.join(',')).join('\n');
                 const blob = new Blob([headers + rows], { type: 'text/csv;charset=utf-8;' });
                 const link = document.createElement('a'); link.href = URL.createObjectURL(blob); link.download = 'dashboard_real.csv'; link.click();
               }} className="flex items-center gap-2 px-4 py-2 bg-secondary hover:bg-neutral-700 text-white rounded-lg text-sm font-semibold transition-all"><Download className="w-5 h-5" /> Exportar CSV</button>
@@ -215,11 +220,40 @@ export default function Dashboard() {
                   <h3 className="text-2xl font-bold font-mono text-on-surface">{valueFormatter(stats?.total_simulado || 0)}</h3>
                   <p className="text-xs text-secondary mt-2">Cenário previsto para final do período</p>
                 </div>
-                <div className="bg-white dark:bg-surface p-6 rounded-xl border border-surface-border shadow-sm relative overflow-hidden group">
+                <div className="bg-white dark:bg-surface p-6 rounded-xl border border-surface-border shadow-sm relative overflow-hidden flex flex-col justify-between">
                   <div className="absolute top-0 left-0 w-1 h-full bg-[#FFA000]"></div>
-                  <div className="flex justify-between items-start mb-4"><span className="text-xs font-bold text-secondary uppercase tracking-wider">Pendentes Master</span><AlertTriangle className="w-5 h-5 text-[#FFA000]" /></div>
-                  <h3 className="text-2xl font-bold font-mono text-on-surface">{valueFormatter(stats?.total_pendente_master || 0)}</h3>
-                  <p className="text-xs text-[#FFA000] mt-2 font-semibold">Aguardando aprovação</p>
+                  <div className="flex justify-between items-start mb-4">
+                    <span className="text-xs font-bold text-secondary uppercase tracking-wider">Fila de Aprovação</span>
+                    <Shield className="w-5 h-5 text-[#FFA000]" />
+                  </div>
+                  
+                  <div className="space-y-3">
+                    <div className="flex items-center justify-between">
+                      <div className="flex flex-col">
+                        <span className="text-[9px] font-black text-alert-red uppercase">A Pagar (Saída)</span>
+                        <span className="text-lg font-bold font-mono text-on-surface">{valueFormatter(stats?.pendente_saida_valor || 0)}</span>
+                      </div>
+                      <div className="text-right">
+                        <span className="bg-red-50 text-alert-red text-[10px] font-black px-2 py-1 rounded-lg border border-red-100">
+                          {stats?.pendente_saida_count || 0} Itens
+                        </span>
+                      </div>
+                    </div>
+                    
+                    <div className="h-px bg-surface-border/50 w-full"></div>
+
+                    <div className="flex items-center justify-between">
+                      <div className="flex flex-col">
+                        <span className="text-[9px] font-black text-bank-truth-green uppercase">A Receber (Entrada)</span>
+                        <span className="text-lg font-bold font-mono text-on-surface">{valueFormatter(stats?.pendente_entrada_valor || 0)}</span>
+                      </div>
+                      <div className="text-right">
+                        <span className="bg-emerald-50 text-bank-truth-green text-[10px] font-black px-2 py-1 rounded-lg border border-emerald-100">
+                          {stats?.pendente_entrada_count || 0} Itens
+                        </span>
+                      </div>
+                    </div>
+                  </div>
                 </div>
               </section>
             )}
