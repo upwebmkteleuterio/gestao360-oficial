@@ -412,10 +412,9 @@ export default function Lancamentos({ typeOverride, titleOverride }: Lancamentos
         </div>
         <div ref={dragScrollAccounts.ref} {...dragScrollAccounts.props} className="flex gap-4 overflow-x-auto pb-4 scrollbar-none select-none px-0.5">
           {/* Card Todas as Contas */}
-
           <div
             onClick={() => setSelectedAccountId(null)}
-            className={`flex-shrink-0 w-64 bg-white dark:bg-surface p-4 border-2 rounded-2xl flex items-center justify-between group cursor-pointer transition-all ${
+            className={`flex-shrink-0 w-48 bg-white dark:bg-surface p-4 border-2 rounded-2xl flex items-center justify-between group cursor-pointer transition-all ${
               selectedAccountId === null
                 ? 'border-primary ring-4 ring-primary/5 shadow-xl scale-[1.02]'
                 : 'border-surface-border hover:border-neutral-200 shadow-sm'
@@ -428,26 +427,20 @@ export default function Lancamentos({ typeOverride, titleOverride }: Lancamentos
                 <Landmark className={`w-5 h-5 ${selectedAccountId === null ? 'text-white' : 'text-secondary'}`} />
               </div>
               <div className="min-w-0">
-                <p className="text-xs font-black text-on-surface truncate w-24 uppercase tracking-tight">Todas as Contas</p>
-                <p className="text-[9px] font-bold text-secondary uppercase tracking-widest">Visão Consolidada</p>
+                <p className={`text-sm font-black font-mono transition-colors ${
+                  selectedAccountId === null ? 'text-primary' : 'text-on-surface'
+                }`}>
+                  {formatCurrency(accountsWithBalances.reduce((sum, acc) => sum + (acc.saldo_real || 0), 0))}
+                </p>
               </div>
-            </div>
-            <div className="text-right">
-              <p className={`text-[10px] font-black font-mono transition-colors ${
-                selectedAccountId === null ? 'text-primary' : 'text-on-surface'
-              }`}>
-                {formatCurrency(accountsWithBalances.reduce((sum, acc) => sum + (acc.saldo_real || 0), 0))}
-              </p>
-              <span className="text-[8px] font-black uppercase text-secondary/40">Total</span>
             </div>
           </div>
 
           {accountsWithBalances.map((acc) => (
-
             <div
               key={acc.id}
               onClick={() => setSelectedAccountId(acc.id === selectedAccountId ? null : acc.id)}
-              className={`flex-shrink-0 w-64 bg-white dark:bg-surface p-4 border-2 rounded-2xl flex items-center justify-between group cursor-pointer transition-all ${
+              className={`flex-shrink-0 w-48 bg-white dark:bg-surface p-4 border-2 rounded-2xl flex items-center justify-between group cursor-pointer transition-all ${
                 selectedAccountId === acc.id
                   ? 'border-primary ring-4 ring-primary/5 shadow-xl scale-[1.02]'
                   : 'border-surface-border hover:border-neutral-200 shadow-sm'
@@ -464,21 +457,17 @@ export default function Lancamentos({ typeOverride, titleOverride }: Lancamentos
                   )}
                 </div>
                 <div className="min-w-0">
-                  <p className="text-xs font-black text-on-surface truncate w-24 uppercase tracking-tight">{acc.nome_banco || acc.nome}</p>
-                  <p className="text-[9px] font-bold text-secondary uppercase tracking-widest">{acc.agencia} / {acc.conta}</p>
+                  <p className={`text-sm font-black font-mono transition-colors ${
+                    selectedAccountId === acc.id ? 'text-primary' : 'text-on-surface'
+                  }`}>
+                    {formatCurrency(acc.saldo_real || 0)}
+                  </p>
                 </div>
-              </div>
-              <div className="text-right">
-                <p className={`text-[10px] font-black font-mono transition-colors ${
-                  selectedAccountId === acc.id ? 'text-primary' : 'text-on-surface'
-                }`}>
-                  {formatCurrency(acc.saldo_real || 0)}
-                </p>
-                <span className="text-[8px] font-black uppercase text-secondary/40">Realizado</span>
               </div>
             </div>
           ))}
         </div>
+
       </div>
 
       {/* Unified Search & Filters Bar */}

@@ -228,10 +228,9 @@ export default function Dashboard() {
               </div>
               <div ref={dragScrollAccounts.ref} {...dragScrollAccounts.props} className="flex gap-4 overflow-x-auto pb-2 scroll-smooth select-none px-0.5">
                 {/* Card Todas as Contas */}
-
                 <div
                   onClick={() => setSelectedAccountId(null)}
-                  className={`flex-shrink-0 w-64 bg-white dark:bg-surface p-4 border rounded-lg flex items-center justify-between group cursor-pointer transition-all ${
+                  className={`flex-shrink-0 w-48 bg-white dark:bg-surface p-4 border rounded-lg flex items-center justify-between group cursor-pointer transition-all ${
                     selectedAccountId === null ? 'border-primary ring-2 ring-primary/20 shadow-md scale-[1.02]' : 'border-surface-border hover:border-primary shadow-sm'
                   }`}
                 >
@@ -242,21 +241,20 @@ export default function Dashboard() {
                       <Landmark className="w-5 h-5" />
                     </div>
                     <div>
-                      <p className="text-sm font-bold text-on-surface truncate w-24">Todas as Contas</p>
-                      <p className="text-xs text-secondary">Geral</p>
+                      <p className={`text-sm font-bold font-mono transition-colors ${
+                        selectedAccountId === null ? 'text-primary' : 'text-on-surface'
+                      }`}>
+                        {valueFormatter(accountsBalances.reduce((sum, acc) => sum + (acc.consolidated || 0), 0))}
+                      </p>
                     </div>
                   </div>
-                  <p className="text-sm font-bold font-mono text-on-surface">
-                    {valueFormatter(accountsBalances.reduce((sum, acc) => sum + (acc.consolidated || 0), 0))}
-                  </p>
                 </div>
 
                 {accountsBalances.map((acc, i) => (
-
                   <div
                     key={acc.id}
                     onClick={() => setSelectedAccountId(acc.id === selectedAccountId ? null : acc.id)}
-                    className={`flex-shrink-0 w-64 bg-white dark:bg-surface p-4 border rounded-lg flex items-center justify-between group cursor-pointer transition-all ${
+                    className={`flex-shrink-0 w-48 bg-white dark:bg-surface p-4 border rounded-lg flex items-center justify-between group cursor-pointer transition-all ${
                       selectedAccountId === acc.id ? 'border-primary ring-2 ring-primary/20 shadow-md scale-[1.02]' : 'border-surface-border hover:border-primary shadow-sm'
                     }`}
                   >
@@ -264,14 +262,24 @@ export default function Dashboard() {
                       <div className={`w-10 h-10 rounded-lg flex items-center justify-center font-bold uppercase transition-colors ${
                         selectedAccountId === acc.id ? 'bg-primary text-white' : 'bg-primary/10 text-primary'
                       }`}>
-                        {(acc.nome || '').substring(0, 2)}
+                        {acc.logo_url ? (
+                          <img src={acc.logo_url} alt="Logo" className="w-full h-full object-cover rounded-lg" />
+                        ) : (
+                          (acc.nome || '').substring(0, 2)
+                        )}
                       </div>
-                      <div><p className="text-sm font-bold text-on-surface truncate w-24">{acc.nome}</p><p className="text-xs text-secondary">{acc.agencia} {acc.conta}</p></div>
+                      <div>
+                        <p className={`text-sm font-bold font-mono transition-colors ${
+                          selectedAccountId === acc.id ? 'text-primary' : 'text-on-surface'
+                        }`}>
+                          {valueFormatter(acc.consolidated || 0)}
+                        </p>
+                      </div>
                     </div>
-                    <p className="text-sm font-bold font-mono text-on-surface">{valueFormatter(acc.consolidated || 0)}</p>
                   </div>
                 ))}
               </div>
+
             </section>
 
             <section className="grid grid-cols-1 lg:grid-cols-3 gap-6 animate-fade-in">
