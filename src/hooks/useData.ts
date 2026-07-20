@@ -21,7 +21,7 @@ export function useNotifications() {
     queryKey: ['notifications', user?.id],
     queryFn: notificationsService.getAll,
     enabled: !!user?.id,
-    refetchInterval: 30000, // Refetch every 30s
+    refetchInterval: 30000,
   });
 
   const markReadMutation = useMutation({
@@ -273,7 +273,6 @@ export function useCategoriasAjuste() {
 }
 
 export function useContas() {
-
   const queryClient = useQueryClient();
 
   const query = useQuery({
@@ -382,6 +381,8 @@ export function useLancamentos(filters?: any) {
 
   return {
     ...query,
+    data: query.data?.data || [], // Retorna o array de dados como 'data' para manter compatibilidade
+    totalCount: query.data?.count || 0, // Expõe o total de registros para a paginação
     createLancamento: createMutation.mutateAsync,
     updateLancamento: updateMutation.mutateAsync,
     deleteLancamento: deleteMutation.mutateAsync,
@@ -389,7 +390,6 @@ export function useLancamentos(filters?: any) {
     estornarLancamento: estornoMutation.mutateAsync,
     batchApprove: batchApproveMutation.mutateAsync,
     isCreating: createMutation.isPending,
-
     isUpdating: updateMutation.isPending,
     isDeleting: deleteMutation.isPending,
     isBatchApproving: batchApproveMutation.isPending

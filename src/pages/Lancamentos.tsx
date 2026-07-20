@@ -88,7 +88,8 @@ export default function Lancamentos({
 
   // FETCH DATA FROM SERVER
   const {
-    data: fetchResult = { data: [], count: 0 },
+    data: allLancamentos = [],
+    totalCount = 0,
     batchApprove,
     estornarLancamento,
     deleteLancamento,
@@ -107,8 +108,6 @@ export default function Lancamentos({
     pageSize
   });
 
-  const allLancamentos = fetchResult.data || [];
-  const totalCount = fetchResult.count || 0;
   const totalPages = Math.max(Math.ceil(totalCount / pageSize), 1);
 
   const { data: entidades = [] } = useEntidades();
