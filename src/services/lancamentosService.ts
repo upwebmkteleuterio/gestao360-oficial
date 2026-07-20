@@ -194,7 +194,7 @@ export const lancamentosService = {
     motivo_ajuste?: string,
     motivo_desconto_id?: string,
     motivo_acrescimo_id?: string
-  }): Promise<LancamentoFinanceiro> => {
+  }, isMaster: boolean = false): Promise<LancamentoFinanceiro> => {
     const { data: current, error: getError } = await supabase
       .from('lancamentos_financeiros')
       .select('*')
@@ -211,6 +211,9 @@ export const lancamentosService = {
     const dataPagamentoVal = data.data_pagamento || new Date().toISOString().split('T')[0];
     const contaBancariaVal = data.conta_bancaria_id || current.conta_bancaria_id;
 
+    // Define final payment status based on role
+    const finalPaymentStatus = isBPI ? 'bpi' : (isMaster ? 'pago' : 'quitação_pendente');
+
     if (isPartial) {
       const saldoRestante = subtotal - valorPagoEfetivo;
 
@@ -220,7 +223,7 @@ export const lancamentosService = {
         .update({
           valor_previsto: saldoRestante,
           // Não resetamos mais para 'pendente_digital' se o original já era 'confirmado_master'
-          status_aprovacao: current.status_aprovacao, 
+          status_aprovacao: current.status_aprovacao,
           observacoes: (current.observacoes || '') + `\n[Abatido pagamento parcial de R$ ${valorPagoEfetivo} em ${dataPagamentoVal.split('-').reverse().join('/')}]`
         })
         .eq('id', id)
@@ -236,7 +239,7 @@ export const lancamentosService = {
           ...rest,
           valor_previsto: valorPagoEfetivo,
           valor_recebido: valorPagoEfetivo,
-          status_pagamento: isBPI ? 'bpi' : 'pago',
+          status_pagamento: finalPaymentStatus,
           data_pagamento: dataPagamentoVal,
           conta_bancaria_id: contaBancariaVal,
           tipo_baixa: data.tipo_baixa || 'financeira',
@@ -256,7 +259,7 @@ export const lancamentosService = {
         .from('lancamentos_financeiros')
         .update({
           valor_recebido: isBPI ? 0 : valorPagoEfetivo,
-          status_pagamento: isBPI ? 'bpi' : 'pago',
+          status_pagamento: finalPaymentStatus,
           data_pagamento: dataPagamentoVal,
           conta_bancaria_id: contaBancariaVal,
           tipo_baixa: data.tipo_baixa || 'financeira',
@@ -317,6 +320,22 @@ export const lancamentosService = {
       .from('lancamentos_financeiros')
       .update({ status_aprovacao: targetStatus, data_aprovacao: targetStatus === 'confirmado_master' ? new Date().toISOString() : null })
       .in('id', ids);
+    if (error) throw error;
+  },
+
+  confirmarQuitacao: async (id: string): Promise<void> => {
+    const { error } = await supabase
+      .from('lancamentos_financeiros')
+      .update({ status_pagamento: 'pago' })
+      .eq('id', id);
+    if (error) throw error;
+  },
+
+  confirmarQuitacao: async (id: string): Promise<void> => {
+    const { error } = await supabase
+      .from('lancamentos_financeiros')
+      .update({ status_pagamento: 'pago' })
+      .eq('id', id);
     if (error) throw error;
   },
 

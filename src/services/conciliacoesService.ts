@@ -46,7 +46,7 @@ export const conciliacoesService = {
     return true;
   },
 
-  linkConciliacao: async (lancamentoId: string, transacaoBancoId: string, usuarioId: string): Promise<Conciliacao> => {
+  linkConciliacao: async (lancamentoId: string, transacaoBancoId: string, usuarioId: string, isMaster: boolean = true): Promise<Conciliacao> => {
     const { data, error } = await supabase
       .from('conciliacoes')
       .insert([{
@@ -60,8 +60,9 @@ export const conciliacoesService = {
     
     if (error) throw error;
 
-    // Update statuses
-    await supabase.from('lancamentos_financeiros').update({ status_pagamento: 'pago' }).eq('id', lancamentoId);
+    // Update statuses - depends on whether it's a master or not
+    const finalStatus = isMaster ? 'pago' : 'quitação_pendente';
+    await supabase.from('lancamentos_financeiros').update({ status_pagamento: finalStatus }).eq('id', lancamentoId);
     await supabase.from('transacoes_banco').update({ status_conciliacao: true }).eq('id', transacaoBancoId);
 
     return data as Conciliacao;

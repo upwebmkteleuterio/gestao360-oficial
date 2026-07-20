@@ -1,8 +1,9 @@
 "use client";
 
 import React from 'react';
-import { Building2, CheckCircle2, Landmark } from 'lucide-react';
+import { Building2, CheckCircle2, Landmark, Clock, ShieldCheck } from 'lucide-react';
 import { useUIStore } from '../../store/uiStore';
+import { useAuth } from '../../hooks/useAuth';
 
 interface AccountFilterCardsProps {
   accounts: any[];
@@ -13,14 +14,17 @@ interface AccountFilterCardsProps {
   valueFormatter: (val: number) => string;
 }
 
-export default function AccountFilterCards({ 
-  accounts, 
-  selectedId, 
-  onSelect, 
-  dragScrollProps, 
+export default function AccountFilterCards({
+  accounts,
+  selectedId,
+  onSelect,
+  dragScrollProps,
   dragScrollRef,
-  valueFormatter 
+  valueFormatter
 }: AccountFilterCardsProps) {
+  const { role } = useAuth();
+  const isMaster = role === 'master';
+
   return (
     <section className="space-y-3">
       <div className="flex items-center justify-between px-1">
@@ -28,7 +32,7 @@ export default function AccountFilterCards({
           <Building2 className="w-4 h-4" /> Filtrar por Conta
         </h4>
         {selectedId && (
-          <button 
+          <button
             onClick={() => onSelect(null)}
             className="text-[10px] font-black text-primary uppercase tracking-widest hover:underline"
           >
@@ -36,9 +40,9 @@ export default function AccountFilterCards({
           </button>
         )}
       </div>
-      <div 
-        ref={dragScrollRef} 
-        {...dragScrollProps} 
+      <div
+        ref={dragScrollRef}
+        {...dragScrollProps}
         className="flex gap-4 overflow-x-auto pb-2 scroll-smooth select-none no-scrollbar"
       >
         {accounts.map((acc) => {
@@ -47,30 +51,51 @@ export default function AccountFilterCards({
             <div
               key={acc.id}
               onClick={() => onSelect(isSelected ? null : acc.id)}
-              className={`flex-shrink-0 w-56 bg-white p-4 border-2 rounded-2xl flex items-center justify-between group cursor-pointer transition-all shadow-sm ${
+              className={`flex-shrink-0 w-64 bg-white p-4 border-2 rounded-2xl flex flex-col group cursor-pointer transition-all shadow-sm ${
                 isSelected ? 'border-primary bg-primary/5 ring-4 ring-primary/10' : 'border-neutral-100 hover:border-neutral-200'
               }`}
             >
-              <div className="flex items-center gap-3 min-w-0">
-                <div className={`w-10 h-10 rounded-xl flex items-center justify-center font-black uppercase shrink-0 transition-colors ${
-                  isSelected ? 'bg-primary text-white' : 'bg-neutral-100 text-neutral-400'
-                }`}>
-                  {acc.logo_url ? (
-                    <img src={acc.logo_url} alt="" className="w-full h-full object-cover rounded-xl" />
-                  ) : (
-                    acc.nome.substring(0, 2)
-                  )}
+              <div className="flex items-center justify-between mb-3">
+                <div className="flex items-center gap-3 min-w-0">
+                  <div className={`w-10 h-10 rounded-xl flex items-center justify-center font-black uppercase shrink-0 transition-colors ${
+                    isSelected ? 'bg-primary text-white' : 'bg-neutral-100 text-neutral-400'
+                  }`}>
+                    {acc.logo_url ? (
+                      <img src={acc.logo_url} alt="" className="w-full h-full object-cover rounded-xl" />
+                    ) : (
+                      acc.nome.substring(0, 2)
+                    )}
+                  </div>
+                  <div className="min-w-0">
+                    <p className={`text-[10px] font-black uppercase truncate tracking-tighter ${isSelected ? 'text-primary' : 'text-neutral-900'}`}>
+                      {acc.nome_banco || acc.nome}
+                    </p>
+                  </div>
                 </div>
-                <div className="min-w-0">
-                  <p className={`text-[10px] font-black uppercase truncate tracking-tighter ${isSelected ? 'text-primary' : 'text-neutral-900'}`}>
-                    {acc.nome_banco || acc.nome}
-                  </p>
-                  <p className="text-[11px] font-black font-mono text-neutral-500 mt-0.5">
-                    {valueFormatter(acc.filteredBalance || 0)}
-                  </p>
-                </div>
+                {isSelected && <CheckCircle2 className="w-4 h-4 text-primary shrink-0" />}
               </div>
-              {isSelected && <CheckCircle2 className="w-4 h-4 text-primary shrink-0 ml-2" />}
+
+              <div className="space-y-1 mt-auto">
+                <div className="flex items-center justify-between">
+                  <span className="text-[9px] font-black text-secondary uppercase tracking-tighter flex items-center gap-1">
+                    <Clock className="w-3 h-3" /> Operacional
+                  </span>
+                  <p className="text-[11px] font-black font-mono text-neutral-900">
+                    {valueFormatter(acc.operacionalBalance || 0)}
+                  </p>
+                </div>
+
+                {isMaster && (
+                  <div className="flex items-center justify-between pt-1 border-t border-neutral-100">
+                    <span className="text-[9px] font-black text-bank-truth-green uppercase tracking-tighter flex items-center gap-1">
+                      <ShieldCheck className="w-3 h-3" /> Auditado
+                    </span>
+                    <p className="text-[11px] font-black font-mono text-bank-truth-green">
+                      {valueFormatter(acc.auditadoBalance || 0)}
+                    </p>
+                  </div>
+                )}
+              </div>
             </div>
           );
         })}

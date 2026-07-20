@@ -340,6 +340,9 @@ export function useContas() {
 export function useLancamentos(filters?: any) {
   const queryClient = useQueryClient();
 
+  const { user, role } = useAuth();
+  const isMaster = role === 'master';
+
   const query = useQuery({
     queryKey: ['lancamentos', filters],
     queryFn: () => lancamentosService.getAll(filters)
@@ -353,7 +356,7 @@ export function useLancamentos(filters?: any) {
   });
 
   const updateMutation = useMutation({
-    mutationFn: ({ id, data, mode }: { id: string, data: any, mode?: 'single' | 'all' }) => 
+    mutationFn: ({ id, data, mode }: { id: string, data: any, mode?: 'single' | 'all' }) =>
       lancamentosService.update(id, data, mode),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['lancamentos'] });
@@ -370,7 +373,7 @@ export function useLancamentos(filters?: any) {
   });
 
   const batchApproveMutation = useMutation({
-    mutationFn: ({ ids, targetStatus }: { ids: string[], targetStatus: 'digital' | 'confirmado_master' }) => 
+    mutationFn: ({ ids, targetStatus }: { ids: string[], targetStatus: 'digital' | 'confirmado_master' }) =>
       lancamentosService.approveInBatch(ids, targetStatus),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['lancamentos'] });
@@ -390,7 +393,7 @@ export function useLancamentos(filters?: any) {
       motivo_desconto_id?: string,
       motivo_acrescimo_id?: string
     } }) =>
-      lancamentosService.baixaLancamento(id, data),
+      lancamentosService.baixaLancamento(id, data, isMaster),
 
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['lancamentos'] });
@@ -505,8 +508,8 @@ export function useConciliacao() {
   });
 
   const linkMutation = useMutation({
-    mutationFn: ({ lancamentoId, transacaoBancoId, usuarioId }: { lancamentoId: string, transacaoBancoId: string, usuarioId: string }) => 
-      conciliacoesService.linkConciliacao(lancamentoId, transacaoBancoId, usuarioId),
+    mutationFn: ({ lancamentoId, transacaoBancoId, usuarioId }: { lancamentoId: string, transacaoBancoId: string, usuarioId: string }) =>
+      conciliacoesService.linkConciliacao(lancamentoId, transacaoBancoId, usuarioId, isMaster),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['conciliacoes'] });
       queryClient.invalidateQueries({ queryKey: ['transacoes'] });

@@ -224,11 +224,28 @@ export default function Lancamentos({
   const accountCardsData = useMemo(() => {
     return activeContas.map(acc => {
       const accLaunches = allLancamentos.filter(l => l.conta_bancaria_id === acc.id);
-      const balance = accLaunches.reduce((sum, l) => {
-        const val = Number(l.valor_previsto) || 0;
-        return l.tipo === 'entrada' ? sum + val : sum - val;
-      }, 0);
-      return { ...acc, filteredBalance: balance };
+      
+      // Saldo Auditado (Pago)
+      const auditado = accLaunches
+        .filter(l => l.status_pagamento === 'pago')
+        .reduce((sum, l) => {
+          const val = Number(l.valor_recebido || l.valor_previsto) || 0;
+          return l.tipo === 'entrada' ? sum + val : sum - val;
+        }, 0);
+
+      // Saldo Operacional (Pago + Quitação Pendente)
+      const operacional = accLaunches
+        .filter(l => ['pago', 'quitação_pendente'].includes(l.status_pagamento))
+        .reduce((sum, l) => {
+          const val = Number(l.valor_recebido || l.valor_previsto) || 0;
+          return l.tipo === 'entrada' ? sum + val : sum - val;
+        }, 0);
+
+      return {
+        ...acc,
+        auditadoBalance: (acc.saldo_inicial || 0) + auditado,
+        operacionalBalance: (acc.saldo_inicial || 0) + operacional
+      };
     });
   }, [activeContas, allLancamentos]);
 
@@ -397,6 +414,11 @@ export default function Lancamentos({
                         {item.status_pagamento === 'pago' ? (
                           <div className="flex flex-col">
                             <span className="text-bank-truth-green font-black text-[9px] uppercase">Liquidado</span>
+                            <span className="text-[9px] text-neutral-400 font-mono">{item.data_pagamento?.split('-').reverse().join('/')}</span>
+                          </div>
+                        ) : item.status_pagamento === 'quitação_pendente' ? (
+                          <div className="flex flex-col">
+                            <span className="text-amber-600 font-black text-[9px] uppercase">Quitação Pendente</span>
                             <span className="text-[9px] text-neutral-400 font-mono">{item.data_pagamento?.split('-').reverse().join('/')}</span>
                           </div>
                         ) : (
