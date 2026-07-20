@@ -47,7 +47,7 @@ export default function Sidebar({ isOpen, onClose, isCollapsed }: SidebarProps) 
       subItems: [
         { id: 'pagar' as TabType, label: 'Contas a Pagar', icon: ArrowDownLeft, path: '/pagar' },
         { id: 'receber' as TabType, label: 'Contas a Receber', icon: ArrowUpRight, path: '/receber' },
-        { id: 'lancamentos' as TabType, label: 'Histórico Global', icon: Receipt, path: '/lancamentos' },
+        { id: 'financeiro' as TabType, label: 'Financeiro (Global)', icon: Receipt, path: '/financeiro' },
       ]
     },
     { id: 'conciliacao' as TabType, label: 'Conciliação Bancária', icon: FileSpreadsheet, path: '/conciliacao', roles: ['master', 'gerente'] },

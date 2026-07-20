@@ -5,6 +5,7 @@ import { LancamentoFinanceiro } from '../types';
 export type TabType =
   | 'dashboard'
   | 'lancamentos'
+  | 'financeiro'
   | 'pagar'
   | 'receber'
   | 'conciliacao'

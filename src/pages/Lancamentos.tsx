@@ -34,6 +34,7 @@ import { useDragScroll } from '../hooks/useDragScroll';
 import { LancamentoFinanceiro } from '../types';
 import { motion, AnimatePresence } from 'motion/react';
 import Button from '../components/Button';
+import FilterDrawer from '../components/FilterDrawer';
 
 interface LancamentosProps {
   typeOverride?: 'entrada' | 'saida';
@@ -48,20 +49,24 @@ export default function Lancamentos({ typeOverride, titleOverride, statusPagamen
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedAccountId, setSelectedAccountId] = useState<string | null>(null);
 
-  const [startDate, setStartDate] = useState(() => {
-    if (statusPagamentoOverride === 'aberto') return '';
-    const d = new Date();
-    d.setDate(d.getDate() - 15);
-    return d.toISOString().split('T')[0];
+  const [isFilterOpen, setIsFilterOpen] = useState(false);
+  const [activeFilters, setActiveFilters] = useState({
+    responsibleId: 'all',
+    categoryId: 'all',
+    clientId: 'all',
+    status: statusPagamentoOverride || 'all',
+    startDate: '',
+    endDate: ''
   });
-  
-  const [endDate, setEndDate] = useState(() => {
-    if (statusPagamentoOverride === 'aberto') return '2099-12-31';
-    return new Date().toISOString().split('T')[0];
-  });
-  
-  const [approvalStatus, setApprovalStatus] = useState('all');
-  const [typeFilter, setTypeFilter] = useState<'all' | 'entrada' | 'saida'>(typeOverride || 'all');
+
+  const hasActiveFilters = useMemo(() => {
+    return activeFilters.responsibleId !== 'all' ||
+           activeFilters.categoryId !== 'all' ||
+           activeFilters.clientId !== 'all' ||
+           (activeFilters.status !== 'all' && activeFilters.status !== statusPagamentoOverride) ||
+           activeFilters.startDate !== '' ||
+           activeFilters.endDate !== '';
+  }, [activeFilters, statusPagamentoOverride]);
 
   const {
     data: allLancamentos = [],
@@ -70,18 +75,15 @@ export default function Lancamentos({ typeOverride, titleOverride, statusPagamen
     isLoading
   } = useLancamentos({
     searchTerm,
-    startDate,
-    endDate,
-    approvalStatus,
-    type: typeFilter === 'all' ? undefined : typeFilter
+    type: typeOverride || 'all',
+    ...activeFilters
   });
 
   const lancamentos = useMemo(() => {
     let list = allLancamentos;
     if (selectedAccountId) list = list.filter(l => l.conta_bancaria_id === selectedAccountId);
-    if (statusPagamentoOverride) list = list.filter(l => l.status_pagamento === statusPagamentoOverride);
     return list;
-  }, [allLancamentos, selectedAccountId, statusPagamentoOverride]);
+  }, [allLancamentos, selectedAccountId]);
   
   const { data: rawContas = [] } = useContas();
   const { data: entidades = [] } = useEntidades();
@@ -135,13 +137,57 @@ export default function Lancamentos({ typeOverride, titleOverride, statusPagamen
           <Search className="w-5 h-5 absolute left-3.5 top-1/2 -translate-y-1/2 text-secondary" />
           <input
             type="text"
-            placeholder="Buscar..."
+            placeholder="Buscar por cliente, documento ou observação..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
             className="w-full h-11 pl-11 pr-4 bg-surface border border-surface-border text-sm font-semibold rounded-lg text-on-surface focus:outline-none focus:border-primary transition-all"
           />
         </div>
+
+        <div className="relative flex flex-col items-center">
+          {hasActiveFilters && (
+            <button
+              onClick={() => setActiveFilters({
+                responsibleId: 'all',
+                categoryId: 'all',
+                clientId: 'all',
+                status: statusPagamentoOverride || 'all',
+                startDate: '',
+                endDate: ''
+              })}
+              className="absolute -top-6 bg-primary text-on-primary text-[9px] font-black px-2 py-0.5 rounded-full shadow-sm hover:scale-105 transition-transform uppercase tracking-tighter z-10"
+            >
+              Limpar
+            </button>
+          )}
+          <button
+            onClick={() => setIsFilterOpen(true)}
+            className={`flex items-center gap-2 px-4 h-11 rounded-lg text-xs font-black uppercase tracking-widest transition-all border-2 ${
+              hasActiveFilters
+                ? 'bg-primary/10 border-primary text-primary'
+                : 'bg-white border-neutral-100 text-secondary hover:border-neutral-200'
+            }`}
+          >
+            <Filter className="w-4 h-4" />
+            <span>Filtrar</span>
+          </button>
+        </div>
       </div>
+
+      <FilterDrawer
+        isOpen={isFilterOpen}
+        onClose={() => setIsFilterOpen(false)}
+        currentFilters={activeFilters}
+        onApply={setActiveFilters}
+        onClear={() => setActiveFilters({
+          responsibleId: 'all',
+          categoryId: 'all',
+          clientId: 'all',
+          status: statusPagamentoOverride || 'all',
+          startDate: '',
+          endDate: ''
+        })}
+      />
 
       <div className="bg-white dark:bg-surface border border-surface-border rounded-xl shadow-sm overflow-hidden">
         <div className="overflow-x-auto">

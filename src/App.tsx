@@ -34,6 +34,7 @@ import Configuracoes from './pages/Configuracoes';
 import Notificacoes from './pages/Notificacoes';
 import Pagar from './pages/Pagar';
 import Receber from './pages/Receber';
+import Financeiro from './pages/Financeiro';
 
 // Create a client for React Query caching
 const queryClient = new QueryClient({
@@ -203,6 +204,7 @@ function AppContent() {
                     <Routes>
                       <Route path="/" element={<Navigate to="/dashboard" replace />} />
                       <Route path="/dashboard" element={<Dashboard />} />
+                      <Route path="/financeiro" element={<Financeiro />} />
                       <Route path="/lancamentos" element={<Lancamentos />} />
                       <Route path="/pagar" element={<Pagar />} />
                       <Route path="/receber" element={<Receber />} />

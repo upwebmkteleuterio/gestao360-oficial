@@ -7,6 +7,10 @@ export interface LancamentoFilters {
   endDate?: string;
   approvalStatus?: string;
   type?: string;
+  responsibleId?: string;
+  categoryId?: string;
+  clientId?: string;
+  status?: string;
 }
 
 export const lancamentosService = {
@@ -29,6 +33,22 @@ export const lancamentosService = {
       }
       if (filters.type && filters.type !== 'all') {
         query = query.eq('tipo', filters.type);
+      }
+      if (filters.responsibleId && filters.responsibleId !== 'all') {
+        query = query.eq('usuario_criador_id', filters.responsibleId);
+      }
+      if (filters.categoryId && filters.categoryId !== 'all') {
+        query = query.eq('categoria_id', filters.categoryId);
+      }
+      if (filters.clientId && filters.clientId !== 'all') {
+        query = query.eq('entidade_id', filters.clientId);
+      }
+      if (filters.status && filters.status !== 'all') {
+        if (filters.status === 'atrasado') {
+          query = query.eq('status_pagamento', 'aberto').lt('data_vencimento', new Date().toISOString().split('T')[0]);
+        } else {
+          query = query.eq('status_pagamento', filters.status);
+        }
       }
       if (filters.searchTerm) {
         query = query.or(`entidades_negocio.nome_razao_social.ilike.%${filters.searchTerm}%,entidades_negocio.documento.ilike.%${filters.searchTerm}%,observacoes.ilike.%${filters.searchTerm}%`);
