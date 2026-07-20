@@ -224,7 +224,6 @@ export default function Lancamentos({
           <Button
             onClick={() => setIsBaixaLoteOpen(true)}
             disabled={selectedIds.length === 0}
-            className="!bg-bank-truth-green"
           >
             <CheckCircle2 className="w-4 h-4" />
             Baixar ({selectedIds.length})
@@ -353,13 +352,40 @@ export default function Lancamentos({
                         )}
                       </td>
                       <td className="py-3 px-4 text-right" onClick={(e) => e.stopPropagation()}>
-                        <div className="relative">
-                          <button
-                            onClick={() => setActiveMenuId(activeMenuId === item.id ? null : item.id)}
-                            className="p-2 hover:bg-white hover:shadow-sm rounded-xl text-neutral-400 hover:text-neutral-900 transition-all"
-                          >
-                            <MoreVertical className="w-5 h-5" />
-                          </button>
+                        <div className="flex items-center justify-end gap-2">
+                          {/* Botões de Ação Rápida na Linha */}
+                          <div className="flex items-center gap-1.5 mr-2">
+                            {role === 'master' && item.status_aprovacao !== 'confirmado_master' && item.status_pagamento !== 'bpi' && (
+                              <button
+                                onClick={() => {
+                                  setSelectedLancamentoIdForModal(item.id);
+                                  setModalOpen('isComprovanteOpen', true);
+                                }}
+                                className="px-3 py-1.5 bg-neutral-900 text-white text-[9px] font-black uppercase tracking-widest rounded-lg hover:bg-black transition-all flex items-center gap-1.5 shadow-sm"
+                              >
+                                <ShieldCheck className="w-3 h-3" />
+                                Aprovar
+                              </button>
+                            )}
+
+                            {(role === 'master' || role === 'gerente') && item.status_aprovacao === 'confirmado_master' && item.status_pagamento !== 'pago' && item.status_pagamento !== 'bpi' && (
+                              <button
+                                onClick={() => handleOpenBaixa(item.id)}
+                                className="px-3 py-1.5 bg-bank-truth-green text-white text-[9px] font-black uppercase tracking-widest rounded-lg hover:brightness-110 transition-all flex items-center gap-1.5 shadow-sm"
+                              >
+                                <CheckCircle2 className="w-3 h-3" />
+                                Quitar
+                              </button>
+                            )}
+                          </div>
+
+                          <div className="relative">
+                            <button
+                              onClick={() => setActiveMenuId(activeMenuId === item.id ? null : item.id)}
+                              className="p-2 hover:bg-white hover:shadow-sm rounded-xl text-neutral-400 hover:text-neutral-900 transition-all"
+                            >
+                              <MoreVertical className="w-5 h-5" />
+                            </button>
                           
                           <AnimatePresence>
                             {activeMenuId === item.id && (
