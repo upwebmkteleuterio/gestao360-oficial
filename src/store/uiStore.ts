@@ -20,7 +20,7 @@ interface UIState {
   theme: 'light' | 'dark';
   activeTab: TabType;
   activeConfigSubTab: 'equipe' | 'auditoria' | 'legacy';
-  currentUserId: string; // Enables easy testing of RLS (Master vs Gerente vs Colaborador)
+  currentUserId: string;
   
   // Modals / Panels toggles
   isNovoLancamentoOpen: boolean;
@@ -37,10 +37,10 @@ interface UIState {
   isNovoUsuarioOpen: boolean;
   isLegacyImportOpen: boolean;
   isBaixaLancamentoOpen: boolean;
+  isAprovarModalOpen: boolean; // Novo modal
   isSidebarCollapsed: boolean;
 
-  // Selected item contexts for modals
-
+  // Selected item contexts
   selectedLancamentoIdForModal: string | null;
   selectedRecorrenciaAction: 'single' | 'all' | null;
   selectedTransacaoForConciliationId: string | null;
@@ -48,7 +48,7 @@ interface UIState {
   currentConciliationDifferenceValue: number;
   currentConciliationId: string | null;
 
-  // Temp Draft states so users don't lose typed progress
+  // Temp Draft states
   lancamentoFormDraft: {
     tipo: 'entrada' | 'saida';
     valor_previsto: string;
@@ -92,7 +92,6 @@ interface UIState {
     uf: string;
   };
 
-  // Scroll locations to preserve context
   scrollPositions: Record<string, number>;
 
   // Actions
@@ -100,8 +99,7 @@ interface UIState {
   setActiveTab: (tab: TabType) => void;
   setActiveConfigSubTab: (sub: 'equipe' | 'auditoria' | 'legacy') => void;
   setCurrentUserId: (id: string) => void;
-  
-  setModalOpen: (modal: keyof Omit<UIState, 'theme' | 'activeTab' | 'activeConfigSubTab' | 'currentUserId' | 'scrollPositions' | 'selectedLancamentoIdForModal' | 'selectedRecorrenciaAction' | 'selectedTransacaoForConciliationId' | 'selectedLancamentoForConciliationId' | 'currentConciliationDifferenceValue' | 'currentConciliationId' | 'lancamentoFormDraft' | 'entidadeFormDraft' | 'setTheme' | 'setActiveTab' | 'setActiveConfigSubTab' | 'setCurrentUserId' | 'setModalOpen' | 'setSelectedLancamentoIdForModal' | 'setSelectedRecorrenciaAction' | 'setSelectedTransacaoForConciliaId' | 'setSelectedLancamentoForConciliaId' | 'setCurrentConciliationId' | 'setLancamentoFormDraft' | 'setEntidadeFormDraft' | 'setScrollPosition'>, value: boolean) => void;
+  setModalOpen: (modal: keyof Omit<UIState, 'theme' | 'activeTab' | 'activeConfigSubTab' | 'currentUserId' | 'scrollPositions' | 'selectedLancamentoIdForModal' | 'selectedRecorrenciaAction' | 'selectedTransacaoForConciliationId' | 'selectedLancamentoForConciliationId' | 'currentConciliationDifferenceValue' | 'currentConciliationId' | 'lancamentoFormDraft' | 'entidadeFormDraft' | 'setTheme' | 'setActiveTab' | 'setActiveConfigSubTab' | 'setCurrentUserId' | 'setModalOpen' | 'setSelectedLancamentoIdForModal' | 'setSelectedRecorrenciaAction' | 'setSelectedTransacaoForConciliaId' | 'setSelectedLancamentoForConciliaId' | 'setCurrentConciliationId' | 'setLancamentoFormDraft' | 'setEntidadeFormDraft' | 'setScrollPosition' | 'setSidebarCollapsed' | 'resetAllDrafts' | 'isSidebarCollapsed'>, value: boolean) => void;
   
   setSelectedLancamentoIdForModal: (id: string | null) => void;
   setSelectedRecorrenciaAction: (action: 'single' | 'all' | null) => void;
@@ -168,7 +166,7 @@ export const useUIStore = create<UIState>()(
       theme: 'light',
       activeTab: 'dashboard',
       activeConfigSubTab: 'equipe',
-      currentUserId: 'user_master_1', // Lucas da Vitória (Default)
+      currentUserId: 'user_master_1',
 
       isNovoLancamentoOpen: false,
       isCadastroRapidoOpen: false,
@@ -184,10 +182,10 @@ export const useUIStore = create<UIState>()(
       isNovoUsuarioOpen: false,
       isLegacyImportOpen: false,
       isBaixaLancamentoOpen: false,
+      isAprovarModalOpen: false,
       isSidebarCollapsed: false,
 
       selectedLancamentoIdForModal: null,
-
       selectedRecorrenciaAction: null,
       selectedTransacaoForConciliationId: null,
       selectedLancamentoForConciliationId: null,
@@ -203,7 +201,7 @@ export const useUIStore = create<UIState>()(
       setActiveConfigSubTab: (activeConfigSubTab) => set({ activeConfigSubTab }),
       setCurrentUserId: (currentUserId) => set({ currentUserId }),
 
-      setModalOpen: (modal, value) => set({ [modal]: value }),
+      setModalOpen: (modal, value) => set((state) => ({ ...state, [modal]: value })),
       
       setSelectedLancamentoIdForModal: (id) => set({ selectedLancamentoIdForModal: id }),
       setSelectedRecorrenciaAction: (action) => set({ selectedRecorrenciaAction: action }),

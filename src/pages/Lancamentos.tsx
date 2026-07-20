@@ -23,7 +23,8 @@ import {
   Landmark,
   Banknote,
   ThumbsUp,
-  ShieldCheck
+  ShieldCheck,
+  Eye
 } from 'lucide-react';
 
 import { useLancamentos, useContas, useEntidades, useCategorias } from '../hooks/useData';
@@ -42,48 +43,30 @@ interface LancamentosProps {
 
 export default function Lancamentos({ typeOverride, titleOverride, statusPagamentoOverride }: LancamentosProps) {
   const { role } = useAuth();
-  const dragScrollAccounts = useDragScroll();
+  const isMaster = role === 'master';
+  
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedAccountId, setSelectedAccountId] = useState<string | null>(null);
-  const [activeShortcut, setActiveShortcut] = useState<number | 'este-mes' | null>(statusPagamentoOverride ? null : 15);
 
   const [startDate, setStartDate] = useState(() => {
-    if (statusPagamentoOverride === 'aberto') return ''; // Sem limite inicial para o que está devendo
+    if (statusPagamentoOverride === 'aberto') return '';
     const d = new Date();
     d.setDate(d.getDate() - 15);
     return d.toISOString().split('T')[0];
   });
   
   const [endDate, setEndDate] = useState(() => {
-    if (statusPagamentoOverride === 'aberto') return '2099-12-31'; // Ver tudo que vence no futuro
+    if (statusPagamentoOverride === 'aberto') return '2099-12-31';
     return new Date().toISOString().split('T')[0];
   });
   
   const [approvalStatus, setApprovalStatus] = useState('all');
   const [typeFilter, setTypeFilter] = useState<'all' | 'entrada' | 'saida'>(typeOverride || 'all');
-  const [isFilterPanelOpen, setIsFilterPanelOpen] = useState(false);
-
-  useEffect(() => {
-    if (typeOverride) setTypeFilter(typeOverride);
-  }, [typeOverride]);
-
-  const hasActiveFilters = searchTerm !== '' || approvalStatus !== 'all' || (typeFilter !== 'all' && !typeOverride);
-
-  const handleQuickPeriod = (days: number | 'este-mes') => {
-    const end = new Date();
-    const start = new Date();
-    if (days === 'este-mes') start.setDate(1);
-    else start.setDate(end.getDate() - (days as number));
-    setStartDate(start.toISOString().split('T')[0]);
-    setEndDate(end.toISOString().split('T')[0]);
-    setActiveShortcut(days);
-  };
 
   const {
     data: allLancamentos = [],
     deleteLancamento,
     batchApprove,
-    estornarLancamento,
     isLoading
   } = useLancamentos({
     searchTerm,
@@ -103,15 +86,13 @@ export default function Lancamentos({ typeOverride, titleOverride, statusPagamen
   const { data: rawContas = [] } = useContas();
   const { data: entidades = [] } = useEntidades();
   const { data: categorias = [] } = useCategorias();
-  const activeContas = useMemo(() => rawContas.filter((c: any) => c.status !== 'excluido'), [rawContas]);
 
-  const { setModalOpen, setSelectedLancamentoIdForModal, setSelectedRecorrenciaAction } = useUIStore();
+  const { setModalOpen, setSelectedLancamentoIdForModal } = useUIStore();
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [activeMenuId, setActiveMenuId] = useState<string | null>(null);
 
   const getEntidadeName = (id: string) => entidades.find(e => e.id === id)?.nome_razao_social || 'Entidade Desconhecida';
   const getCategoriaName = (id: string) => categorias.find(c => c.id === id)?.nome || 'Sem Categoria';
-  const getContaName = (id: string) => rawContas.find(c => c.id === id)?.nome_banco || 'Sem Conta';
 
   const paginatedGroups = useMemo(() => {
     const result: { date: string, items: LancamentoFinanceiro[] }[] = [];
@@ -128,30 +109,24 @@ export default function Lancamentos({ typeOverride, titleOverride, statusPagamen
     <div className="space-y-6 relative" onClick={() => setActiveMenuId(null)}>
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
-          <h1 className="text-headline-lg font-bold tracking-tight text-on-surface uppercase">
+          <h1 className="text-2xl font-bold tracking-tight text-on-surface uppercase">
             {titleOverride || 'Histórico Global'}
           </h1>
-          <p className="text-body-md text-on-surface-variant mt-1 font-medium italic">
-            {statusPagamentoOverride === 'aberto' ? 'Verdade Bancária: Apenas títulos pendentes de liquidação.' : 'Visão completa de todos os movimentos financeiros.'}
+          <p className="text-sm text-on-surface-variant mt-1 font-medium italic">
+            {statusPagamentoOverride === 'aberto' ? 'Tesouraria Ativa: Títulos pendentes de liquidação.' : 'Visão completa de todos os movimentos financeiros.'}
           </p>
         </div>
 
         <div className="flex flex-wrap items-center gap-3">
           {selectedIds.length > 0 && (
             <motion.div initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} className="flex gap-2">
-              <Button onClick={() => setModalOpen('isBaixaLoteOpen' as any, true)} className="!bg-bank-truth-green">
-                Dar Baixa em Lote ({selectedIds.length})
-              </Button>
-              {role === 'master' && (
+              {isMaster && (
                 <Button onClick={() => batchApprove({ ids: selectedIds, targetStatus: 'confirmado_master' })}>
                   Aprovar Selecionados
                 </Button>
               )}
             </motion.div>
           )}
-          <Button onClick={handleExportCSV}>
-            CSV <Download className="w-4 h-4" />
-          </Button>
         </div>
       </div>
 
@@ -166,9 +141,6 @@ export default function Lancamentos({ typeOverride, titleOverride, statusPagamen
             className="w-full h-11 pl-11 pr-4 bg-surface border border-surface-border text-sm font-semibold rounded-lg text-on-surface focus:outline-none focus:border-primary transition-all"
           />
         </div>
-        <button onClick={() => setIsFilterPanelOpen(true)} className="flex items-center gap-2 px-4 h-11 rounded-lg text-xs font-bold transition-all border bg-white text-secondary border-surface-border hover:bg-neutral-50">
-          <Filter className="w-4 h-4" /> Filtros
-        </button>
       </div>
 
       <div className="bg-white dark:bg-surface border border-surface-border rounded-xl shadow-sm overflow-hidden">
@@ -185,20 +157,19 @@ export default function Lancamentos({ typeOverride, titleOverride, statusPagamen
                 <th className="py-4 px-4 text-[10px] font-black uppercase text-secondary">Tipo</th>
                 <th className="py-4 px-4 text-[10px] font-black uppercase text-secondary">Vencimento</th>
                 <th className="py-4 px-4 text-[10px] font-black uppercase text-secondary">Local/Cliente</th>
-                <th className="py-4 px-4 text-[10px] font-black uppercase text-secondary">Categoria</th>
                 <th className="py-4 px-4 text-[10px] font-black uppercase text-secondary text-right">Valor</th>
-                <th className="py-4 px-4 text-[10px] font-black uppercase text-secondary text-center">Status</th>
+                <th className="py-4 px-4 text-[10px] font-black uppercase text-secondary text-center">Aprovação</th>
                 <th className="py-4 px-4 w-14"></th>
               </tr>
             </thead>
             <tbody className="text-xs text-on-surface">
               {isLoading ? (
-                <tr><td colSpan={8} className="py-20 text-center"><Loader2 className="w-8 h-8 text-primary animate-spin mx-auto" /></td></tr>
+                <tr><td colSpan={7} className="py-20 text-center"><Loader2 className="w-8 h-8 text-primary animate-spin mx-auto" /></td></tr>
               ) : (
                 paginatedGroups.map((group) => (
                   <React.Fragment key={group.date}>
                     <tr className="bg-neutral-50/80 border-y border-surface-border/50">
-                      <td colSpan={8} className="py-2 px-4 text-[10px] font-black uppercase text-secondary text-center">
+                      <td colSpan={7} className="py-2 px-4 text-[10px] font-black uppercase text-secondary text-center">
                         {group.date.split('-').reverse().join(' / ')}
                       </td>
                     </tr>
@@ -220,7 +191,6 @@ export default function Lancamentos({ typeOverride, titleOverride, statusPagamen
                           {item.data_vencimento.split('-').reverse().join('/')}
                         </td>
                         <td className="py-3 px-4 font-black text-on-background uppercase">{getEntidadeName(item.entidade_id)}</td>
-                        <td className="py-3 px-4 text-secondary">{getCategoriaName(item.categoria_id)}</td>
                         <td className={`py-3 px-4 font-mono font-black text-right ${item.tipo === 'saida' ? 'text-alert-red' : 'text-bank-truth-green'}`}>
                           {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(item.valor_previsto)}
                         </td>
@@ -231,8 +201,38 @@ export default function Lancamentos({ typeOverride, titleOverride, statusPagamen
                             <span className="bg-neutral-100 text-neutral-500 px-2 py-0.5 rounded text-[9px] font-black uppercase">Pendente</span>
                           )}
                         </td>
-                        <td className="py-3 px-4 text-right" onClick={(e) => { e.stopPropagation(); setActiveMenuId(item.id); }}>
-                          <MoreVertical className="w-5 h-5 text-secondary cursor-pointer" />
+                        <td className="py-3 px-4 text-right relative" onClick={(e) => e.stopPropagation()}>
+                          <button onClick={() => setActiveMenuId(item.id === activeMenuId ? null : item.id)} className="p-1.5 hover:bg-neutral-100 rounded-lg">
+                            <MoreVertical className="w-5 h-5 text-secondary" />
+                          </button>
+
+                          <AnimatePresence>
+                            {activeMenuId === item.id && (
+                              <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.95 }} className="absolute right-full top-0 mt-0 mr-2 w-48 bg-white border border-surface-border rounded-xl shadow-2xl z-[100] overflow-hidden py-1 text-left">
+                                <button onClick={() => { setModalOpen('isComprovanteOpen', true); setSelectedLancamentoIdForModal(item.id); setActiveMenuId(null); }} className="w-full px-4 py-2 hover:bg-neutral-50 text-[11px] font-bold text-on-surface flex items-center gap-3">
+                                  <Eye className="w-4 h-4 text-secondary" /> Ver Detalhes
+                                </button>
+                                
+                                {item.status_pagamento === 'aberto' && (
+                                  <button onClick={() => { setModalOpen('isBaixaLancamentoOpen', true); setSelectedLancamentoIdForModal(item.id); setActiveMenuId(null); }} className="w-full px-4 py-2 hover:bg-neutral-50 text-[11px] font-bold text-bank-truth-green flex items-center gap-3">
+                                    <CheckCircle2 className="w-4 h-4" /> Dar Baixa
+                                  </button>
+                                )}
+
+                                {isMaster && item.status_aprovacao !== 'confirmado_master' && (
+                                  <button onClick={() => { setModalOpen('isAprovarModalOpen' as any, true); setSelectedLancamentoIdForModal(item.id); setActiveMenuId(null); }} className="w-full px-4 py-2 hover:bg-neutral-50 text-[11px] font-bold text-primary flex items-center gap-3 border-t border-neutral-50">
+                                    <ShieldCheck className="w-4 h-4" /> Aprovar Master
+                                  </button>
+                                )}
+
+                                {isMaster && (
+                                  <button onClick={() => { if(confirm('Excluir?')) deleteLancamento({ id: item.id }); setActiveMenuId(null); }} className="w-full px-4 py-2 hover:bg-red-50 text-[11px] font-bold text-alert-red flex items-center gap-3">
+                                    <Trash2 className="w-4 h-4" /> Excluir
+                                  </button>
+                                )}
+                              </motion.div>
+                            )}
+                          </AnimatePresence>
                         </td>
                       </tr>
                     ))}
@@ -243,9 +243,8 @@ export default function Lancamentos({ typeOverride, titleOverride, statusPagamen
           </table>
         </div>
       </div>
-      {/* Modais omitidos para brevidade do plano de escrita, serão criados nos próximos passos */}
     </div>
   );
 
-  function handleExportCSV() { /* lógica simplificada */ }
+  function handleExportCSV() { alert('Iniciando exportação CSV...'); }
 }
