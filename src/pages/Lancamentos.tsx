@@ -33,7 +33,7 @@ import { useDragScroll } from '../hooks/useDragScroll';
 import { LancamentoFinanceiro } from '../types';
 import { motion, AnimatePresence } from 'motion/react';
 import Button from '../components/Button';
-import BaixaLoteModal from '../components/Lancamentos/BaixaLoteModal';
+import { Landmark, Building2 } from 'lucide-react';
 
 interface LancamentosProps {
   typeOverride?: 'entrada' | 'saida';
@@ -80,10 +80,7 @@ export default function Lancamentos({
 
   const hasActiveFilters = searchTerm !== '' || approvalStatus !== 'all' || typeFilter !== 'all' || authorIdFilter !== 'all' || categoryIdFilter !== 'all';
 
-  // Checkbox Selection State for Batch Actions
-  const [selectedIds, setSelectedIds] = useState<string[]>([]);
-  const [isBaixaLoteOpen, setIsBaixaLoteOpen] = useState(false);
-  
+  // Row action dropdown active state
   const [activeMenuId, setActiveMenuId] = useState<string | null>(null);
 
   const {
@@ -198,8 +195,76 @@ export default function Lancamentos({
     }
   };
 
+  // Calculate balances for the account cards based on filtered list
+  const accountCardsData = useMemo(() => {
+    return activeContas.map(acc => {
+      const accLaunches = allLancamentos.filter(l => l.conta_bancaria_id === acc.id);
+      const balance = accLaunches.reduce((sum, l) => {
+        const val = Number(l.valor_previsto) || 0;
+        return l.tipo === 'entrada' ? sum + val : sum - val;
+      }, 0);
+      return { ...acc, filteredBalance: balance };
+    });
+  }, [activeContas, allLancamentos]);
+
   return (
     <div className="space-y-6 animate-fade-in" onClick={() => setActiveMenuId(null)}>
+      {/* Account Selector Row (Dashboard Style) */}
+      <section className="space-y-3">
+        <div className="flex items-center justify-between px-1">
+          <h4 className="text-[10px] font-black uppercase tracking-[0.2em] text-secondary flex items-center gap-2">
+            <Building2 className="w-4 h-4" /> Filtrar por Conta
+          </h4>
+          {selectedAccountId && (
+            <button
+              onClick={() => setSelectedAccountId(null)}
+              className="text-[10px] font-black text-primary uppercase tracking-widest hover:underline"
+            >
+              Limpar Filtro
+            </button>
+          )}
+        </div>
+        <div
+          ref={dragScrollTabs.ref}
+          {...dragScrollTabs.props}
+          className="flex gap-4 overflow-x-auto pb-2 scroll-smooth select-none no-scrollbar"
+        >
+          {accountCardsData.map((acc) => {
+            const isSelected = selectedAccountId === acc.id;
+            return (
+              <div
+                key={acc.id}
+                onClick={() => setSelectedAccountId(isSelected ? null : acc.id)}
+                className={`flex-shrink-0 w-56 bg-white p-4 border-2 rounded-2xl flex items-center justify-between group cursor-pointer transition-all shadow-sm ${
+                  isSelected ? 'border-primary bg-primary/5 ring-4 ring-primary/10' : 'border-neutral-100 hover:border-neutral-200'
+                }`}
+              >
+                <div className="flex items-center gap-3 min-w-0">
+                  <div className={`w-10 h-10 rounded-xl flex items-center justify-center font-black uppercase shrink-0 transition-colors ${
+                    isSelected ? 'bg-primary text-white' : 'bg-neutral-100 text-neutral-400'
+                  }`}>
+                    {acc.logo_url ? (
+                      <img src={acc.logo_url} alt="" className="w-full h-full object-cover rounded-xl" />
+                    ) : (
+                      acc.nome.substring(0, 2)
+                    )}
+                  </div>
+                  <div className="min-w-0">
+                    <p className={`text-[10px] font-black uppercase truncate tracking-tighter ${isSelected ? 'text-primary' : 'text-neutral-900'}`}>
+                      {acc.nome_banco || acc.nome}
+                    </p>
+                    <p className="text-[11px] font-black font-mono text-neutral-500 mt-0.5">
+                      {valueFormatter(acc.filteredBalance)}
+                    </p>
+                  </div>
+                </div>
+                {isSelected && <CheckCircle2 className="w-4 h-4 text-primary shrink-0 ml-2" />}
+              </div>
+            );
+          })}
+        </div>
+      </section>
+
       {/* Header section */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
@@ -220,14 +285,6 @@ export default function Lancamentos({
               Aprovar ({selectedIds.length})
             </Button>
           )}
-          
-          <Button
-            onClick={() => setIsBaixaLoteOpen(true)}
-            disabled={selectedIds.length === 0}
-          >
-            <CheckCircle2 className="w-4 h-4" />
-            Baixar ({selectedIds.length})
-          </Button>
         </div>
       </div>
 
@@ -557,12 +614,6 @@ export default function Lancamentos({
         )}
       </AnimatePresence>
 
-      <BaixaLoteModal 
-        isOpen={isBaixaLoteOpen}
-        onClose={() => setIsBaixaLoteOpen(false)}
-        selectedIds={selectedIds}
-        onSuccess={() => setSelectedIds([])}
-      />
     </div>
   );
 }
