@@ -461,6 +461,18 @@ export default function NovoLancamentoDrawer() {
       return;
     }
 
+    if (!lancamentoFormDraft.categoria_id) {
+      showToast('Por favor, selecione uma categoria.', 'warning');
+      setIsSubmitting(false);
+      return;
+    }
+
+    if (!lancamentoFormDraft.centro_custo_id) {
+      showToast('Por favor, selecione um centro de custo.', 'warning');
+      setIsSubmitting(false);
+      return;
+    }
+
     const itemDetails = {
 
       tipo: lancamentoFormDraft.tipo,
@@ -1051,7 +1063,7 @@ export default function NovoLancamentoDrawer() {
                           <option value="mensal">Mensal</option>
                           <option value="bimestral">Bimestral</option>
                           <option value="trimestral">Trimestral</option>
-                          <option value="semestral">Semestral</option>
+                          <option value="semestral">Semanal</option>
                           <option value="anual">Anual</option>
                           <option value="personalizado">Personalizado</option>
                         </select>
