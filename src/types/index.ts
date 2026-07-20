@@ -55,7 +55,7 @@ export interface ContaBancaria {
 }
 
 export type StatusAprovacao = 'pendente_digital' | 'digital' | 'confirmado_master';
-export type StatusPagamento = 'aberto' | 'pago' | 'pago_parcial' | 'bpi';
+export type StatusPagamento = 'aberto' | 'pago' | 'pago_parcial' | 'bpi' | 'quitação_pendente';
 
 export interface LancamentoFinanceiro {
   id: string;

@@ -239,8 +239,9 @@ export const lancamentosService = {
           ...rest,
           valor_previsto: valorPagoEfetivo,
           valor_recebido: valorPagoEfetivo,
-          status_pagamento: finalPaymentStatus,
+          status_pagamento: isMaster ? 'pago' : 'quitação_pendente',
           data_pagamento: dataPagamentoVal,
+
           conta_bancaria_id: contaBancariaVal,
           tipo_baixa: data.tipo_baixa || 'financeira',
           desconto_valor: data.valor_desconto || 0,
@@ -259,8 +260,9 @@ export const lancamentosService = {
         .from('lancamentos_financeiros')
         .update({
           valor_recebido: isBPI ? 0 : valorPagoEfetivo,
-          status_pagamento: finalPaymentStatus,
+          status_pagamento: isMaster ? 'pago' : 'quitação_pendente',
           data_pagamento: dataPagamentoVal,
+
           conta_bancaria_id: contaBancariaVal,
           tipo_baixa: data.tipo_baixa || 'financeira',
           desconto_valor: data.valor_desconto || 0,
@@ -323,26 +325,10 @@ export const lancamentosService = {
     if (error) throw error;
   },
 
-  confirmarQuitacao: async (id: string): Promise<void> => {
+  confirmarQuitacao: async (id: string, isMaster: boolean = false): Promise<void> => {
     const { error } = await supabase
       .from('lancamentos_financeiros')
-      .update({ status_pagamento: 'pago' })
-      .eq('id', id);
-    if (error) throw error;
-  },
-
-  confirmarQuitacao: async (id: string): Promise<void> => {
-    const { error } = await supabase
-      .from('lancamentos_financeiros')
-      .update({ status_pagamento: 'pago' })
-      .eq('id', id);
-    if (error) throw error;
-  },
-
-  confirmarQuitacao: async (id: string): Promise<void> => {
-    const { error } = await supabase
-      .from('lancamentos_financeiros')
-      .update({ status_pagamento: 'pago' })
+      .update({ status_pagamento: isMaster ? 'pago' : 'quitação_pendente' })
       .eq('id', id);
     if (error) throw error;
   },

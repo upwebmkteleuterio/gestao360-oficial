@@ -38,7 +38,7 @@ export default function LancamentoDetailsSlide() {
     setSelectedLancamentoIdForModal 
   } = useUIStore();
 
-  const { updateLancamento } = useLancamentos();
+  const { updateLancamento, baixaLancamento } = useLancamentos();
   const { data: entidades = [] } = useEntidades();
   const { data: categorias = [] } = useCategorias();
   const { data: usuarios = [] } = useUsuarios();
@@ -97,12 +97,12 @@ export default function LancamentoDetailsSlide() {
     if (!lancamento) return;
     setLoadingAction(true);
     try {
-      await updateLancamento({ 
-        id: lancamento.id, 
-        data: { 
+      await updateLancamento({
+        id: lancamento.id,
+        data: {
           status_aprovacao: 'confirmado_master',
           data_aprovacao: new Date().toISOString()
-        } 
+        }
       });
       handleClose();
     } catch (err: any) {
@@ -117,12 +117,12 @@ export default function LancamentoDetailsSlide() {
     if (!confirm('Deseja realmente reprovar este lançamento? Ele voltará para o status Pendente.')) return;
     setLoadingAction(true);
     try {
-      await updateLancamento({ 
-        id: lancamento.id, 
-        data: { 
+      await updateLancamento({
+        id: lancamento.id,
+        data: {
           status_aprovacao: 'pendente_digital',
-          data_aprovacao: null 
-        } 
+          data_aprovacao: null
+        }
       });
       handleClose();
     } catch (err: any) {
@@ -197,11 +197,11 @@ export default function LancamentoDetailsSlide() {
                     <div className="flex items-center gap-2">
                       {lancamento.status_aprovacao === 'confirmado_master' ? (
                         <div className="flex items-center gap-1.5 text-neutral-900 font-black text-[10px] uppercase">
-                          <ShieldCheck className="w-4 h-4 text-primary" /> Confirmado
+                          <ShieldCheck className="w-4 h-4 text-primary" /> Lançamento Aprovado
                         </div>
                       ) : (
                         <div className="flex items-center gap-1.5 text-secondary font-black text-[10px] uppercase">
-                          <Info className="w-4 h-4" /> Pendente
+                          <Info className="w-4 h-4" /> Lançamento Pendente
                         </div>
                       )}
                     </div>
@@ -212,6 +212,10 @@ export default function LancamentoDetailsSlide() {
                       {lancamento.status_pagamento === 'bpi' ? (
                         <div className="flex items-center gap-1.5 text-alert-red font-black text-[10px] uppercase">
                           <AlertTriangle className="w-4 h-4" /> BPI
+                        </div>
+                      ) : lancamento.status_pagamento === 'quitação_pendente' ? (
+                        <div className="flex items-center gap-1.5 text-amber-600 font-black text-[10px] uppercase">
+                          <Clock className="w-4 h-4" /> Quitação Pendente
                         </div>
                       ) : lancamento.status_pagamento === 'pago' ? (
                         <div className="flex items-center gap-1.5 text-bank-truth-green font-black text-[10px] uppercase">
@@ -224,6 +228,7 @@ export default function LancamentoDetailsSlide() {
                       )}
                     </div>
                   </div>
+
                 </div>
 
                 <div className="space-y-4">
@@ -255,7 +260,7 @@ export default function LancamentoDetailsSlide() {
                     <div>
                       <span className="text-[8px] font-black uppercase tracking-widest text-white/40 block mb-1">Confirmado em</span>
                       <span className="text-xs font-black font-mono">
-                        {lancamento.status_aprovacao === 'confirmado_master' 
+                        {lancamento.status_aprovacao === 'confirmado_master'
                           ? ((lancamento as any).data_aprovacao ? formatDateTime((lancamento as any).data_aprovacao) : 'Sem registro')
                           : 'Aguardando Aprovação'}
                       </span>
@@ -267,6 +272,7 @@ export default function LancamentoDetailsSlide() {
                       </div>
                     )}
                   </div>
+  
                 </div>
 
                 <div className="space-y-3">

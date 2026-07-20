@@ -340,7 +340,7 @@ export function useContas() {
 export function useLancamentos(filters?: any) {
   const queryClient = useQueryClient();
 
-  const { user, role } = useAuth();
+  const { role } = useAuth();
   const isMaster = role === 'master';
 
   const query = useQuery({

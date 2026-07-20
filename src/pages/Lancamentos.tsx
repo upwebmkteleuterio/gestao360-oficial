@@ -425,6 +425,7 @@ export default function Lancamentos({
                           <span className="text-neutral-300 font-bold uppercase text-[9px] tracking-widest">Aguardando</span>
                         )}
                       </td>
+
                       <td className={`py-3 px-4 text-right font-black font-mono text-xs ${item.tipo === 'entrada' ? 'text-bank-truth-green' : 'text-neutral-950'}`}>
                         {valueFormatter(item.valor_previsto)}
                       </td>
