@@ -1,4 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from './useAuth';
 import { entidadesService } from '../services/entidadesService';
@@ -21,8 +22,34 @@ export function useNotifications() {
     queryKey: ['notifications', user?.id],
     queryFn: notificationsService.getAll,
     enabled: !!user?.id,
-    refetchInterval: 30000,
+    refetchInterval: 60000, // Fallback de 1 minuto
   });
+
+  // REALTIME: Escutar novas notificações
+  useEffect(() => {
+    if (!user?.id) return;
+
+    const channel = supabase
+      .channel('schema-db-changes')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'notifications',
+          filter: `user_id=eq.${user.id}`
+        },
+        () => {
+          // Atualiza a lista instantaneamente quando algo muda no banco
+          queryClient.invalidateQueries({ queryKey: ['notifications', user.id] });
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [user?.id, queryClient]);
 
   const markReadMutation = useMutation({
     mutationFn: notificationsService.markAsRead,
@@ -47,6 +74,7 @@ export function useNotifications() {
   };
 }
 
+// ... rest of the file stays exactly the same
 export function useFinancialSummary(filters?: { accountId?: string, costCenterId?: string }) {
   const { user } = useAuth();
   
@@ -281,7 +309,7 @@ export function useContas() {
   });
 
   const createMutation = useMutation({
-    mutationFn: contasService.create,
+    mutationFn: status === 'ativo' ? contasService.create : async (item: any) => { throw new Error('Cannot create inactive account'); },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['contas'] });
     }
@@ -381,8 +409,8 @@ export function useLancamentos(filters?: any) {
 
   return {
     ...query,
-    data: query.data?.data || [], // Retorna o array de dados como 'data' para manter compatibilidade
-    totalCount: query.data?.count || 0, // Expõe o total de registros para a paginação
+    data: query.data?.data || [], 
+    totalCount: query.data?.count || 0, 
     createLancamento: createMutation.mutateAsync,
     updateLancamento: updateMutation.mutateAsync,
     deleteLancamento: deleteMutation.mutateAsync,

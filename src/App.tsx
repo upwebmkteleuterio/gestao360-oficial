@@ -53,18 +53,12 @@ const queryClient = new QueryClient({
 });
 
 function NotificationDropdown() {
-  // Safe way to call useNotifications without throwing context error if outside AuthProvider
   const { notifications, unreadCount, markAsRead, markAllAsRead } = useNotifications();
   const [isOpen, setIsOpen] = useState(false);
   const navigate = useNavigate();
 
-  // Mark all as read immediately when opening the dropdown
   const handleToggle = () => {
-    const nextState = !isOpen;
-    setIsOpen(nextState);
-    if (nextState && unreadCount > 0) {
-      markAllAsRead();
-    }
+    setIsOpen(!isOpen);
   };
 
   return (
@@ -102,7 +96,10 @@ function NotificationDropdown() {
                     key={n.id}
                     onClick={() => {
                       markAsRead(n.id);
-                      if (n.link) navigate(n.link);
+                      if (n.link) {
+                        // Navegação com Deep Link
+                        navigate(n.link);
+                      }
                       setIsOpen(false);
                     }}
                     className={`p-4 border-b border-surface-border hover:bg-surface-low-low transition-colors cursor-pointer relative ${!n.read ? 'bg-primary/5' : ''}`}
