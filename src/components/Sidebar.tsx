@@ -40,14 +40,14 @@ export default function Sidebar({ isOpen, onClose, isCollapsed }: SidebarProps) 
   const navItems = [
     { id: 'dashboard' as TabType, label: 'Painel Geral', icon: LayoutDashboard, path: '/dashboard', roles: ['master', 'gerente', 'colaborador'] },
     {
-      label: 'Tesouraria',
+      label: 'Financeiro',
       icon: Coins,
       isGroup: true,
       roles: ['master', 'gerente', 'colaborador'],
       subItems: [
         { id: 'pagar' as TabType, label: 'Contas a Pagar', icon: ArrowDownLeft, path: '/pagar' },
         { id: 'receber' as TabType, label: 'Contas a Receber', icon: ArrowUpRight, path: '/receber' },
-        { id: 'lancamentos' as TabType, label: 'Histórico Global', icon: Receipt, path: '/lancamentos' },
+        { id: 'lancamentos' as TabType, label: 'Extrato', icon: Receipt, path: '/lancamentos' },
       ]
     },
     { id: 'conciliacao' as TabType, label: 'Conciliação Bancária', icon: FileSpreadsheet, path: '/conciliacao', roles: ['master', 'gerente'] },
@@ -184,7 +184,7 @@ export default function Sidebar({ isOpen, onClose, isCollapsed }: SidebarProps) 
               );
             }
 
-            const isActive = location.pathname.startsWith(item.path);
+            const isActive = location.pathname.startsWith((item as any).path);
             const Icon = (item as any).icon;
             return (
               <button

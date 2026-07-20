@@ -205,7 +205,7 @@ export default function Lancamentos({
         <div>
           <h1 className="text-2xl font-black uppercase tracking-tighter text-neutral-900 flex items-center gap-3">
             <Receipt className="w-8 h-8 text-primary" />
-            {titleOverride || 'Histórico Global'}
+            {titleOverride || 'Extrato'}
           </h1>
           <p className="text-[10px] font-black uppercase tracking-widest text-neutral-400 mt-1">Gestão centralizada de movimentações e conciliação</p>
         </div>
@@ -216,19 +216,19 @@ export default function Lancamentos({
               onClick={() => handleBatchApprove()}
               disabled={selectedIds.length === 0 || isBatchApproving}
             >
+              <ShieldCheck className="w-4 h-4" />
               Aprovar ({selectedIds.length})
             </Button>
           )}
-          {selectedIds.length > 0 && (
-            <Button
-              variant="outline"
-              onClick={() => setIsBaixaLoteOpen(true)}
-              className="bg-bank-truth-green/10 text-bank-truth-green border-bank-truth-green/20 hover:bg-bank-truth-green hover:text-white"
-            >
-              Baixar ({selectedIds.length})
-              <CheckCircle2 className="w-4 h-4" />
-            </Button>
-          )}
+          
+          <Button
+            onClick={() => setIsBaixaLoteOpen(true)}
+            disabled={selectedIds.length === 0}
+            className="!bg-bank-truth-green"
+          >
+            <CheckCircle2 className="w-4 h-4" />
+            Baixar ({selectedIds.length})
+          </Button>
         </div>
       </div>
 
@@ -369,12 +369,14 @@ export default function Lancamentos({
                                 exit={{ opacity: 0, scale: 0.95, y: -10 }}
                                 className="absolute right-0 top-full mt-2 w-48 bg-white border border-neutral-100 rounded-2xl shadow-2xl z-50 p-2 overflow-hidden"
                               >
-                                {item.status_pagamento !== 'pago' ? (
+                                {(role === 'master' || role === 'gerente') && item.status_pagamento !== 'pago' && (
                                   <button onClick={() => handleOpenBaixa(item.id)} className="w-full flex items-center gap-3 px-4 py-3 text-bank-truth-green hover:bg-emerald-50 rounded-xl transition-all">
                                     <CheckCircle2 className="w-4 h-4" />
                                     <span className="text-[10px] font-black uppercase tracking-widest">Dar Baixa</span>
                                   </button>
-                                ) : (
+                                )}
+                                
+                                {item.status_pagamento === 'pago' && (
                                   <button onClick={() => handleEstornar(item.id)} className="w-full flex items-center gap-3 px-4 py-3 text-alert-red hover:bg-red-50 rounded-xl transition-all">
                                     <History className="w-4 h-4" />
                                     <span className="text-[10px] font-black uppercase tracking-widest">Estornar</span>
