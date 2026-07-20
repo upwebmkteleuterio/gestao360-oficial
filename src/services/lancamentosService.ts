@@ -339,6 +339,14 @@ export const lancamentosService = {
     if (error) throw error;
   },
 
+  confirmarQuitacao: async (id: string): Promise<void> => {
+    const { error } = await supabase
+      .from('lancamentos_financeiros')
+      .update({ status_pagamento: 'pago' })
+      .eq('id', id);
+    if (error) throw error;
+  },
+
   getAnexos: async (lancamentoId: string): Promise<any[]> => {
     const { data, error } = await supabase
       .from('lancamento_anexos')
