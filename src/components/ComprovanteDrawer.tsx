@@ -133,7 +133,7 @@ export default function ComprovanteDrawer() {
               <div className="grid grid-cols-2 gap-4">
                 <div className="bg-white p-4 rounded-2xl border border-neutral-100 space-y-1.5">
                   <span className="text-[9px] font-black uppercase text-secondary tracking-widest flex items-center gap-1.5">
-                    <User className="w-3 h-3" /> Entidade
+                    <User className="w-3 h-3" /> Local / Cliente
                   </span>
                   <p className="text-xs font-black text-on-surface truncate">{entidade?.nome_razao_social || 'N/A'}</p>
                   <p className="text-[9px] text-neutral-400 font-mono">{entidade?.documento || 'Documento não informado'}</p>
@@ -151,9 +151,9 @@ export default function ComprovanteDrawer() {
               <div className="bg-white rounded-3xl border border-neutral-100 overflow-hidden">
                 <div className="bg-neutral-50 px-5 py-3 border-b border-neutral-100 flex items-center gap-2">
                   <Calendar className="w-3.5 h-3.5 text-primary" />
-                  <span className="text-[10px] font-black uppercase tracking-widest text-neutral-900">Cronograma Fiscal</span>
+                  <span className="text-[10px] font-black uppercase tracking-widest text-neutral-900">Cronograma e Auditoria</span>
                 </div>
-                <div className="p-5 grid grid-cols-3 gap-4">
+                <div className="p-5 grid grid-cols-2 gap-y-6 gap-x-4">
                   <div>
                     <span className="text-[9px] font-black uppercase text-secondary tracking-widest block mb-1">Emissão</span>
                     <p className="text-xs font-bold text-on-surface">{formatDate(lancamento.data_emissao)}</p>
@@ -163,8 +163,24 @@ export default function ComprovanteDrawer() {
                     <p className="text-xs font-bold text-on-surface">{formatDate(lancamento.data_vencimento)}</p>
                   </div>
                   <div>
-                    <span className="text-[9px] font-black uppercase text-secondary tracking-widest block mb-1">Competência</span>
+                    <span className="text-[9px] font-black uppercase text-secondary tracking-widest block mb-1">Competência (Referência)</span>
                     <p className="text-xs font-bold text-on-surface">{formatDate(lancamento.data_competencia || lancamento.data_emissao)}</p>
+                  </div>
+                  <div>
+                    <span className="text-[9px] font-black uppercase text-secondary tracking-widest block mb-1">Recebido / Pago em</span>
+                    <p className={`text-xs font-bold ${lancamento.data_pagamento ? 'text-bank-truth-green' : 'text-neutral-400'}`}>
+                      {formatDate(lancamento.data_pagamento)}
+                    </p>
+                  </div>
+                  <div>
+                    <span className="text-[9px] font-black uppercase text-secondary tracking-widest block mb-1">Confirmado Master em</span>
+                    <p className={`text-xs font-bold ${(lancamento as any).data_aprovacao ? 'text-primary' : 'text-neutral-400'}`}>
+                      {formatDate((lancamento as any).data_aprovacao)}
+                    </p>
+                  </div>
+                  <div>
+                    <span className="text-[9px] font-black uppercase text-secondary tracking-widest block mb-1">Responsável</span>
+                    <p className="text-xs font-bold text-on-surface truncate">{autor?.nome || 'Sistema'}</p>
                   </div>
                 </div>
               </div>

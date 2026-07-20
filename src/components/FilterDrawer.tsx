@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { X, Filter, Calendar, User, Tag, UserSquare2, CheckCircle2, RotateCcw } from 'lucide-react';
+import { X, Filter, Calendar, User, Tag, UserSquare2, CheckCircle2, RotateCcw, Info } from 'lucide-react';
 import { useUsuarios, useCategorias, useEntidades } from '../hooks/useData';
 
 interface FilterDrawerProps {
@@ -33,6 +33,7 @@ export default function FilterDrawer({ isOpen, onClose, onApply, onClear, curren
       categoryId: 'all',
       clientId: 'all',
       status: 'all',
+      approvalStatus: 'all',
       startDate: '',
       endDate: ''
     });
@@ -95,6 +96,22 @@ export default function FilterDrawer({ isOpen, onClose, onApply, onClear, curren
                   {usuarios.map((u: any) => (
                     <option key={u.id} value={u.id}>{u.nome || u.email}</option>
                   ))}
+                </select>
+              </div>
+
+              {/* Status de Aprovação */}
+              <div className="space-y-3">
+                <label className="flex items-center gap-2 text-[10px] font-black text-secondary uppercase tracking-widest">
+                  <Info className="w-3.5 h-3.5" /> Status de Aprovação
+                </label>
+                <select
+                  value={filters.approvalStatus}
+                  onChange={(e) => setFilters({ ...filters, approvalStatus: e.target.value })}
+                  className="w-full h-12 bg-white border-2 border-neutral-100 rounded-xl px-4 text-xs font-bold focus:border-primary outline-none transition-all"
+                >
+                  <option value="all">Todos os Status</option>
+                  <option value="pendente_digital">Pendente de Aprovação</option>
+                  <option value="confirmado_master">Aprovado pelo Master</option>
                 </select>
               </div>
 

@@ -402,12 +402,26 @@ export const lancamentosService = {
     },
   
     approveInBatch: async (ids: string[], targetStatus: string): Promise<boolean> => {
-    const { error } = await supabase
-      .from('lancamentos_financeiros')
-      .update({ status_aprovacao: targetStatus })
-      .in('id', ids);
-    
-    if (error) throw error;
-    return true;
-  }
-};
+      const { error } = await supabase
+        .from('lancamentos_financeiros')
+        .update({ status_aprovacao: targetStatus })
+        .in('id', ids);
+      
+      if (error) throw error;
+      return true;
+    },
+  
+    baixaInBatch: async (ids: string[], data: {
+      data_pagamento: string,
+      conta_bancaria_id: string
+    }): Promise<boolean> => {
+      const { error } = await supabase.rpc('batch_full_payment', {
+        p_ids: ids,
+        p_data_pagamento: data.data_pagamento,
+        p_conta_id: data.conta_bancaria_id
+      });
+      
+      if (error) throw error;
+      return true;
+    }
+  };

@@ -39,10 +39,11 @@ import FilterDrawer from '../components/FilterDrawer';
 interface LancamentosProps {
   typeOverride?: 'entrada' | 'saida';
   titleOverride?: string;
-  statusPagamentoOverride?: 'aberto' | 'pago';
+  statusPagamentoOverride?: 'aberto' | 'pago' | 'pago_parcial' | 'bpi';
+  statusAprovacaoOverride?: string;
 }
 
-export default function Lancamentos({ typeOverride, titleOverride, statusPagamentoOverride }: LancamentosProps) {
+export default function Lancamentos({ typeOverride, titleOverride, statusPagamentoOverride, statusAprovacaoOverride }: LancamentosProps) {
   const { role } = useAuth();
   const isMaster = role === 'master';
   
@@ -55,6 +56,7 @@ export default function Lancamentos({ typeOverride, titleOverride, statusPagamen
     categoryId: 'all',
     clientId: 'all',
     status: statusPagamentoOverride || 'all',
+    approvalStatus: statusAprovacaoOverride || 'all',
     startDate: '',
     endDate: ''
   });
@@ -64,18 +66,21 @@ export default function Lancamentos({ typeOverride, titleOverride, statusPagamen
            activeFilters.categoryId !== 'all' ||
            activeFilters.clientId !== 'all' ||
            (activeFilters.status !== 'all' && activeFilters.status !== statusPagamentoOverride) ||
+           (activeFilters.approvalStatus !== 'all' && activeFilters.approvalStatus !== statusAprovacaoOverride) ||
            activeFilters.startDate !== '' ||
            activeFilters.endDate !== '';
-  }, [activeFilters, statusPagamentoOverride]);
+  }, [activeFilters, statusPagamentoOverride, statusAprovacaoOverride]);
 
   const {
     data: allLancamentos = [],
     deleteLancamento,
     batchApprove,
+    batchBaixa,
     isLoading
   } = useLancamentos({
     searchTerm,
     type: typeOverride || 'all',
+    approvalStatus: statusAprovacaoOverride || undefined,
     ...activeFilters
   });
 
@@ -88,6 +93,25 @@ export default function Lancamentos({ typeOverride, titleOverride, statusPagamen
   const { data: rawContas = [] } = useContas();
   const { data: entidades = [] } = useEntidades();
   const { data: categorias = [] } = useCategorias();
+
+  const handleBatchBaixa = async () => {
+    if (selectedIds.length === 0) return;
+    if (confirm(`Deseja dar baixa em ${selectedIds.length} títulos selecionados?\n(Isso usará a conta padrão e a data de hoje)`)) {
+      try {
+        await batchBaixa({
+          ids: selectedIds,
+          data: {
+            data_pagamento: new Date().toISOString().split('T')[0],
+            conta_bancaria_id: rawContas[0]?.id
+          }
+        });
+        setSelectedIds([]);
+        alert('Baixa em lote realizada com sucesso!');
+      } catch (err) {
+        alert('Erro ao realizar baixa em lote.');
+      }
+    }
+  };
 
   const { setModalOpen, setSelectedLancamentoIdForModal } = useUIStore();
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
@@ -122,6 +146,11 @@ export default function Lancamentos({ typeOverride, titleOverride, statusPagamen
         <div className="flex flex-wrap items-center gap-3">
           {selectedIds.length > 0 && (
             <motion.div initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} className="flex gap-2">
+              {statusPagamentoOverride === 'aberto' && (
+                <Button onClick={handleBatchBaixa} className="bg-bank-truth-green text-white">
+                  Dar Baixa Selecionados ({selectedIds.length})
+                </Button>
+              )}
               {isMaster && (
                 <Button onClick={() => batchApprove({ ids: selectedIds, targetStatus: 'confirmado_master' })}>
                   Aprovar Selecionados
@@ -152,6 +181,7 @@ export default function Lancamentos({ typeOverride, titleOverride, statusPagamen
                 categoryId: 'all',
                 clientId: 'all',
                 status: statusPagamentoOverride || 'all',
+                approvalStatus: statusAprovacaoOverride || 'all',
                 startDate: '',
                 endDate: ''
               })}
@@ -184,6 +214,7 @@ export default function Lancamentos({ typeOverride, titleOverride, statusPagamen
           categoryId: 'all',
           clientId: 'all',
           status: statusPagamentoOverride || 'all',
+          approvalStatus: statusAprovacaoOverride || 'all',
           startDate: '',
           endDate: ''
         })}

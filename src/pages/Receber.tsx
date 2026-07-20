@@ -3,10 +3,11 @@ import Lancamentos from './Lancamentos';
 
 export default function Receber() {
   return (
-    <Lancamentos 
-      typeOverride="entrada" 
-      titleOverride="Contas a Receber" 
+    <Lancamentos
+      typeOverride="entrada"
+      titleOverride="Contas a Receber"
       statusPagamentoOverride="aberto"
+      statusAprovacaoOverride="confirmado_master"
     />
   );
 }
