@@ -24,7 +24,6 @@ import {
 import { useUIStore } from '../../store/uiStore';
 import { useLancamentos, useEntidades, useCategorias, useUsuarios, useLancamentoAnexos } from '../../hooks/useData';
 import { LancamentoFinanceiro } from '../../types';
-import Button from '../Button';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 
@@ -65,12 +64,16 @@ export default function LancamentoDetailsSlide() {
 
   const formatDate = (dateStr: string | null | undefined) => {
     if (!dateStr) return '-';
-    return format(new Date(dateStr), 'dd/MM/yyyy', { locale: ptBR });
+    try {
+      return format(new Date(dateStr + 'T00:00:00'), 'dd/MM/yyyy', { locale: ptBR });
+    } catch { return dateStr; }
   };
 
   const formatDateTime = (dateStr: string | null | undefined) => {
     if (!dateStr) return '-';
-    return format(new Date(dateStr), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR });
+    try {
+      return format(new Date(dateStr), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR });
+    } catch { return dateStr; }
   };
 
   const handleAprovar = async () => {
@@ -92,7 +95,7 @@ export default function LancamentoDetailsSlide() {
   };
 
   const handleReprovar = async () => {
-    if (!confirm('Deseja realmente reprovar este lançamento? Ele voltará para o status Pendente Digital.')) return;
+    if (!confirm('Deseja realmente reprovar este lançamento? Ele voltará para o status Pendente.')) return;
     setLoadingAction(true);
     try {
       await updateLancamento({ 
@@ -132,7 +135,6 @@ export default function LancamentoDetailsSlide() {
             transition={{ type: 'spring', damping: 25, stiffness: 200 }}
             className="bg-white w-full max-w-[500px] h-full shadow-2xl relative z-10 flex flex-col border-l border-neutral-100"
           >
-            {/* Header */}
             <header className="px-8 py-6 border-b border-neutral-100 flex justify-between items-center bg-neutral-50/50 shrink-0">
               <div>
                 <div className="flex items-center gap-2 mb-1">
@@ -152,25 +154,18 @@ export default function LancamentoDetailsSlide() {
               </button>
             </header>
 
-            {/* Content */}
             <div className="flex-1 overflow-y-auto p-8 space-y-8 scrollbar-thin">
-              
-              {/* Status Section */}
               <div className="grid grid-cols-2 gap-4">
                 <div className="p-4 bg-neutral-50 rounded-2xl border border-neutral-100">
                   <span className="text-[9px] font-black text-secondary uppercase tracking-widest block mb-2">Status Aprovação</span>
                   <div className="flex items-center gap-2">
                     {lancamento.status_aprovacao === 'confirmado_master' ? (
                       <div className="flex items-center gap-1.5 text-neutral-900 font-black text-[10px] uppercase">
-                        <ShieldCheck className="w-4 h-4 text-primary" /> Confirmado Master
-                      </div>
-                    ) : lancamento.status_aprovacao === 'digital' ? (
-                      <div className="flex items-center gap-1.5 text-pending-amber font-black text-[10px] uppercase">
-                        <Clock className="w-4 h-4" /> Digital (Em Revisão)
+                        <ShieldCheck className="w-4 h-4 text-primary" /> Confirmado
                       </div>
                     ) : (
                       <div className="flex items-center gap-1.5 text-secondary font-black text-[10px] uppercase">
-                        <Info className="w-4 h-4" /> Pendente Digital
+                        <Info className="w-4 h-4" /> Pendente
                       </div>
                     )}
                   </div>
@@ -178,9 +173,13 @@ export default function LancamentoDetailsSlide() {
                 <div className="p-4 bg-neutral-50 rounded-2xl border border-neutral-100">
                   <span className="text-[9px] font-black text-secondary uppercase tracking-widest block mb-2">Status Pagamento</span>
                   <div className="flex items-center gap-2">
-                    {lancamento.status_pagamento === 'pago' ? (
+                    {item.status_pagamento === 'bpi' ? (
+                      <div className="flex items-center gap-1.5 text-alert-red font-black text-[10px] uppercase">
+                        <AlertTriangle className="w-4 h-4" /> BPI
+                      </div>
+                    ) : lancamento.status_pagamento === 'pago' ? (
                       <div className="flex items-center gap-1.5 text-bank-truth-green font-black text-[10px] uppercase">
-                        <CheckCircle2 className="w-4 h-4" /> Pago / Recebido
+                        <CheckCircle2 className="w-4 h-4" /> Liquidado
                       </div>
                     ) : (
                       <div className="flex items-center gap-1.5 text-alert-red font-black text-[10px] uppercase">
@@ -191,7 +190,6 @@ export default function LancamentoDetailsSlide() {
                 </div>
               </div>
 
-              {/* General Info */}
               <div className="space-y-4">
                 <h4 className="text-[10px] font-black uppercase tracking-widest text-primary flex items-center gap-2 border-b border-neutral-100 pb-2">
                   <Info className="w-4 h-4" /> Informações Gerais
@@ -201,11 +199,10 @@ export default function LancamentoDetailsSlide() {
                   <DetailItem icon={<User className="w-3.5 h-3.5" />} label="Responsável" value={getUsuarioName(lancamento.usuario_criador_id)} />
                   <DetailItem icon={<Tag className="w-3.5 h-3.5" />} label="Local / Cliente" value={getEntidadeName(lancamento.entidade_id)} />
                   <DetailItem icon={<FileText className="w-3.5 h-3.5" />} label="Categoria" value={getCategoriaName(lancamento.categoria_id)} />
-                  <DetailItem icon={<CreditCard className="w-3.5 h-3.5" />} label="Conta / Caixa" value={lancamento.conta_bancaria_id ? 'Banco / Caixa Destino' : 'Não definida'} />
+                  <DetailItem icon={<CreditCard className="w-3.5 h-3.5" />} label="Conta / Caixa" value={rawContas.find(c => c.id === lancamento.conta_bancaria_id)?.nome_banco || 'Não definida'} />
                 </div>
               </div>
 
-              {/* Finance Info */}
               <div className="space-y-4">
                 <h4 className="text-[10px] font-black uppercase tracking-widest text-primary flex items-center gap-2 border-b border-neutral-100 pb-2">
                   <DollarSign className="w-4 h-4" /> Financeiro e Datas
@@ -221,7 +218,11 @@ export default function LancamentoDetailsSlide() {
                 <div className="p-4 bg-neutral-900 text-white rounded-2xl flex items-center justify-between">
                   <div>
                     <span className="text-[8px] font-black uppercase tracking-widest text-white/40 block mb-1">Confirmado em</span>
-                    <span className="text-xs font-black font-mono">{(lancamento as any).data_aprovacao ? formatDateTime((lancamento as any).data_aprovacao) : 'Aguardando Aprovação'}</span>
+                    <span className="text-xs font-black font-mono">
+                      {lancamento.status_aprovacao === 'confirmado_master' 
+                        ? ((lancamento as any).data_aprovacao ? formatDateTime((lancamento as any).data_aprovacao) : 'Sem registro')
+                        : 'Aguardando Aprovação'}
+                    </span>
                   </div>
                   {(lancamento as any).usuario_aprovador_id && (
                     <div className="text-right">
@@ -232,7 +233,6 @@ export default function LancamentoDetailsSlide() {
                 </div>
               </div>
 
-              {/* Observações */}
               <div className="space-y-3">
                 <h4 className="text-[10px] font-black uppercase tracking-widest text-primary flex items-center gap-2 border-b border-neutral-100 pb-2">
                   <FileText className="w-4 h-4" /> Observações
@@ -242,7 +242,6 @@ export default function LancamentoDetailsSlide() {
                 </div>
               </div>
 
-              {/* Comprovante / Anexos */}
               <div className="space-y-4 pb-8">
                 <h4 className="text-[10px] font-black uppercase tracking-widest text-primary flex items-center gap-2 border-b border-neutral-100 pb-2">
                   <Paperclip className="w-4 h-4" /> Comprovantes e Anexos
@@ -281,12 +280,9 @@ export default function LancamentoDetailsSlide() {
                   </div>
                 )}
               </div>
-
             </div>
 
-            {/* Footer Actions */}
             <footer className="p-8 border-t border-neutral-100 bg-neutral-50/50 space-y-4 shrink-0">
-              
               {!hasAnexo && lancamento.status_aprovacao !== 'confirmado_master' && (
                 <div className="flex items-start gap-3 p-4 bg-white rounded-2xl border border-neutral-100 shadow-sm">
                   <div className={`mt-0.5 w-5 h-5 rounded flex items-center justify-center border-2 transition-all cursor-pointer ${
@@ -319,15 +315,14 @@ export default function LancamentoDetailsSlide() {
                     <button 
                       onClick={handleReprovar}
                       disabled={loadingAction}
-                      className="w-12 h-12 bg-white border-2 border-neutral-200 text-secondary hover:border-alert-red hover:text-alert-red transition-all rounded-xl flex items-center justify-center shadow-sm"
-                      title="Reprovar / Pendenciar"
+                      className="flex-1 h-12 bg-white border-2 border-neutral-200 text-secondary hover:border-alert-red hover:text-alert-red transition-all rounded-xl text-[10px] font-black uppercase tracking-widest flex items-center justify-center gap-2 shadow-sm"
                     >
-                      <XCircle className="w-5 h-5" />
+                      <XCircle className="w-4 h-4" /> Reprovar
                     </button>
                     <button 
                       onClick={handleAprovar}
                       disabled={!canApprove || loadingAction}
-                      className={`flex-1 h-12 text-white transition-all rounded-xl text-[10px] font-black uppercase tracking-[0.2em] flex items-center justify-center gap-2 shadow-lg shadow-primary/20 ${
+                      className={`flex-[2] h-12 text-white transition-all rounded-xl text-[10px] font-black uppercase tracking-[0.2em] flex items-center justify-center gap-2 shadow-lg shadow-primary/20 ${
                         canApprove ? 'bg-neutral-900 hover:bg-black' : 'bg-neutral-300 cursor-not-allowed'
                       }`}
                     >

@@ -8,6 +8,8 @@ export interface LancamentoFilters {
   approvalStatus?: string;
   statusPagamento?: string;
   type?: string;
+  authorId?: string;
+  categoryId?: string;
 }
 
 export const lancamentosService = {
@@ -26,7 +28,11 @@ export const lancamentosService = {
         query = query.lte('data_vencimento', filters.endDate);
       }
       if (filters.approvalStatus && filters.approvalStatus !== 'all') {
-        query = query.eq('status_aprovacao', filters.approvalStatus);
+        if (filters.approvalStatus === 'pendente') {
+          query = query.in('status_aprovacao', ['pendente_digital', 'digital']);
+        } else {
+          query = query.eq('status_aprovacao', filters.approvalStatus);
+        }
       }
       if (filters.statusPagamento && filters.statusPagamento !== 'all') {
         query = query.eq('status_pagamento', filters.statusPagamento);
@@ -34,166 +40,123 @@ export const lancamentosService = {
       if (filters.type && filters.type !== 'all') {
         query = query.eq('tipo', filters.type);
       }
+      if (filters.authorId && filters.authorId !== 'all') {
+        query = query.eq('usuario_criador_id', filters.authorId);
+      }
+      if (filters.categoryId && filters.categoryId !== 'all') {
+        query = query.eq('categoria_id', filters.categoryId);
+      }
       if (filters.searchTerm) {
-        query = query.or(`entidades_negocio.nome_razao_social.ilike.%${filters.searchTerm}%,entidades_negocio.documento.ilike.%${filters.searchTerm}%,observacoes.ilike.%${filters.searchTerm}%`);
+        query = query.ilike('entidades_negocio.nome_razao_social', `%${filters.searchTerm}%`);
       }
     }
 
     const { data, error } = await query;
-    
     if (error) throw error;
-    return data as any[];
+    return data as LancamentoFinanceiro[];
   },
 
   create: async (item: any, recorrencia?: any): Promise<LancamentoFinanceiro> => {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) throw new Error('Usuário não autenticado');
 
-    if (recorrencia) {
-      // 1. Create Recurrence Record
+    const lancamentoData = {
+      ...item,
+      user_id: user.id,
+      usuario_criador_id: user.id
+    };
+
+    if (!recorrencia) {
+      const { data, error } = await supabase
+        .from('lancamentos_financeiros')
+        .insert([lancamentoData])
+        .select()
+        .single();
+      if (error) throw error;
+      return data as LancamentoFinanceiro;
+    } else {
       const { data: recData, error: recError } = await supabase
         .from('recorrencias')
         .insert([{
           user_id: user.id,
           periodicidade: recorrencia.periodicidade,
-          periodicidade_customizada_dias: recorrencia.periodicidade_customizada_dias,
           quantidade_total_parcelas: recorrencia.quantidade_total_parcelas,
-          data_inicio: recorrencia.parcelas?.[0]?.data_vencimento || item.data_vencimento
+          data_inicio: item.data_vencimento,
+          periodicidade_customizada_dias: recorrencia.periodicidade_customizada_dias
         }])
         .select()
         .single();
 
       if (recError) throw recError;
 
-      // 2. Generate Installments
-      const installments = [];
-      
-      if (recorrencia.parcelas && recorrencia.parcelas.length > 0) {
-        // Use custom parcels provided
-        for (let i = 0; i < recorrencia.parcelas.length; i++) {
-          const p = recorrencia.parcelas[i];
-          installments.push({
-            ...item,
-            user_id: user.id,
-            usuario_criador_id: user.id,
-            recorrencia_id: recData.id,
-            numero_parcela: i + 1,
-            data_vencimento: p.data_vencimento,
-            valor_previsto: p.valor_previsto,
-            quantidade_total_parcelas: recorrencia.quantidade_total_parcelas // helpful for UI
-          });
-        }
-      } else {
-        // Fallback to automatic generation if no custom parcels provided
-        let currentDate = new Date(item.data_vencimento + 'T00:00:00');
-        for (let i = 1; i <= recorrencia.quantidade_total_parcelas; i++) {
-          installments.push({
-            ...item,
-            user_id: user.id,
-            usuario_criador_id: user.id,
-            recorrencia_id: recData.id,
-            numero_parcela: i,
-            data_vencimento: currentDate.toISOString().split('T')[0],
-            quantidade_total_parcelas: recorrencia.quantidade_total_parcelas
-          });
+      const parcelas = recorrencia.parcelas.map((p: any, index: number) => ({
+        ...lancamentoData,
+        data_vencimento: p.data_vencimento,
+        valor_previsto: p.valor_previsto,
+        recorrencia_id: recData.id,
+        numero_parcela: index + 1,
+        quantidade_total_parcelas: recorrencia.quantidade_total_parcelas
+      }));
 
-          // Advance date
-          if (recorrencia.periodicidade === 'diario') currentDate.setDate(currentDate.getDate() + 1);
-          else if (recorrencia.periodicidade === 'semanal') currentDate.setDate(currentDate.getDate() + 7);
-          else if (recorrencia.periodicidade === 'quinzenal') currentDate.setDate(currentDate.getDate() + 15);
-          else if (recorrencia.periodicidade === 'mensal') currentDate.setMonth(currentDate.getMonth() + 1);
-          else if (recorrencia.periodicidade === 'bimestral') currentDate.setMonth(currentDate.getMonth() + 2);
-          else if (recorrencia.periodicidade === 'trimestral') currentDate.setMonth(currentDate.getMonth() + 3);
-          else if (recorrencia.periodicidade === 'semestral') currentDate.setMonth(currentDate.getMonth() + 6);
-          else if (recorrencia.periodicidade === 'anual') currentDate.setFullYear(currentDate.getFullYear() + 1);
-          else if (recorrencia.periodicidade === 'personalizado') {
-            const dias = recorrencia.periodicidade_customizada_dias || 30;
-            currentDate.setDate(currentDate.getDate() + dias);
-          }
-        }
-      }
-
-      const { data: createdItems, error: itemsError } = await supabase
+      const { data: createdParcelas, error: parcelasError } = await supabase
         .from('lancamentos_financeiros')
-        .insert(installments)
+        .insert(parcelas)
         .select();
 
-      if (itemsError) throw itemsError;
-      return createdItems[0] as LancamentoFinanceiro;
+      if (parcelasError) throw parcelasError;
+      return createdParcelas[0] as LancamentoFinanceiro;
     }
-
-    const { data, error } = await supabase
-      .from('lancamentos_financeiros')
-      .insert([{ 
-        ...item, 
-        user_id: user.id,
-        usuario_criador_id: user.id 
-      }])
-      .select()
-      .single();
-    
-    if (error) throw error;
-    return data as LancamentoFinanceiro;
   },
 
   update: async (id: string, data: any, mode: 'single' | 'all' = 'single'): Promise<LancamentoFinanceiro> => {
-    if (mode === 'all') {
-      const { data: current } = await supabase
-        .from('lancamentos_financeiros')
-        .select('recorrencia_id, data_vencimento')
-        .eq('id', id)
-        .single();
-
-      if (current?.recorrencia_id) {
-        // Update this and all future installments of the same recurrence
-        const { error } = await supabase
-          .from('lancamentos_financeiros')
-          .update(data)
-          .eq('recorrencia_id', current.recorrencia_id)
-          .gte('data_vencimento', current.data_vencimento);
-        
-        if (error) throw error;
-        return { id } as any;
-      }
-    }
-
-    const { data: updatedData, error } = await supabase
+    const { data: current } = await supabase
       .from('lancamentos_financeiros')
-      .update(data)
+      .select('recorrencia_id')
       .eq('id', id)
-      .select()
       .single();
-    
-    if (error) throw error;
-    return updatedData as LancamentoFinanceiro;
+
+    if (mode === 'all' && current?.recorrencia_id) {
+      const { data: updated, error } = await supabase
+        .from('lancamentos_financeiros')
+        .update(data)
+        .eq('recorrencia_id', current.recorrencia_id)
+        .eq('status_pagamento', 'aberto')
+        .select();
+      if (error) throw error;
+      return updated[0] as LancamentoFinanceiro;
+    } else {
+      const { data: updated, error } = await supabase
+        .from('lancamentos_financeiros')
+        .update(data)
+        .eq('id', id)
+        .select()
+        .single();
+      if (error) throw error;
+      return updated as LancamentoFinanceiro;
+    }
   },
 
   delete: async (id: string, mode: 'single' | 'all' = 'single'): Promise<boolean> => {
-    if (mode === 'all') {
-      const { data: current } = await supabase
-        .from('lancamentos_financeiros')
-        .select('recorrencia_id, data_vencimento')
-        .eq('id', id)
-        .single();
-
-      if (current?.recorrencia_id) {
-        const { error } = await supabase
-          .from('lancamentos_financeiros')
-          .delete()
-          .eq('recorrencia_id', current.recorrencia_id)
-          .gte('data_vencimento', current.data_vencimento);
-        
-        if (error) throw error;
-        return true;
-      }
-    }
-
-    const { error } = await supabase
+    const { data: current } = await supabase
       .from('lancamentos_financeiros')
-      .delete()
-      .eq('id', id);
-    
-    if (error) throw error;
+      .select('recorrencia_id')
+      .eq('id', id)
+      .single();
+
+    if (mode === 'all' && current?.recorrencia_id) {
+      const { error } = await supabase
+        .from('lancamentos_financeiros')
+        .delete()
+        .eq('recorrencia_id', current.recorrencia_id)
+        .eq('status_pagamento', 'aberto');
+      if (error) throw error;
+    } else {
+      const { error } = await supabase
+        .from('lancamentos_financeiros')
+        .delete()
+        .eq('id', id);
+      if (error) throw error;
+    }
     return true;
   },
 
@@ -208,17 +171,12 @@ export const lancamentosService = {
     motivo_desconto_id?: string,
     motivo_acrescimo_id?: string
   }): Promise<LancamentoFinanceiro> => {
-
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) throw new Error('Usuário não autenticado');
-
-    // 1. Get current record
     const { data: current, error: getError } = await supabase
       .from('lancamentos_financeiros')
       .select('*')
       .eq('id', id)
       .single();
-    
+
     if (getError) throw getError;
 
     const valorPagoEfetivo = data.valor_pago > 0 ? data.valor_pago : current.valor_previsto;
@@ -232,22 +190,19 @@ export const lancamentosService = {
     if (isPartial) {
       const saldoRestante = subtotal - valorPagoEfetivo;
 
-      // Keep original record ID as "aberto" (unpaid) but with the remaining amount (the resíduo)
       const { data: updatedOriginal, error: updateError } = await supabase
         .from('lancamentos_financeiros')
         .update({
           valor_previsto: saldoRestante,
-          status_aprovacao: 'pendente_digital', // Force re-approval for residue
+          status_aprovacao: 'pendente_digital',
           observacoes: (current.observacoes || '') + `\n[Abatido pagamento parcial de R$ ${valorPagoEfetivo} em ${dataPagamentoVal.split('-').reverse().join('/')}]`
         })
-
         .eq('id', id)
         .select()
         .single();
 
       if (updateError) throw updateError;
 
-      // Create a NEW record for the paid portion
       const { id: _, created_at: __, updated_at: ___, ...rest } = current;
       const { error: insertError } = await supabase
         .from('lancamentos_financeiros')
@@ -271,7 +226,6 @@ export const lancamentosService = {
       if (insertError) throw insertError;
       return updatedOriginal as LancamentoFinanceiro;
     } else {
-      // Full payment (or BPI / AVR)
       const { data: updated, error: updateError } = await supabase
         .from('lancamentos_financeiros')
         .update({
@@ -285,10 +239,8 @@ export const lancamentosService = {
           motivo_ajuste: data.motivo_ajuste || null,
           motivo_desconto_id: data.motivo_desconto_id || null,
           motivo_acrescimo_id: data.motivo_acrescimo_id || null,
-          // If AVR, adjust the final value
           valor_previsto: isAVR ? valorPagoEfetivo : (isBPI ? current.valor_previsto : subtotal)
         })
-
         .eq('id', id)
         .select()
         .single();
@@ -298,101 +250,69 @@ export const lancamentosService = {
     }
   },
 
-  estornarLancamento: async (id: string): Promise<boolean> => {
-    // 1. Get the record to be reversed
+  estornarLancamento: async (id: string): Promise<void> => {
     const { data: current, error: getError } = await supabase
       .from('lancamentos_financeiros')
       .select('*')
       .eq('id', id)
       .single();
-    
+
     if (getError) throw getError;
-    if (current.status_pagamento === 'aberto') throw new Error('Não é possível estornar um lançamento que já está em aberto.');
 
     if (current.vinculo_residuo_id) {
-      // It's a partial payment record. We need to restore the value to the parent and delete this one.
-      const { data: parent, error: parentError } = await supabase
+      const { data: original } = await supabase
         .from('lancamentos_financeiros')
-        .select('valor_previsto, observacoes')
+        .select('valor_previsto')
         .eq('id', current.vinculo_residuo_id)
         .single();
-
-      if (!parentError && parent) {
-        const valorARestaurar = (current.valor_previsto || 0) + (current.desconto_valor || 0) - (current.acrescimo_valor || 0);
-        
+      
+      if (original) {
         await supabase
           .from('lancamentos_financeiros')
-          .update({
-            valor_previsto: parent.valor_previsto + valorARestaurar,
-            observacoes: (parent.observacoes || '') + `\n[Estorno de pagamento parcial de R$ ${current.valor_previsto} realizado em ${new Date().toLocaleDateString('pt-BR')}]`
-          })
+          .update({ valor_previsto: original.valor_previsto + current.valor_previsto })
           .eq('id', current.vinculo_residuo_id);
       }
-
-      // Delete the paid record
-      const { error: deleteError } = await supabase
-        .from('lancamentos_financeiros')
-        .delete()
-        .eq('id', id);
-      
-      if (deleteError) throw deleteError;
+      await supabase.from('lancamentos_financeiros').delete().eq('id', id);
     } else {
-      // It's a full payment record. Just mark it as open again.
-      const { error: updateError } = await supabase
+      await supabase
         .from('lancamentos_financeiros')
         .update({
           status_pagamento: 'aberto',
           valor_recebido: 0,
           data_pagamento: null,
-          tipo_baixa: 'financeira',
-          desconto_valor: 0,
-          acrescimo_valor: 0,
-          motivo_ajuste: null,
-          observacoes: (current.observacoes || '') + `\n[Estorno de quitação realizado em ${new Date().toLocaleDateString('pt-BR')}]`
+          tipo_baixa: 'financeira'
         })
         .eq('id', id);
-
-      if (updateError) throw updateError;
     }
-
-    return true;
   },
 
-    getAnexos: async (lancamentoId: string): Promise<any[]> => {
-
-      const { data, error } = await supabase
-        .from('lancamento_anexos')
-        .select('*')
-        .eq('lancamento_id', lancamentoId);
-      
-      if (error) throw error;
-      return data;
-    },
-  
-    deleteAnexo: async (anexoId: string, filePath: string): Promise<void> => {
-      // Delete from storage
-      const { error: storageError } = await supabase.storage
-        .from('documents')
-        .remove([filePath]);
-      
-      if (storageError) console.error('Storage delete error:', storageError);
-  
-      // Delete from DB
-      const { error: dbError } = await supabase
-        .from('lancamento_anexos')
-        .delete()
-        .eq('id', anexoId);
-      
-      if (dbError) throw dbError;
-    },
-  
-    approveInBatch: async (ids: string[], targetStatus: string): Promise<boolean> => {
+  approveInBatch: async (ids: string[], targetStatus: 'digital' | 'confirmado_master'): Promise<void> => {
     const { error } = await supabase
       .from('lancamentos_financeiros')
-      .update({ status_aprovacao: targetStatus })
+      .update({ status_aprovacao: targetStatus, data_aprovacao: targetStatus === 'confirmado_master' ? new Date().toISOString() : null })
       .in('id', ids);
-    
     if (error) throw error;
-    return true;
+  },
+
+  getAnexos: async (lancamentoId: string): Promise<any[]> => {
+    const { data, error } = await supabase
+      .from('lancamento_anexos')
+      .select('*')
+      .eq('lancamento_id', lancamentoId);
+    if (error) throw error;
+    return data;
+  },
+
+  deleteAnexo: async (id: string, filePath: string): Promise<void> => {
+    const { error: storageError } = await supabase.storage
+      .from('documents')
+      .remove([filePath]);
+    if (storageError) console.error('Storage error:', storageError);
+
+    const { error: dbError } = await supabase
+      .from('lancamento_anexos')
+      .delete()
+      .eq('id', id);
+    if (dbError) throw dbError;
   }
 };
