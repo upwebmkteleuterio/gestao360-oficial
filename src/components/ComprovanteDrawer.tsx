@@ -1,10 +1,11 @@
-import React from 'react';
+"use client";
+
+import React, { useRef, useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import {
   Printer,
   Download,
   X,
-  Bluetooth,
   Calendar,
   User,
   Wallet,
@@ -15,14 +16,13 @@ import {
   Clock,
   CheckCircle2,
   AlertCircle,
-  CreditCard,
-  Briefcase,
-  Layers,
   Banknote,
-  QrCode
+  Loader2
 } from 'lucide-react';
 import { useUIStore } from '../store/uiStore';
 import { useLancamentos, useEntidades, useCategorias, useContas, useLancamentoAnexos, useUsuarios } from '../hooks/useData';
+import jsPDF from 'jspdf';
+import html2canvas from 'html2canvas';
 
 export default function ComprovanteDrawer() {
   const { isComprovanteOpen, setModalOpen, selectedLancamentoIdForModal, setSelectedLancamentoIdForModal } = useUIStore();
@@ -32,12 +32,49 @@ export default function ComprovanteDrawer() {
   const { data: contas = [] } = useContas();
   const { data: usuarios = [] } = useUsuarios();
   const { anexos = [] } = useLancamentoAnexos(selectedLancamentoIdForModal);
+  
+  const [isGenerating, setIsGenerating] = useState(false);
+  const receiptRef = useRef<HTMLDivElement>(null);
 
   const lancamento = lancamentos.find(l => l.id === selectedLancamentoIdForModal);
 
   const handleClose = () => {
     setModalOpen('isComprovanteOpen', false);
     setSelectedLancamentoIdForModal(null);
+  };
+
+  const handleGeneratePDF = async () => {
+    if (!receiptRef.current || !lancamento) return;
+    
+    setIsGenerating(true);
+    try {
+      const element = receiptRef.current;
+      const canvas = await html2canvas(element, {
+        scale: 2,
+        useCORS: true,
+        logging: false,
+        backgroundColor: '#ffffff'
+      });
+      
+      const imgData = canvas.toDataURL('image/png');
+      const pdf = new jsPDF({
+        orientation: 'portrait',
+        unit: 'mm',
+        format: 'a4'
+      });
+      
+      const imgProps = pdf.getImageProperties(imgData);
+      const pdfWidth = pdf.internal.pageSize.getWidth();
+      const pdfHeight = (imgProps.height * pdfWidth) / imgProps.width;
+      
+      pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, pdfHeight);
+      pdf.save(`comprovante_${lancamento.id.slice(0, 8)}.pdf`);
+    } catch (error) {
+      console.error('Erro ao gerar PDF:', error);
+      alert('Falha ao gerar o PDF. Tente novamente.');
+    } finally {
+      setIsGenerating(false);
+    }
   };
 
   if (!lancamento) return null;
@@ -75,155 +112,151 @@ export default function ComprovanteDrawer() {
             transition={{ type: 'spring', damping: 25, stiffness: 200 }}
             className="absolute inset-y-0 right-0 max-w-xl w-full bg-surface shadow-2xl flex flex-col h-full transform transition-transform duration-300"
           >
-            <div className="px-6 py-5 border-b border-surface-border flex items-center justify-between bg-white shrink-0 print:border-none">
+            {/* Header fixo do Drawer */}
+            <div className="px-6 py-5 border-b border-surface-border flex items-center justify-between bg-white shrink-0">
               <div className="flex items-center gap-3">
                 <div className="w-10 h-10 bg-neutral-900 rounded-xl flex items-center justify-center text-white font-black text-lg">
                   G
                 </div>
                 <div>
-                  <h2 className="text-sm font-black uppercase text-on-surface tracking-wider">Comprovante de Lançamento</h2>
+                  <h2 className="text-sm font-black uppercase text-on-surface tracking-wider">Visualizar Lançamento</h2>
                   <p className="text-[10px] font-bold text-secondary uppercase tracking-widest mt-0.5">Gestão 360 • ERP Financeiro</p>
                 </div>
               </div>
               <button
                 onClick={handleClose}
-                className="p-2 rounded-xl text-secondary hover:bg-neutral-100 transition-all print:hidden"
+                className="p-2 rounded-xl text-secondary hover:bg-neutral-100 transition-all"
               >
                 <X className="w-6 h-6" />
               </button>
             </div>
 
-            <div className="flex-1 overflow-y-auto bg-neutral-50/50 p-6 space-y-6 print:bg-white print:p-0 print:overflow-visible">
-              {/* Header de Status */}
-              <div className="flex gap-4">
-                <div className="flex-1 bg-white border border-neutral-100 rounded-3xl p-6 shadow-sm flex flex-col items-center text-center relative overflow-hidden print:border-neutral-200 print:shadow-none">
-                  <div className={`absolute top-0 right-0 w-24 h-24 -mr-8 -mt-8 rounded-full opacity-5 ${lancamento.tipo === 'entrada' ? 'bg-bank-truth-green' : 'bg-alert-red'}`} />
-                  
-                  <div className={`w-14 h-14 rounded-2xl flex items-center justify-center mb-4 ${
-                    lancamento.tipo === 'entrada' ? 'bg-bank-truth-green/10 text-bank-truth-green' : 'bg-alert-red/10 text-alert-red'
-                  } print:border print:border-neutral-100`}>
-                    <Wallet className="w-7 h-7" />
+            <div className="flex-1 overflow-y-auto bg-neutral-50/50 p-6 space-y-6">
+              
+              {/* ÁREA DE CAPTURA DO PDF */}
+              <div ref={receiptRef} className="bg-white border border-neutral-100 rounded-[32px] overflow-hidden shadow-sm p-8 space-y-8">
+                
+                {/* Branding do PDF */}
+                <div className="flex justify-between items-start border-b border-neutral-100 pb-6">
+                  <div className="flex items-center gap-3">
+                    <div className="w-12 h-12 bg-primary flex items-center justify-center rounded-2xl text-white font-black text-xl">G</div>
+                    <div>
+                      <h1 className="text-sm font-black uppercase tracking-tighter text-neutral-900 leading-none">Gestão 360</h1>
+                      <p className="text-[8px] font-bold text-primary uppercase tracking-[0.2em] mt-1">CFO ERP Headquarters</p>
+                    </div>
                   </div>
+                  <div className="text-right">
+                    <p className="text-[9px] font-black uppercase text-neutral-400 tracking-widest">Protocolo de Operação</p>
+                    <p className="text-[11px] font-bold text-neutral-900 font-mono mt-1">#{lancamento.id.slice(0, 12).toUpperCase()}</p>
+                  </div>
+                </div>
 
-                  <div className="space-y-1">
-                    <span className="text-[10px] font-black uppercase tracking-widest text-secondary">
+                {/* Valor e Status Central */}
+                <div className="flex flex-col items-center text-center space-y-4">
+                  <div className={`w-16 h-16 rounded-full flex items-center justify-center ${
+                    lancamento.tipo === 'entrada' ? 'bg-bank-truth-green/10 text-bank-truth-green' : 'bg-alert-red/10 text-alert-red'
+                  }`}>
+                    <Wallet className="w-8 h-8" />
+                  </div>
+                  <div>
+                    <span className="text-[10px] font-black uppercase tracking-widest text-neutral-400">
                       {lancamento.tipo === 'entrada' ? 'Valor Recebido / Previsto' : 'Valor Pago / Previsto'}
                     </span>
-                    <h3 className={`text-3xl font-black ${lancamento.tipo === 'entrada' ? 'text-bank-truth-green' : 'text-alert-red'}`}>
+                    <h3 className={`text-4xl font-black mt-1 ${lancamento.tipo === 'entrada' ? 'text-bank-truth-green' : 'text-alert-red'}`}>
                       {formatBRL(lancamento.valor_previsto)}
                     </h3>
                   </div>
-
-                  <div className="mt-6 flex items-center gap-3">
-                    <div className={`flex items-center gap-1.5 px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-widest ${
-                      lancamento.status_pagamento === 'pago' ? 'bg-bank-truth-green text-white' : 'bg-pending-amber/10 text-pending-amber border border-pending-amber/20'
+                  <div className="flex items-center gap-2">
+                    <span className={`px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-widest ${
+                      lancamento.status_pagamento === 'pago' ? 'bg-bank-truth-green text-white' : 'bg-pending-amber/10 text-pending-amber'
                     }`}>
-                      {lancamento.status_pagamento === 'pago' ? <CheckCircle2 className="w-3 h-3" /> : <Clock className="w-3 h-3" />}
                       {lancamento.status_pagamento === 'pago' ? 'Liquidado' : 'Em Aberto'}
-                    </div>
-                    <div className="flex items-center gap-1.5 px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-widest bg-neutral-900 text-white">
-                      {lancamento.status_aprovacao === 'confirmado_master' ? <CheckCircle2 className="w-3 h-3" /> : <Clock className="w-3 h-3" />}
+                    </span>
+                    <span className="px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-widest bg-neutral-900 text-white">
                       {lancamento.status_aprovacao === 'confirmado_master' ? 'Confirmado Master' : 'Pendente'}
-                    </div>
+                    </span>
                   </div>
                 </div>
-              </div>
 
-              {/* Grid de Informações Essenciais */}
-              <div className="grid grid-cols-2 gap-4">
-                <div className="bg-white p-4 rounded-2xl border border-neutral-100 space-y-1.5">
-                  <span className="text-[9px] font-black uppercase text-secondary tracking-widest flex items-center gap-1.5">
-                    <User className="w-3 h-3" /> Local / Cliente
-                  </span>
-                  <p className="text-xs font-black text-on-surface truncate">{entidade?.nome_razao_social || 'N/A'}</p>
-                  <p className="text-[9px] text-neutral-400 font-mono">{entidade?.documento || 'Documento não informado'}</p>
+                {/* Detalhes da Transação */}
+                <div className="grid grid-cols-2 gap-6 pt-4">
+                  <div className="space-y-1">
+                    <span className="text-[9px] font-black uppercase text-neutral-400 tracking-widest flex items-center gap-1.5">
+                      <User className="w-3 h-3" /> Beneficiário / Cliente
+                    </span>
+                    <p className="text-xs font-black text-neutral-900 uppercase">{entidade?.nome_razao_social || 'N/A'}</p>
+                    <p className="text-[9px] text-neutral-400 font-mono">{entidade?.documento || 'Sem doc.'}</p>
+                  </div>
+                  <div className="space-y-1 text-right">
+                    <span className="text-[9px] font-black uppercase text-neutral-400 tracking-widest flex items-center justify-end gap-1.5">
+                      <Tag className="w-3 h-3" /> Categoria
+                    </span>
+                    <p className="text-xs font-black text-neutral-900 uppercase">{categoria?.nome || 'N/A'}</p>
+                    <p className="text-[9px] text-neutral-400 uppercase tracking-widest">{lancamento.tipo === 'entrada' ? 'Receita' : 'Despesa'}</p>
+                  </div>
                 </div>
-                <div className="bg-white p-4 rounded-2xl border border-neutral-100 space-y-1.5">
-                  <span className="text-[9px] font-black uppercase text-secondary tracking-widest flex items-center gap-1.5">
-                    <Tag className="w-3 h-3" /> Categoria
-                  </span>
-                  <p className="text-xs font-black text-on-surface truncate">{categoria?.nome || 'N/A'}</p>
-                  <p className="text-[9px] text-neutral-400 uppercase tracking-widest">{lancamento.tipo === 'entrada' ? 'Receita' : 'Despesa'}</p>
-                </div>
-              </div>
 
-              {/* Datas de Auditoria (Crucial para ERP) */}
-              <div className="bg-white rounded-3xl border border-neutral-100 overflow-hidden">
-                <div className="bg-neutral-50 px-5 py-3 border-b border-neutral-100 flex items-center gap-2">
-                  <Calendar className="w-3.5 h-3.5 text-primary" />
-                  <span className="text-[10px] font-black uppercase tracking-widest text-neutral-900">Cronograma e Auditoria</span>
-                </div>
-                <div className="p-5 grid grid-cols-2 gap-y-6 gap-x-4">
+                {/* Cronograma */}
+                <div className="bg-neutral-50 rounded-2xl p-5 grid grid-cols-2 gap-y-5 gap-x-4">
                   <div>
-                    <span className="text-[9px] font-black uppercase text-secondary tracking-widest block mb-1">Emissão</span>
-                    <p className="text-xs font-bold text-on-surface">{formatDate(lancamento.data_emissao)}</p>
+                    <span className="text-[9px] font-black uppercase text-neutral-400 tracking-widest block mb-1">Emissão</span>
+                    <p className="text-xs font-bold text-neutral-900">{formatDate(lancamento.data_emissao)}</p>
+                  </div>
+                  <div className="text-right">
+                    <span className="text-[9px] font-black uppercase text-neutral-400 tracking-widest block mb-1">Vencimento</span>
+                    <p className="text-xs font-bold text-neutral-900">{formatDate(lancamento.data_vencimento)}</p>
                   </div>
                   <div>
-                    <span className="text-[9px] font-black uppercase text-secondary tracking-widest block mb-1">Vencimento</span>
-                    <p className="text-xs font-bold text-on-surface">{formatDate(lancamento.data_vencimento)}</p>
+                    <span className="text-[9px] font-black uppercase text-neutral-400 tracking-widest block mb-1">Competência</span>
+                    <p className="text-xs font-bold text-neutral-900">{formatDate(lancamento.data_competencia || lancamento.data_emissao)}</p>
                   </div>
-                  <div>
-                    <span className="text-[9px] font-black uppercase text-secondary tracking-widest block mb-1">Competência (Referência)</span>
-                    <p className="text-xs font-bold text-on-surface">{formatDate(lancamento.data_competencia || lancamento.data_emissao)}</p>
-                  </div>
-                  <div>
-                    <span className="text-[9px] font-black uppercase text-secondary tracking-widest block mb-1">Recebido / Pago em</span>
+                  <div className="text-right">
+                    <span className="text-[9px] font-black uppercase text-neutral-400 tracking-widest block mb-1">Liquidação</span>
                     <p className={`text-xs font-bold ${lancamento.data_pagamento ? 'text-bank-truth-green' : 'text-neutral-400'}`}>
                       {formatDate(lancamento.data_pagamento)}
                     </p>
                   </div>
-                  <div>
-                    <span className="text-[9px] font-black uppercase text-secondary tracking-widest block mb-1">Confirmado Master em</span>
-                    <p className={`text-xs font-bold ${(lancamento as any).data_aprovacao ? 'text-primary' : 'text-neutral-400'}`}>
-                      {formatDate((lancamento as any).data_aprovacao)}
+                </div>
+
+                {/* Origem e Auditoria */}
+                <div className="grid grid-cols-2 gap-6 pt-2">
+                  <div className="space-y-1">
+                    <span className="text-[9px] font-black uppercase text-neutral-400 tracking-widest flex items-center gap-1.5">
+                      <Banknote className="w-3 h-3" /> Conta Bancária
+                    </span>
+                    <p className="text-xs font-black text-neutral-900 uppercase truncate">{conta?.nome_banco || 'N/A'}</p>
+                  </div>
+                  <div className="space-y-1 text-right">
+                    <span className="text-[9px] font-black uppercase text-neutral-400 tracking-widest flex items-center justify-end gap-1.5">
+                      <User className="w-3 h-3" /> Operador
+                    </span>
+                    <p className="text-xs font-black text-neutral-900 uppercase truncate">{autor?.nome || 'Sistema'}</p>
+                  </div>
+                </div>
+
+                {/* Observações */}
+                {lancamento.observacoes && (
+                  <div className="bg-neutral-50 p-4 rounded-xl border border-neutral-100 space-y-1.5">
+                    <span className="text-[8px] font-black uppercase text-neutral-400 tracking-widest flex items-center gap-1.5">
+                      <Hash className="w-3 h-3" /> Notas Técnicas
+                    </span>
+                    <p className="text-[10px] font-medium text-neutral-600 leading-relaxed italic">
+                      "{lancamento.observacoes}"
                     </p>
                   </div>
-                  <div>
-                    <span className="text-[9px] font-black uppercase text-secondary tracking-widest block mb-1">Responsável</span>
-                    <p className="text-xs font-bold text-on-surface truncate">{autor?.nome || 'Sistema'}</p>
-                  </div>
+                )}
+
+                {/* Rodapé Interno do PDF */}
+                <div className="pt-6 border-t border-neutral-100 flex justify-between items-center opacity-40">
+                  <span className="text-[7px] font-bold uppercase tracking-[0.3em]">Gestão 360 Document Verification</span>
+                  <span className="text-[7px] font-bold uppercase tracking-[0.3em]">Gerado em: {new Date().toLocaleString()}</span>
                 </div>
               </div>
 
-              {/* Detalhes Financeiros e Origem */}
-              <div className="grid grid-cols-2 gap-4">
-                <div className="bg-white p-4 rounded-2xl border border-neutral-100 space-y-1.5">
-                  <span className="text-[9px] font-black uppercase text-secondary tracking-widest flex items-center gap-1.5">
-                    <Banknote className="w-3 h-3" /> Conta e Liquidação
-                  </span>
-                  <p className="text-xs font-black text-on-surface truncate">{conta?.nome_banco || 'N/A'}</p>
-                  {lancamento.status_pagamento === 'pago' ? (
-                    <p className="text-[9px] text-bank-truth-green font-bold uppercase tracking-tight">Liquidado em: {formatDate(lancamento.data_pagamento)}</p>
-                  ) : (
-                    <p className="text-[9px] text-amber-500 font-bold uppercase tracking-tight">Aguardando Baixa</p>
-                  )}
-                </div>
-                <div className="bg-white p-4 rounded-2xl border border-neutral-100 space-y-1.5">
-                  <span className="text-[9px] font-black uppercase text-secondary tracking-widest flex items-center gap-1.5">
-                    <User className="w-3 h-3" /> Origem e Responsável
-                  </span>
-                  <p className="text-xs font-black text-on-surface truncate">{autor?.nome || 'Sistema'}</p>
-                  <p className="text-[9px] text-neutral-400 uppercase tracking-widest">Via {(lancamento as any).condicao?.replace('_', ' ') || 'Lançamento Único'}</p>
-                </div>
-              </div>
-
-              {/* Observações */}
-              {lancamento.observacoes && (
-                <div className="bg-white p-5 rounded-3xl border border-neutral-100 space-y-3">
-                  <span className="text-[9px] font-black uppercase text-secondary tracking-widest flex items-center gap-1.5">
-                    <Hash className="w-3 h-3" /> Observações Contábeis
-                  </span>
-                  <p className="text-xs font-medium text-on-surface leading-relaxed italic">
-                    "{lancamento.observacoes}"
-                  </p>
-                </div>
-              )}
-
-              {/* Anexos */}
-              <div className="space-y-3 print:hidden">
+              {/* Seção de Anexos (Apenas Drawer, não vai no PDF principal por segurança) */}
+              <div className="space-y-3">
                 <span className="text-[9px] font-black uppercase text-secondary tracking-widest flex items-center gap-1.5 ml-2">
-
-                  <ExternalLink className="w-3 h-3" /> Documentos e Anexos Digitais ({anexos.length})
+                  <ExternalLink className="w-3 h-3" /> Documentos Digitais ({anexos.length})
                 </span>
                 {anexos.length > 0 ? (
                   <div className="grid grid-cols-1 gap-2">
@@ -241,7 +274,7 @@ export default function ComprovanteDrawer() {
                           </div>
                           <div>
                             <p className="text-xs font-black text-on-surface truncate max-w-[200px]">{anexo.nome}</p>
-                            <p className="text-[9px] font-bold text-secondary uppercase tracking-widest">{(anexo.tamanho / 1024 / 1024).toFixed(2)} MB • Armazenado em Nuvem</p>
+                            <p className="text-[9px] font-bold text-secondary uppercase tracking-widest">{(anexo.tamanho / 1024 / 1024).toFixed(2)} MB • Cloud Store</p>
                           </div>
                         </div>
                         <Download className="w-4 h-4 text-neutral-300 group-hover:text-primary transition-all" />
@@ -257,27 +290,28 @@ export default function ComprovanteDrawer() {
               </div>
             </div>
 
-            {/* Footer de Auditoria e Botões */}
-            <div className="px-6 py-4 bg-neutral-50 border-t border-surface-border text-center">
-               <p className="text-[8px] font-bold text-neutral-400 uppercase tracking-[0.3em]">ID de Rastreabilidade: {lancamento.id}</p>
-            </div>
-
-            <div className="p-6 bg-white border-t border-surface-border grid grid-cols-2 gap-3 shrink-0 print:hidden">
+            {/* Ações do Drawer */}
+            <div className="p-6 bg-white border-t border-surface-border grid grid-cols-2 gap-3 shrink-0">
               <button
                 type="button"
                 onClick={() => window.print()}
-                className="h-12 bg-neutral-900 text-white font-black text-xs uppercase tracking-[0.2em] rounded-xl flex items-center justify-center gap-2 hover:bg-black transition-all"
+                className="h-12 border-2 border-neutral-100 text-neutral-600 font-black text-xs uppercase tracking-[0.2em] rounded-xl flex items-center justify-center gap-2 hover:bg-neutral-50 transition-all"
               >
                 <Printer className="w-4 h-4" />
                 Imprimir
               </button>
               <button
                 type="button"
-                onClick={() => window.print()}
-                className="h-12 bg-primary text-white font-black text-xs uppercase tracking-[0.2em] rounded-xl flex items-center justify-center gap-2 hover:brightness-110 transition-all shadow-md"
+                disabled={isGenerating}
+                onClick={handleGeneratePDF}
+                className="h-12 bg-neutral-900 text-white font-black text-xs uppercase tracking-[0.2em] rounded-xl flex items-center justify-center gap-2 hover:bg-black transition-all shadow-lg disabled:opacity-50"
               >
-                <Download className="w-4 h-4" />
-                Gerar PDF
+                {isGenerating ? (
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                ) : (
+                  <Download className="w-4 h-4 text-primary" />
+                )}
+                {isGenerating ? 'Gerando...' : 'Baixar PDF'}
               </button>
             </div>
 
@@ -287,5 +321,3 @@ export default function ComprovanteDrawer() {
     </AnimatePresence>
   );
 }
-
-
