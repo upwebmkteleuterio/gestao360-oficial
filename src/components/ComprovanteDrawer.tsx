@@ -49,11 +49,14 @@ export default function ComprovanteDrawer() {
     setIsGenerating(true);
     try {
       const element = receiptRef.current;
+      
+      // Captura apenas o card interno branco
       const canvas = await html2canvas(element, {
-        scale: 2,
+        scale: 3, // Aumentado para máxima nitidez
         useCORS: true,
         logging: false,
-        backgroundColor: '#ffffff'
+        backgroundColor: '#ffffff',
+        windowWidth: 800 // Força um contexto de largura fixa para o layout não quebrar
       });
       
       const imgData = canvas.toDataURL('image/png');
@@ -67,7 +70,11 @@ export default function ComprovanteDrawer() {
       const pdfWidth = pdf.internal.pageSize.getWidth();
       const pdfHeight = (imgProps.height * pdfWidth) / imgProps.width;
       
-      pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, pdfHeight);
+      // Centraliza levemente se o conteúdo for menor que a página
+      const margin = (pdf.internal.pageSize.getHeight() - pdfHeight) / 2;
+      const yPos = margin > 10 ? margin : 10;
+
+      pdf.addImage(imgData, 'PNG', 0, yPos, pdfWidth, pdfHeight);
       pdf.save(`comprovante_${lancamento.id.slice(0, 8)}.pdf`);
     } catch (error) {
       console.error('Erro ao gerar PDF:', error);
@@ -96,12 +103,12 @@ export default function ComprovanteDrawer() {
   return (
     <AnimatePresence>
       {isComprovanteOpen && (
-        <div className="fixed inset-0 z-[250] overflow-hidden font-sans select-none">
+        <div className="fixed inset-0 z-[250] overflow-hidden font-sans select-none print:bg-white">
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="absolute inset-0 bg-neutral-900/60 backdrop-blur-xs transition-opacity duration-300"
+            className="absolute inset-0 bg-neutral-900/60 backdrop-blur-xs transition-opacity duration-300 print:hidden"
             onClick={handleClose}
           />
           
@@ -110,10 +117,10 @@ export default function ComprovanteDrawer() {
             animate={{ x: 0 }}
             exit={{ x: '100%' }}
             transition={{ type: 'spring', damping: 25, stiffness: 200 }}
-            className="absolute inset-y-0 right-0 max-w-xl w-full bg-surface shadow-2xl flex flex-col h-full transform transition-transform duration-300"
+            className="absolute inset-y-0 right-0 max-w-xl w-full bg-surface shadow-2xl flex flex-col h-full transform transition-transform duration-300 print:static print:w-full print:shadow-none print:max-w-none"
           >
-            {/* Header fixo do Drawer */}
-            <div className="px-6 py-5 border-b border-surface-border flex items-center justify-between bg-white shrink-0">
+            {/* Header fixo do Drawer - OCULTO NO PRINT */}
+            <div className="px-6 py-5 border-b border-surface-border flex items-center justify-between bg-white shrink-0 print:hidden">
               <div className="flex items-center gap-3">
                 <div className="w-10 h-10 bg-neutral-900 rounded-xl flex items-center justify-center text-white font-black text-lg">
                   G
@@ -131,10 +138,10 @@ export default function ComprovanteDrawer() {
               </button>
             </div>
 
-            <div className="flex-1 overflow-y-auto bg-neutral-50/50 p-6 space-y-6">
+            <div className="flex-1 overflow-y-auto bg-neutral-50/50 p-6 space-y-6 print:p-0 print:bg-white">
               
-              {/* ÁREA DE CAPTURA DO PDF */}
-              <div ref={receiptRef} className="bg-white border border-neutral-100 rounded-[32px] overflow-hidden shadow-sm p-8 space-y-8">
+              {/* ÁREA DE CAPTURA DO PDF - Apenas este bloco será capturado */}
+              <div ref={receiptRef} className="bg-white border border-neutral-100 rounded-[32px] overflow-hidden shadow-sm p-8 space-y-8 print:border-none print:shadow-none print:rounded-none">
                 
                 {/* Branding do PDF */}
                 <div className="flex justify-between items-start border-b border-neutral-100 pb-6">
@@ -253,8 +260,8 @@ export default function ComprovanteDrawer() {
                 </div>
               </div>
 
-              {/* Seção de Anexos (Apenas Drawer, não vai no PDF principal por segurança) */}
-              <div className="space-y-3">
+              {/* Seção de Anexos - OCULTO NO PRINT */}
+              <div className="space-y-3 print:hidden">
                 <span className="text-[9px] font-black uppercase text-secondary tracking-widest flex items-center gap-1.5 ml-2">
                   <ExternalLink className="w-3 h-3" /> Documentos Digitais ({anexos.length})
                 </span>
@@ -290,8 +297,8 @@ export default function ComprovanteDrawer() {
               </div>
             </div>
 
-            {/* Ações do Drawer */}
-            <div className="p-6 bg-white border-t border-surface-border grid grid-cols-2 gap-3 shrink-0">
+            {/* Ações do Drawer - OCULTO NO PRINT */}
+            <div className="p-6 bg-white border-t border-surface-border grid grid-cols-2 gap-3 shrink-0 print:hidden">
               <button
                 type="button"
                 onClick={() => window.print()}
