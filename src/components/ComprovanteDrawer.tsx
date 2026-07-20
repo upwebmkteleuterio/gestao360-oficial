@@ -221,6 +221,7 @@ export default function ComprovanteDrawer() {
                     <span className="text-[9px] font-black uppercase text-neutral-400 tracking-widest block mb-1">Liquidação</span>
                     <p className={`text-xs font-bold ${lancamento.data_pagamento ? 'text-bank-truth-green' : 'text-neutral-400'}`}>
                       {formatDate(lancamento.data_pagamento)}
+                      {lancamento.hora_pagamento && ` às ${lancamento.hora_pagamento.slice(0, 5)}`}
                     </p>
                   </div>
                 </div>

@@ -365,6 +365,7 @@ export function useLancamentos(filters?: any) {
     mutationFn: ({ id, data }: { id: string, data: {
       valor_pago: number,
       data_pagamento: string,
+      hora_pagamento?: string,
       conta_bancaria_id: string,
       tipo_baixa?: 'financeira' | 'bpi' | 'avr',
       valor_desconto?: number,

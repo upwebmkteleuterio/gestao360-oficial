@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import {
-  X, CheckCircle2, AlertTriangle, Loader2, DollarSign, Calendar, Wallet, TrendingUp, TrendingDown, Info, Plus, User, Tag, CreditCard, FileWarning
+  X, CheckCircle2, AlertTriangle, Loader2, DollarSign, Calendar, Wallet, TrendingUp, TrendingDown, Info, Plus, User, Tag, CreditCard, FileWarning, Clock, FileText
 } from 'lucide-react';
 import { useUIStore } from '../store/uiStore';
 import { useLancamentos, useContas, useEntidades, useCategorias, useCategoriasAjuste, useLancamentoAnexos } from '../hooks/useData';
@@ -19,8 +19,11 @@ export default function BaixaLancamentoModal() {
   
   const [loading, setLoading] = useState(false);
   const [dataPagamento, setDataPagamento] = useState(new Date().toISOString().split('T')[0]);
+  const [horaPagamento, setHoraPagamento] = useState(new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit', hour12: false }));
   const [contaId, setContaId] = useState('');
   const [valorPago, setValorPago] = useState('');
+  const [isAVR, setIsAVR] = useState(false);
+  const [motivoAjuste, setMotivoAjuste] = useState('');
   const [declararSemComprovante, setDeclararSemComprovante] = useState(false);
 
   const lancamento = lancamentos.find(l => l.id === selectedLancamentoIdForModal);
@@ -28,15 +31,21 @@ export default function BaixaLancamentoModal() {
 
   useEffect(() => {
     if (lancamento) {
-      setValorPago(lancamento.valor_previsto.toLocaleString('pt-BR', { minimumFractionDigits: 2 }));
+      const valorFormatado = lancamento.valor_previsto.toLocaleString('pt-BR', { minimumFractionDigits: 2 });
+      setValorPago(valorFormatado);
       setContaId(lancamento.conta_bancaria_id || (contas[0]?.id || ''));
       setDeclararSemComprovante(false);
+      setIsAVR(false);
+      setMotivoAjuste('');
+      setHoraPagamento(new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit', hour12: false }));
     }
   }, [lancamento, contas]);
 
   if (!lancamento) return null;
 
-  const canSave = (hasComprovante || declararSemComprovante) && parseFloat(valorPago.replace(/\D/g, '')) > 0;
+  const currentValorPagoNumeric = parseFloat(valorPago.replace(/\D/g, '')) / 100;
+  const isDiff = Math.abs(currentValorPagoNumeric - lancamento.valor_previsto) > 0.01;
+  const canSave = (hasComprovante || declararSemComprovante) && currentValorPagoNumeric > 0 && (!isAVR || (isAVR && motivoAjuste.length > 3));
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -46,10 +55,12 @@ export default function BaixaLancamentoModal() {
       await baixaLancamento({
         id: lancamento.id,
         data: {
-          valor_pago: parseFloat(valorPago.replace(/\D/g, '')) / 100,
+          valor_pago: currentValorPagoNumeric,
           data_pagamento: dataPagamento,
+          hora_pagamento: horaPagamento,
           conta_bancaria_id: contaId,
-          tipo_baixa: 'financeira'
+          tipo_baixa: isAVR ? 'avr' : 'financeira',
+          motivo_ajuste: isAVR ? motivoAjuste : undefined
         }
       });
       setModalOpen('isBaixaLancamentoOpen', false);
@@ -83,9 +94,80 @@ export default function BaixaLancamentoModal() {
                   <input type="date" value={dataPagamento} onChange={e => setDataPagamento(e.target.value)} className="w-full h-12 bg-neutral-50 border-2 border-neutral-100 rounded-xl px-4 text-xs font-bold focus:border-primary outline-none" />
                 </div>
                 <div className="space-y-2">
-                  <label className="text-[10px] font-black uppercase text-secondary">Valor Liquidado</label>
-                  <MoneyInput value={valorPago} onChange={setValorPago} className="w-full h-12 bg-neutral-50 border-2 border-neutral-100 rounded-xl px-4 text-xs font-black focus:border-primary outline-none" />
+                  <label className="text-[10px] font-black uppercase text-secondary">Horário</label>
+                  <div className="relative">
+                    <Clock className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-neutral-400" />
+                    <input type="time" value={horaPagamento} onChange={e => setHoraPagamento(e.target.value)} className="w-full h-12 bg-neutral-50 border-2 border-neutral-100 rounded-xl pl-11 pr-4 text-xs font-bold focus:border-primary outline-none" />
+                  </div>
                 </div>
+              </div>
+
+              <div className="space-y-2">
+                <label className="text-[10px] font-black uppercase text-secondary">Valor Liquidado</label>
+                <div className="relative">
+                  <MoneyInput value={valorPago} onChange={setValorPago} className="w-full h-12 bg-neutral-50 border-2 border-neutral-100 rounded-xl px-4 text-xs font-black focus:border-primary outline-none" />
+                  
+                  <AnimatePresence>
+                    {isDiff && (
+                      <motion.div
+                        initial={{ opacity: 0, y: -10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, y: -10 }}
+                        className="absolute -bottom-10 right-0"
+                      >
+                        <button
+                          type="button"
+                          onClick={() => setIsAVR(!isAVR)}
+                          className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-tight transition-all shadow-sm ${
+                            isAVR
+                              ? 'bg-primary text-white ring-2 ring-primary/20'
+                              : 'bg-white text-primary border border-primary/20 hover:bg-primary/5'
+                          }`}
+                        >
+                          {isAVR ? <CheckCircle2 className="w-3 h-3" /> : <TrendingUp className="w-3 h-3" />}
+                          {isAVR ? 'AVR Ativado (Valor Ajustado)' : 'Ativar Ajuste Real (AVR)'}
+                        </button>
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+                </div>
+              </div>
+
+              <AnimatePresence>
+                {isAVR && (
+                  <motion.div
+                    initial={{ height: 0, opacity: 0 }}
+                    animate={{ height: 'auto', opacity: 1 }}
+                    exit={{ height: 0, opacity: 0 }}
+                    className="overflow-hidden"
+                  >
+                    <div className="space-y-2 pt-6">
+                      <label className="text-[10px] font-black uppercase text-secondary flex items-center gap-2">
+                        <FileText className="w-3 h-3" /> Motivo do Ajuste de Valor (Obrigatório)
+                      </label>
+                      <textarea
+                        value={motivoAjuste}
+                        onChange={e => setMotivoAjuste(e.target.value)}
+                        placeholder="Descreva o motivo da divergência de valor..."
+                        className="w-full h-24 bg-neutral-50 border-2 border-neutral-100 rounded-xl p-4 text-xs font-bold focus:border-primary outline-none resize-none"
+                      />
+                    </div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+
+              <div className="space-y-2 pt-2">
+                <label className="text-[10px] font-black uppercase text-secondary">Conta Bancária</label>
+                <select
+                  value={contaId}
+                  onChange={e => setContaId(e.target.value)}
+                  className="w-full h-12 bg-neutral-50 border-2 border-neutral-100 rounded-xl px-4 text-xs font-bold focus:border-primary outline-none"
+                >
+                  <option value="">Selecione uma conta</option>
+                  {contas.map(c => (
+                    <option key={c.id} value={c.id}>{c.nome_banco} - {c.nome}</option>
+                  ))}
+                </select>
               </div>
 
               {!hasComprovante && (

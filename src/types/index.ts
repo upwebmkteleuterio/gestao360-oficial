@@ -66,6 +66,7 @@ export interface LancamentoFinanceiro {
   data_emissao: string;
   data_competencia?: string;
   data_pagamento?: string;
+  hora_pagamento?: string;
   entidade_id: string;
   centro_custo_id: string;
   categoria_id: string;
@@ -81,6 +82,7 @@ export interface LancamentoFinanceiro {
   status_sincronizacao?: boolean;
   motivo_desconto_id?: string;
   motivo_acrescimo_id?: string;
+  motivo_ajuste?: string;
   created_at: string;
   updated_at: string;
 }

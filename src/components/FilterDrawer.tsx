@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { X, Filter, Calendar, User, Tag, UserSquare2, CheckCircle2, RotateCcw, Info } from 'lucide-react';
-import { useUsuarios, useCategorias, useEntidades } from '../hooks/useData';
+import { X, Filter, Calendar, User, Tag, UserSquare2, CheckCircle2, RotateCcw, Info, Wallet } from 'lucide-react';
+import { useUsuarios, useCategorias, useEntidades, useCentrosCusto } from '../hooks/useData';
 
 interface FilterDrawerProps {
   isOpen: boolean;
@@ -15,6 +15,7 @@ export default function FilterDrawer({ isOpen, onClose, onApply, onClear, curren
   const { data: usuarios = [] } = useUsuarios();
   const { data: categorias = [] } = useCategorias();
   const { data: entidades = [] } = useEntidades();
+  const { data: centrosCusto = [] } = useCentrosCusto();
 
   const [filters, setFilters] = useState(currentFilters);
 
@@ -31,6 +32,7 @@ export default function FilterDrawer({ isOpen, onClose, onApply, onClear, curren
     setFilters({
       responsibleId: 'all',
       categoryId: 'all',
+      costCenterId: 'all',
       clientId: 'all',
       status: 'all',
       approvalStatus: 'all',
@@ -128,6 +130,23 @@ export default function FilterDrawer({ isOpen, onClose, onApply, onClear, curren
                   <option value="all">Todas as Categorias</option>
                   {categorias.map((c: any) => (
                     <option key={c.id} value={c.id}>{c.nome}</option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Centro de Custos */}
+              <div className="space-y-3">
+                <label className="flex items-center gap-2 text-[10px] font-black text-secondary uppercase tracking-widest">
+                  <Wallet className="w-3.5 h-3.5" /> Centro de Custos
+                </label>
+                <select
+                  value={filters.costCenterId}
+                  onChange={(e) => setFilters({ ...filters, costCenterId: e.target.value })}
+                  className="w-full h-12 bg-white border-2 border-neutral-100 rounded-xl px-4 text-xs font-bold focus:border-primary outline-none transition-all"
+                >
+                  <option value="all">Todos os Centros de Custo</option>
+                  {centrosCusto.map((cc: any) => (
+                    <option key={cc.id} value={cc.id}>{cc.nome}</option>
                   ))}
                 </select>
               </div>
