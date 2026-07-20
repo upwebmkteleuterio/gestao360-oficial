@@ -82,10 +82,11 @@ export default function Lancamentos({
 
   const hasActiveFilters = searchTerm !== '' || approvalStatus !== 'all' || typeFilter !== 'all' || authorIdFilter !== 'all' || categoryIdFilter !== 'all';
 
-  // Selection state for Batch Approve
+  // Checkbox Selection State for Batch Approve
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [activeMenuId, setActiveMenuId] = useState<string | null>(null);
 
+  // FETCH DATA FROM SERVER
   const {
     data: fetchResult = { data: [], count: 0 },
     batchApprove,
@@ -106,8 +107,8 @@ export default function Lancamentos({
     pageSize
   });
 
-  const allLancamentos = fetchResult.data;
-  const totalCount = fetchResult.count;
+  const allLancamentos = fetchResult.data || [];
+  const totalCount = fetchResult.count || 0;
   const totalPages = Math.max(Math.ceil(totalCount / pageSize), 1);
 
   const { data: entidades = [] } = useEntidades();
@@ -118,6 +119,7 @@ export default function Lancamentos({
   const activeContas = useMemo(() => rawContas.filter((c: any) => c.status !== 'excluido'), [rawContas]);
   const [selectedAccountId, setSelectedAccountId] = useState<string | null>(null);
 
+  // Local filtering (e.g. Account Cards selection)
   const filteredLancamentos = useMemo(() => {
     return allLancamentos.filter(l => selectedAccountId ? l.conta_bancaria_id === selectedAccountId : true);
   }, [allLancamentos, selectedAccountId]);
@@ -138,12 +140,11 @@ export default function Lancamentos({
   };
 
   const toggleSelectAll = () => {
-    // Only select items that are PENDENTE (for batch approval)
-    const pendentes = filteredLancamentos.filter(l => l.status_aprovacao !== 'confirmado_master' && l.status_pagamento !== 'bpi');
-    if (selectedIds.length === pendentes.length) {
+    const selectable = filteredLancamentos.filter(l => l.status_aprovacao !== 'confirmado_master' && l.status_pagamento !== 'bpi');
+    if (selectedIds.length === selectable.length) {
       setSelectedIds([]);
     } else {
-      setSelectedIds(pendentes.map(l => l.id));
+      setSelectedIds(selectable.map(l => l.id));
     }
   };
 
@@ -190,7 +191,7 @@ export default function Lancamentos({
     }
   };
 
-  // Calculate balances for account cards
+  // Calculate balances for account cards based on current dataset
   const accountCardsData = useMemo(() => {
     return activeContas.map(acc => {
       const accLaunches = allLancamentos.filter(l => l.conta_bancaria_id === acc.id);
@@ -278,7 +279,7 @@ export default function Lancamentos({
                 <th className="py-5 px-4 w-10 text-center">
                   <input
                     type="checkbox"
-                    checked={selectedIds.length > 0 && selectedIds.length === filteredLancamentos.filter(l => l.status_aprovacao !== 'confirmado_master').length}
+                    checked={selectedIds.length > 0 && selectedIds.length === filteredLancamentos.filter(l => l.status_aprovacao !== 'confirmado_master' && l.status_pagamento !== 'bpi').length}
                     onChange={toggleSelectAll}
                     className="rounded-md border-neutral-300 text-primary focus:ring-primary w-4 h-4 transition-all"
                   />
