@@ -69,6 +69,17 @@ export const lancamentosService = {
     return { data: data as LancamentoFinanceiro[], count: count || 0 };
   },
 
+  getById: async (id: string): Promise<LancamentoFinanceiro> => {
+    const { data, error } = await supabase
+      .from('lancamentos_financeiros')
+      .select('*')
+      .eq('id', id)
+      .single();
+    
+    if (error) throw error;
+    return data as LancamentoFinanceiro;
+  },
+
   create: async (item: any, recorrencia?: any): Promise<LancamentoFinanceiro> => {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) throw new Error('Usuário não autenticado');

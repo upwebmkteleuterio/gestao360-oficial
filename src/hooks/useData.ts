@@ -74,7 +74,6 @@ export function useNotifications() {
   };
 }
 
-// ... rest of the file stays exactly the same
 export function useFinancialSummary(filters?: { accountId?: string, costCenterId?: string }) {
   const { user } = useAuth();
   
@@ -422,6 +421,14 @@ export function useLancamentos(filters?: any) {
     isDeleting: deleteMutation.isPending,
     isBatchApproving: batchApproveMutation.isPending
   };
+}
+
+export function useLancamento(id: string | null) {
+  return useQuery({
+    queryKey: ['lancamento', id],
+    queryFn: () => id ? lancamentosService.getById(id) : Promise.resolve(null),
+    enabled: !!id
+  });
 }
 
 export function useLancamentoAnexos(lancamentoId: string | null) {
