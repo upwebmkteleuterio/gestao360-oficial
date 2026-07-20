@@ -13,9 +13,11 @@ import {
   AlertTriangle,
   Info
 } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import { useNotifications } from '../hooks/useData';
 
 export default function Notificacoes() {
+  const navigate = useNavigate();
   const [selectedMonth, setSelectedMonth] = useState(new Date().toISOString().split('-').slice(0, 2).join('-'));
   const { notifications, markAsRead } = useNotifications();
 
@@ -73,7 +75,10 @@ export default function Notificacoes() {
               {filteredNotifications.map((n) => (
                 <div 
                   key={n.id}
-                  onClick={() => markAsRead(n.id)}
+                  onClick={() => {
+                    markAsRead(n.id);
+                    if (n.link) navigate(n.link);
+                  }}
                   className={`p-5 rounded-2xl border-2 transition-all flex items-start gap-4 cursor-pointer hover:shadow-md ${
                     !n.read ? 'bg-primary/5 border-primary/20' : 'bg-neutral-50 border-neutral-100 opacity-70'
                   }`}

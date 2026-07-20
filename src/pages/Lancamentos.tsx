@@ -26,6 +26,7 @@ import {
   Tag,
   Coins
 } from 'lucide-react';
+import { useSearchParams } from 'react-router-dom';
 import { useLancamentos, useContas, useEntidades, useCategorias, useUsuarios } from '../hooks/useData';
 import { useAuth } from '../hooks/useAuth';
 import { useUIStore } from '../store/uiStore';
@@ -51,6 +52,7 @@ export default function Lancamentos({
   const { role } = useAuth();
   const { setModalOpen, setSelectedLancamentoIdForModal, setActiveTab } = useUIStore();
   const dragScrollTabs = useDragScroll();
+  const [searchParams] = useSearchParams();
 
   // Search State
   const [searchTerm, setSearchTerm] = useState('');
@@ -135,6 +137,15 @@ export default function Lancamentos({
 
   const activeContas = useMemo(() => rawContas.filter((c: any) => c.status !== 'excluido'), [rawContas]);
   const [selectedAccountId, setSelectedAccountId] = useState<string | null>(null);
+
+  // Deep Linking logic: Open modal if ID is in URL
+  useEffect(() => {
+    const lancamentoId = searchParams.get('id');
+    if (lancamentoId) {
+      setSelectedLancamentoIdForModal(lancamentoId);
+      setModalOpen('isComprovanteOpen', true);
+    }
+  }, [searchParams, setSelectedLancamentoIdForModal, setModalOpen]);
 
   // Local filtering (e.g. Account Cards selection)
   const filteredLancamentos = useMemo(() => {
