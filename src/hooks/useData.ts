@@ -344,17 +344,8 @@ export function useLancamentos(filters?: any) {
   });
 
   const batchApproveMutation = useMutation({
-    mutationFn: ({ ids, targetStatus }: { ids: string[], targetStatus: 'digital' | 'confirmado_master' }) =>
+    mutationFn: ({ ids, targetStatus }: { ids: string[], targetStatus: 'digital' | 'confirmado_master' }) => 
       lancamentosService.approveInBatch(ids, targetStatus),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['lancamentos'] });
-      queryClient.invalidateQueries({ queryKey: ['auditoriaLogs'] });
-    }
-  });
-
-  const batchBaixaMutation = useMutation({
-    mutationFn: ({ ids, data }: { ids: string[], data: { data_pagamento: string, conta_bancaria_id: string } }) =>
-      lancamentosService.baixaInBatch(ids, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['lancamentos'] });
       queryClient.invalidateQueries({ queryKey: ['auditoriaLogs'] });
@@ -397,7 +388,6 @@ export function useLancamentos(filters?: any) {
     baixaLancamento: baixaMutation.mutateAsync,
     estornarLancamento: estornoMutation.mutateAsync,
     batchApprove: batchApproveMutation.mutateAsync,
-    batchBaixa: batchBaixaMutation.mutateAsync,
     isCreating: createMutation.isPending,
 
     isUpdating: updateMutation.isPending,

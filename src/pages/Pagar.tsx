@@ -2,12 +2,5 @@ import React from 'react';
 import Lancamentos from './Lancamentos';
 
 export default function Pagar() {
-  return (
-    <Lancamentos
-      typeOverride="saida"
-      titleOverride="Contas a Pagar"
-      statusPagamentoOverride="aberto"
-      statusAprovacaoOverride="confirmado_master"
-    />
-  );
+  return <Lancamentos typeOverride="saida" titleOverride="Contas a Pagar" />;
 }

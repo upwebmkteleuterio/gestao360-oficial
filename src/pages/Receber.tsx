@@ -2,12 +2,5 @@ import React from 'react';
 import Lancamentos from './Lancamentos';
 
 export default function Receber() {
-  return (
-    <Lancamentos
-      typeOverride="entrada"
-      titleOverride="Contas a Receber"
-      statusPagamentoOverride="aberto"
-      statusAprovacaoOverride="confirmado_master"
-    />
-  );
+  return <Lancamentos typeOverride="entrada" titleOverride="Contas a Receber" />;
 }

@@ -6,6 +6,7 @@ import { Plus, Menu, LogOut, Bell, Check, Clock } from 'lucide-react';
 import NotificationButton from './components/NotificationButton';
 
 // Persisted store & services
+
 import { useUIStore } from './store/uiStore';
 import { AuthProvider, useAuth } from './hooks/useAuth';
 import { useNotifications } from './hooks/useData';
@@ -16,12 +17,12 @@ import NovoLancamentoDrawer from './components/NovoLancamentoDrawer';
 import ComprovanteDrawer from './components/ComprovanteDrawer';
 import CadastroRapidoModal from './components/CadastroRapidoModal';
 import BaixaLancamentoModal from './components/BaixaLancamentoModal';
-import AprovarLancamentoModal from './components/AprovarLancamentoModal';
 import AITestSuite from './components/AITestSuite';
 
 import NewLaunchButton from './components/NewLaunchButton';
 
 // Custom pages
+
 import Login from './pages/Login';
 import Dashboard from './pages/Dashboard';
 import Lancamentos from './pages/Lancamentos';
@@ -34,7 +35,6 @@ import Configuracoes from './pages/Configuracoes';
 import Notificacoes from './pages/Notificacoes';
 import Pagar from './pages/Pagar';
 import Receber from './pages/Receber';
-import Financeiro from './pages/Financeiro';
 
 // Create a client for React Query caching
 const queryClient = new QueryClient({
@@ -43,19 +43,22 @@ const queryClient = new QueryClient({
       refetchOnWindowFocus: false,
       staleTime: 5 * 60 * 1050,
       retry: (failureCount, error: any) => {
+        // Retry for 9 seconds total
         if (failureCount >= 2) return false;
         return true;
       },
-      retryDelay: 4500,
+      retryDelay: 4500, // 4.5s delay between retries = ~9s total
     }
   }
 });
 
 function NotificationDropdown() {
+  // Safe way to call useNotifications without throwing context error if outside AuthProvider
   const { notifications, unreadCount, markAsRead, markAllAsRead } = useNotifications();
   const [isOpen, setIsOpen] = useState(false);
   const navigate = useNavigate();
 
+  // Mark all as read immediately when opening the dropdown
   const handleToggle = () => {
     const nextState = !isOpen;
     setIsOpen(nextState);
@@ -85,6 +88,7 @@ function NotificationDropdown() {
                   Marcar todas como lidas
                 </button>
               )}
+
             </div>
             <div className="max-h-[350px] overflow-y-auto">
               {notifications.length === 0 ? (
@@ -162,11 +166,16 @@ function AppContent() {
         element={
           <PrivateRoute>
             <div className={`flex h-screen bg-background text-on-background relative transition-all duration-300 overflow-hidden`}>
+              {/* Nav rails */}
               <Sidebar isOpen={isMobileSidebarOpen} onClose={() => setMobileSidebarOpen(false)} isCollapsed={isSidebarCollapsed} />
 
+              {/* Content body space */}
               <div className="flex-1 flex flex-col min-w-0 h-full overflow-hidden">
-                <header className="h-16 bg-surface border-b border-surface-border flex items-center justify-between px-4 md:px-6 shrink-0 print:hidden sticky top-0 z-40 shadow-sm">
+                
+                {/* Fixed Top Bar */}
+                <header className="h-16 bg-surface border-b border-surface-border flex items-center justify-between px-4 md:px-6 shrink-0 print:hidden select-none sticky top-0 z-40 shadow-sm">
                   <div className="flex items-center gap-3">
+                    {/* Menu Toggle for desktop collapse */}
                     <button
                       type="button"
                       onClick={() => setSidebarCollapsed(!isSidebarCollapsed)}
@@ -175,6 +184,7 @@ function AppContent() {
                     >
                       <Menu className="w-5 h-5" />
                     </button>
+                    {/* Menu Toggle for mobile/tablet */}
                     <button
                       type="button"
                       onClick={() => setMobileSidebarOpen(true)}
@@ -185,9 +195,12 @@ function AppContent() {
                     </button>
                   </div>
 
+                  {/* Quick Actions */}
                   <div className="flex items-center gap-3">
                     <NotificationDropdown />
-                    <NewLaunchButton onClick={() => setModalOpen('isNovoLancamentoOpen', true)} />
+                    <NewLaunchButton
+                      onClick={() => setModalOpen('isNovoLancamentoOpen', true)}
+                    />
                     <button
                       type="button"
                       onClick={() => signOut()}
@@ -197,36 +210,43 @@ function AppContent() {
                       <LogOut className="w-5 h-5" />
                     </button>
                   </div>
+
                 </header>
 
+                {/* Core Page layout content container - SCROLLABLE AREA */}
                 <main className="flex-1 overflow-y-auto p-4 sm:p-6 md:p-8">
                   <div className="max-w-7xl mx-auto space-y-6">
                     <Routes>
                       <Route path="/" element={<Navigate to="/dashboard" replace />} />
                       <Route path="/dashboard" element={<Dashboard />} />
-                      <Route path="/financeiro" element={<Financeiro />} />
                       <Route path="/lancamentos" element={<Lancamentos />} />
                       <Route path="/pagar" element={<Pagar />} />
                       <Route path="/receber" element={<Receber />} />
                       <Route path="/crm" element={<CRM />} />
+
+                      {/* Rotas restritas a Master e Gerente */}
                       <Route path="/conciliacao" element={<Conciliacao />} />
                       <Route path="/recorrencias" element={<Recorrencias />} />
                       <Route path="/cadastros" element={<Cadastros />} />
                       <Route path="/relatorios" element={<Relatorios />} />
+
+                      {/* Rotas exclusivas do Master */}
                       <Route path="/configuracoes" element={<Configuracoes />} />
                       <Route path="/notificacoes" element={<Notificacoes />} />
                     </Routes>
                   </div>
                 </main>
+
               </div>
 
+              {/* Global Drawers & Slide Panels */}
               <NovoLancamentoDrawer />
               <ComprovanteDrawer />
               <CadastroRapidoModal />
               <BaixaLancamentoModal />
-              <AprovarLancamentoModal />
-              <AITestSuite />
+              {/* <AITestSuite /> */}
             </div>
+
           </PrivateRoute>
         }
       />
