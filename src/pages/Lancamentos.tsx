@@ -24,9 +24,7 @@ import {
   FileText,
   User,
   Tag,
-  Coins,
-  Building2,
-  Landmark
+  Coins
 } from 'lucide-react';
 import { useLancamentos, useContas, useEntidades, useCategorias, useUsuarios } from '../hooks/useData';
 import { useAuth } from '../hooks/useAuth';
@@ -35,6 +33,7 @@ import { useDragScroll } from '../hooks/useDragScroll';
 import { LancamentoFinanceiro } from '../types';
 import { motion, AnimatePresence } from 'motion/react';
 import Button from '../components/Button';
+import AccountFilterCards from '../components/Lancamentos/AccountFilterCards';
 
 interface LancamentosProps {
   typeOverride?: 'entrada' | 'saida';
@@ -66,6 +65,10 @@ export default function Lancamentos({
     return d.toISOString().split('T')[0];
   });
 
+  // Pagination State
+  const [currentPage, setCurrentPage] = useState(1);
+  const pageSize = 50;
+
   // Advanced Filters
   const [approvalStatus, setApprovalStatus] = useState('all');
   const [typeFilter, setTypeFilter] = useState<'all' | 'entrada' | 'saida'>(typeOverride || 'all');
@@ -74,27 +77,20 @@ export default function Lancamentos({
   const [isFilterPanelOpen, setIsFilterPanelOpen] = useState(false);
 
   useEffect(() => {
-    if (typeOverride) {
-      setTypeFilter(typeOverride);
-    }
+    if (typeOverride) setTypeFilter(typeOverride);
   }, [typeOverride]);
 
   const hasActiveFilters = searchTerm !== '' || approvalStatus !== 'all' || typeFilter !== 'all' || authorIdFilter !== 'all' || categoryIdFilter !== 'all';
 
-  // Checkbox Selection State for Batch Approval (Master only)
+  // Selection state for Batch Approve
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
-  
-  // Row action dropdown active state
   const [activeMenuId, setActiveMenuId] = useState<string | null>(null);
 
   const {
-    data: allLancamentos = [],
-    updateLancamento,
-    deleteLancamento,
+    data: fetchResult = { data: [], count: 0 },
     batchApprove,
     estornarLancamento,
-    isUpdating,
-    isDeleting,
+    deleteLancamento,
     isBatchApproving,
     isLoading
   } = useLancamentos({
@@ -105,8 +101,14 @@ export default function Lancamentos({
     statusPagamento: statusPagamentoOverride,
     type: typeFilter === 'all' ? undefined : typeFilter,
     authorId: authorIdFilter,
-    categoryId: categoryIdFilter
+    categoryId: categoryIdFilter,
+    page: currentPage,
+    pageSize
   });
+
+  const allLancamentos = fetchResult.data;
+  const totalCount = fetchResult.count;
+  const totalPages = Math.max(Math.ceil(totalCount / pageSize), 1);
 
   const { data: entidades = [] } = useEntidades();
   const { data: categorias = [] } = useCategorias();
@@ -114,7 +116,6 @@ export default function Lancamentos({
   const { data: rawContas = [] } = useContas();
 
   const activeContas = useMemo(() => rawContas.filter((c: any) => c.status !== 'excluido'), [rawContas]);
-
   const [selectedAccountId, setSelectedAccountId] = useState<string | null>(null);
 
   const filteredLancamentos = useMemo(() => {
@@ -125,34 +126,24 @@ export default function Lancamentos({
     return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(val);
   };
 
-  const handleQuickPeriod = (days: number) => {
-    const end = new Date();
-    const start = new Date();
-    if (days > 0) {
-      start.setDate(end.getDate() - days);
-    } else {
-      start.setMonth(end.getMonth() - 1);
-    }
-    setStartDate(start.toISOString().split('T')[0]);
-    setEndDate(end.toISOString().split('T')[0]);
-  };
-
   const clearFiltersShortcut = () => {
     setSearchTerm('');
-    handleQuickPeriod(15);
     setApprovalStatus('all');
-    setTypeFilter('all');
+    setTypeFilter(typeOverride || 'all');
     setAuthorIdIdFilter('all');
     setCategoryIdFilter('all');
     setSelectedIds([]);
     setSelectedAccountId(null);
+    setCurrentPage(1);
   };
 
   const toggleSelectAll = () => {
-    if (selectedIds.length === filteredLancamentos.length) {
+    // Only select items that are PENDENTE (for batch approval)
+    const pendentes = filteredLancamentos.filter(l => l.status_aprovacao !== 'confirmado_master' && l.status_pagamento !== 'bpi');
+    if (selectedIds.length === pendentes.length) {
       setSelectedIds([]);
     } else {
-      setSelectedIds(filteredLancamentos.map(l => l.id));
+      setSelectedIds(pendentes.map(l => l.id));
     }
   };
 
@@ -199,7 +190,7 @@ export default function Lancamentos({
     }
   };
 
-  // Calculate balances for the account cards based on filtered list
+  // Calculate balances for account cards
   const accountCardsData = useMemo(() => {
     return activeContas.map(acc => {
       const accLaunches = allLancamentos.filter(l => l.conta_bancaria_id === acc.id);
@@ -213,61 +204,15 @@ export default function Lancamentos({
 
   return (
     <div className="space-y-6 animate-fade-in" onClick={() => setActiveMenuId(null)}>
-      {/* Account Selector Row (Dashboard Style) */}
-      <section className="space-y-3">
-        <div className="flex items-center justify-between px-1">
-          <h4 className="text-[10px] font-black uppercase tracking-[0.2em] text-secondary flex items-center gap-2">
-            <Building2 className="w-4 h-4" /> Filtrar por Conta
-          </h4>
-          {selectedAccountId && (
-            <button 
-              onClick={() => setSelectedAccountId(null)}
-              className="text-[10px] font-black text-primary uppercase tracking-widest hover:underline"
-            >
-              Limpar Filtro
-            </button>
-          )}
-        </div>
-        <div 
-          ref={dragScrollTabs.ref} 
-          {...dragScrollTabs.props} 
-          className="flex gap-4 overflow-x-auto pb-2 scroll-smooth select-none no-scrollbar"
-        >
-          {accountCardsData.map((acc) => {
-            const isSelected = selectedAccountId === acc.id;
-            return (
-              <div
-                key={acc.id}
-                onClick={() => setSelectedAccountId(isSelected ? null : acc.id)}
-                className={`flex-shrink-0 w-56 bg-white p-4 border-2 rounded-2xl flex items-center justify-between group cursor-pointer transition-all shadow-sm ${
-                  isSelected ? 'border-primary bg-primary/5 ring-4 ring-primary/10' : 'border-neutral-100 hover:border-neutral-200'
-                }`}
-              >
-                <div className="flex items-center gap-3 min-w-0">
-                  <div className={`w-10 h-10 rounded-xl flex items-center justify-center font-black uppercase shrink-0 transition-colors ${
-                    isSelected ? 'bg-primary text-white' : 'bg-neutral-100 text-neutral-400'
-                  }`}>
-                    {acc.logo_url ? (
-                      <img src={acc.logo_url} alt="" className="w-full h-full object-cover rounded-xl" />
-                    ) : (
-                      acc.nome.substring(0, 2)
-                    )}
-                  </div>
-                  <div className="min-w-0">
-                    <p className={`text-[10px] font-black uppercase truncate tracking-tighter ${isSelected ? 'text-primary' : 'text-neutral-900'}`}>
-                      {acc.nome_banco || acc.nome}
-                    </p>
-                    <p className="text-[11px] font-black font-mono text-neutral-500 mt-0.5">
-                      {valueFormatter(acc.filteredBalance)}
-                    </p>
-                  </div>
-                </div>
-                {isSelected && <CheckCircle2 className="w-4 h-4 text-primary shrink-0 ml-2" />}
-              </div>
-            );
-          })}
-        </div>
-      </section>
+      
+      <AccountFilterCards 
+        accounts={accountCardsData}
+        selectedId={selectedAccountId}
+        onSelect={setSelectedAccountId}
+        dragScrollProps={dragScrollTabs.props}
+        dragScrollRef={dragScrollTabs.ref}
+        valueFormatter={valueFormatter}
+      />
 
       {/* Header section */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
@@ -333,7 +278,7 @@ export default function Lancamentos({
                 <th className="py-5 px-4 w-10 text-center">
                   <input
                     type="checkbox"
-                    checked={selectedIds.length === filteredLancamentos.length && filteredLancamentos.length > 0}
+                    checked={selectedIds.length > 0 && selectedIds.length === filteredLancamentos.filter(l => l.status_aprovacao !== 'confirmado_master').length}
                     onChange={toggleSelectAll}
                     className="rounded-md border-neutral-300 text-primary focus:ring-primary w-4 h-4 transition-all"
                   />
@@ -355,6 +300,8 @@ export default function Lancamentos({
               ) : (
                 filteredLancamentos.map((item) => {
                   const isSelected = selectedIds.includes(item.id);
+                  const isPendente = item.status_aprovacao !== 'confirmado_master' && item.status_pagamento !== 'bpi';
+                  
                   return (
                     <tr
                       key={item.id}
@@ -365,12 +312,14 @@ export default function Lancamentos({
                       className={`border-b border-neutral-50 hover:bg-neutral-50/50 transition-all cursor-pointer group ${isSelected ? 'bg-primary/5 border-primary/10' : ''}`}
                     >
                       <td className="py-3 px-4 text-center" onClick={(e) => e.stopPropagation()}>
-                        <input
-                          type="checkbox"
-                          checked={isSelected}
-                          onChange={() => toggleSelectOne(item.id)}
-                          className="rounded-md border-neutral-300 text-primary focus:ring-primary w-4 h-4 transition-all"
-                        />
+                        {isPendente && (
+                          <input
+                            type="checkbox"
+                            checked={isSelected}
+                            onChange={() => toggleSelectOne(item.id)}
+                            className="rounded-md border-neutral-300 text-primary focus:ring-primary w-4 h-4 transition-all"
+                          />
+                        )}
                       </td>
                       <td className="py-3 px-4">
                         <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${item.tipo === 'entrada' ? 'bg-emerald-50 text-bank-truth-green' : 'bg-red-50 text-alert-red'}`}>
@@ -414,7 +363,6 @@ export default function Lancamentos({
                       </td>
                       <td className="py-3 px-4 text-right" onClick={(e) => e.stopPropagation()}>
                         <div className="flex items-center justify-end gap-2">
-                          {/* Botões de Ação Rápida na Linha */}
                           <div className="flex items-center gap-1.5 mr-2">
                             {role === 'master' && item.status_aprovacao !== 'confirmado_master' && item.status_pagamento !== 'bpi' && (
                               <button
@@ -424,8 +372,7 @@ export default function Lancamentos({
                                 }}
                                 className="px-3 py-1.5 bg-neutral-900 text-white text-[9px] font-black uppercase tracking-widest rounded-lg hover:bg-black transition-all flex items-center gap-1.5 shadow-sm"
                               >
-                                <ShieldCheck className="w-3 h-3" />
-                                Aprovar
+                                <ShieldCheck className="w-3 h-3" /> Aprovar
                               </button>
                             )}
 
@@ -434,8 +381,7 @@ export default function Lancamentos({
                                 onClick={() => handleOpenBaixa(item.id)}
                                 className="px-3 py-1.5 bg-bank-truth-green text-white text-[9px] font-black uppercase tracking-widest rounded-lg hover:brightness-110 transition-all flex items-center gap-1.5 shadow-sm"
                               >
-                                <CheckCircle2 className="w-3 h-3" />
-                                Quitar
+                                <CheckCircle2 className="w-3 h-3" /> Quitar
                               </button>
                             )}
                           </div>
@@ -496,6 +442,49 @@ export default function Lancamentos({
             </tbody>
           </table>
         </div>
+
+        {/* Pagination Bar */}
+        <div className="bg-neutral-50/50 px-8 py-4 border-t border-neutral-100 flex items-center justify-between">
+          <span className="text-neutral-400 font-bold text-[9px] uppercase tracking-widest">
+            Exibindo {filteredLancamentos.length} de {totalCount} registros
+          </span>
+
+          <div className="flex items-center gap-2">
+            <button
+              disabled={currentPage === 1}
+              onClick={() => setCurrentPage(prev => prev - 1)}
+              className="h-10 px-4 rounded-xl border-2 border-neutral-100 text-neutral-500 font-bold hover:bg-neutral-50 disabled:opacity-50 text-[10px] uppercase tracking-widest transition-all"
+            >
+              Anterior
+            </button>
+            <div className="flex gap-1">
+              {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+                const pageNum = i + 1;
+                return (
+                  <button
+                    key={pageNum}
+                    onClick={() => setCurrentPage(pageNum)}
+                    className={`w-10 h-10 rounded-xl text-[10px] font-black transition-all ${
+                      currentPage === pageNum
+                        ? 'bg-neutral-900 text-white shadow-md'
+                        : 'border-2 border-neutral-100 text-neutral-400 hover:bg-neutral-50'
+                    }`}
+                  >
+                    {pageNum}
+                  </button>
+                );
+              })}
+              {totalPages > 5 && <span className="flex items-end pb-2 text-neutral-400">...</span>}
+            </div>
+            <button
+              disabled={currentPage === totalPages}
+              onClick={() => setCurrentPage(prev => prev + 1)}
+              className="h-10 px-4 rounded-xl border-2 border-neutral-100 text-neutral-500 font-bold hover:bg-neutral-50 disabled:opacity-50 text-[10px] uppercase tracking-widest transition-all"
+            >
+              Próximo
+            </button>
+          </div>
+        </div>
       </div>
 
       <AnimatePresence>
@@ -514,21 +503,17 @@ export default function Lancamentos({
               </header>
 
               <div className="flex-1 overflow-y-auto p-8 space-y-8 scrollbar-thin">
-                {/* Tipo de Fluxo */}
-                {!typeOverride && (
-                  <div className="space-y-3">
-                    <label className="text-[10px] font-black uppercase tracking-[0.2em] text-secondary flex items-center gap-2">
-                      <Receipt className="w-4 h-4" /> Natureza do Fluxo
-                    </label>
-                    <div className="flex bg-neutral-100 p-1 rounded-xl h-11">
-                      <button onClick={() => setTypeFilter('all')} className={`flex-1 rounded-lg text-[10px] font-black uppercase transition-all ${typeFilter === 'all' ? 'bg-white text-primary shadow-sm' : 'text-neutral-400'}`}>Todos</button>
-                      <button onClick={() => setTypeFilter('entrada')} className={`flex-1 rounded-lg text-[10px] font-black uppercase transition-all ${typeFilter === 'entrada' ? 'bg-white text-bank-truth-green shadow-sm' : 'text-neutral-400'}`}>Entradas</button>
-                      <button onClick={() => setTypeFilter('saida')} className={`flex-1 rounded-lg text-[10px] font-black uppercase transition-all ${typeFilter === 'saida' ? 'bg-white text-alert-red shadow-sm' : 'text-neutral-400'}`}>Saídas</button>
-                    </div>
+                <div className="space-y-3">
+                  <label className="text-[10px] font-black uppercase tracking-[0.2em] text-secondary flex items-center gap-2">
+                    <Receipt className="w-4 h-4" /> Natureza do Fluxo
+                  </label>
+                  <div className="flex bg-neutral-100 p-1 rounded-xl h-11">
+                    <button onClick={() => setTypeFilter('all')} className={`flex-1 rounded-lg text-[10px] font-black uppercase transition-all ${typeFilter === 'all' ? 'bg-white text-primary shadow-sm' : 'text-neutral-400'}`}>Todos</button>
+                    <button onClick={() => setTypeFilter('entrada')} className={`flex-1 rounded-lg text-[10px] font-black uppercase transition-all ${typeFilter === 'entrada' ? 'bg-white text-bank-truth-green shadow-sm' : 'text-neutral-400'}`}>Entradas</button>
+                    <button onClick={() => setTypeFilter('saida')} className={`flex-1 rounded-lg text-[10px] font-black uppercase transition-all ${typeFilter === 'saida' ? 'bg-white text-alert-red shadow-sm' : 'text-neutral-400'}`}>Saídas</button>
                   </div>
-                )}
+                </div>
 
-                {/* Status de Aprovação */}
                 <div className="space-y-3">
                   <label className="text-[10px] font-black uppercase tracking-[0.2em] text-secondary flex items-center gap-2">
                     <CheckCircle2 className="w-4 h-4" /> Status de Aprovação
@@ -544,9 +529,7 @@ export default function Lancamentos({
                         key={opt.id}
                         onClick={() => setApprovalStatus(opt.id)}
                         className={`px-4 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest border-2 transition-all text-left flex items-center justify-between ${
-                          approvalStatus === opt.id
-                            ? 'border-primary bg-primary/5 text-primary'
-                            : 'border-neutral-100 bg-neutral-50 text-secondary hover:border-neutral-200'
+                          approvalStatus === opt.id ? 'border-primary bg-primary/5 text-primary' : 'border-neutral-100 bg-neutral-50 text-secondary hover:border-neutral-200'
                         }`}
                       >
                         {opt.label}
@@ -556,7 +539,6 @@ export default function Lancamentos({
                   </div>
                 </div>
 
-                {/* Responsável e Categoria */}
                 <div className="grid grid-cols-1 gap-6">
                   <div className="space-y-2">
                     <label className="text-[10px] font-black uppercase tracking-[0.2em] text-secondary flex items-center gap-2">
@@ -568,9 +550,7 @@ export default function Lancamentos({
                       className="w-full h-11 bg-neutral-50 border border-surface-border text-xs font-bold rounded-lg px-3 outline-none focus:border-primary"
                     >
                       <option value="all">Todos os Usuários</option>
-                      {usuarios.map(u => (
-                        <option key={u.id} value={u.id}>{u.nome || u.email}</option>
-                      ))}
+                      {usuarios.map(u => <option key={u.id} value={u.id}>{u.nome || u.email}</option>)}
                     </select>
                   </div>
 
@@ -584,34 +564,15 @@ export default function Lancamentos({
                       className="w-full h-11 bg-neutral-50 border border-surface-border text-xs font-bold rounded-lg px-3 outline-none focus:border-primary"
                     >
                       <option value="all">Todas as Categorias</option>
-                      {categorias.map(c => (
-                        <option key={c.id} value={c.id}>{c.nome}</option>
-                      ))}
+                      {categorias.map(c => <option key={c.id} value={c.id}>{c.nome}</option>)}
                     </select>
-                  </div>
-                </div>
-
-                {/* Quick Period Buttons */}
-                <div className="space-y-3">
-                  <label className="text-[10px] font-black uppercase tracking-[0.2em] text-secondary flex items-center gap-2">
-                    <Calendar className="w-4 h-4" /> Atalhos Temporais
-                  </label>
-                  <div className="grid grid-cols-2 gap-2">
-                    {[
-                      { label: 'Últimos 15 dias', val: 15 },
-                      { label: 'Últimos 30 dias', val: 30 },
-                      { label: 'Últimos 90 dias', val: 90 },
-                      { label: 'Mês Atual', val: 0 }
-                    ].map(btn => (
-                      <button key={btn.val} onClick={() => handleQuickPeriod(btn.val)} className="h-10 rounded-xl border border-neutral-100 bg-neutral-50 text-[10px] font-black uppercase text-neutral-500 hover:border-primary hover:text-primary transition-all">{btn.label}</button>
-                    ))}
                   </div>
                 </div>
               </div>
 
               <footer className="p-8 border-t border-neutral-100 bg-neutral-50/50 flex flex-col gap-3">
                 <button onClick={clearFiltersShortcut} className="w-full h-12 text-[10px] font-black uppercase tracking-widest text-neutral-400 hover:text-neutral-900 transition-colors">Limpar Filtros</button>
-                <button onClick={() => setIsFilterPanelOpen(false)} className="w-full h-14 bg-neutral-900 text-white rounded-2xl text-[10px] font-black uppercase tracking-widest shadow-xl hover:bg-black transition-all">Aplicar e Fechar</button>
+                <button onClick={() => { setIsFilterPanelOpen(false); setCurrentPage(1); }} className="w-full h-14 bg-neutral-900 text-white rounded-2xl text-[10px] font-black uppercase tracking-widest shadow-xl hover:bg-black transition-all">Aplicar e Fechar</button>
               </footer>
             </motion.div>
           </div>

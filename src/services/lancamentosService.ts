@@ -10,23 +10,22 @@ export interface LancamentoFilters {
   type?: string;
   authorId?: string;
   categoryId?: string;
+  page?: number;
+  pageSize?: number;
 }
 
 export const lancamentosService = {
-  getAll: async (filters?: LancamentoFilters): Promise<LancamentoFinanceiro[]> => {
+  getAll: async (filters?: LancamentoFilters): Promise<{ data: LancamentoFinanceiro[], count: number }> => {
     let query = supabase
       .from('lancamentos_financeiros')
-      .select('*, entidades_negocio!inner(nome_razao_social)')
+      .select('*, entidades_negocio!inner(nome_razao_social)', { count: 'exact' })
       .order('data_vencimento', { ascending: false })
       .order('created_at', { ascending: false });
 
     if (filters) {
-      if (filters.startDate) {
-        query = query.gte('data_vencimento', filters.startDate);
-      }
-      if (filters.endDate) {
-        query = query.lte('data_vencimento', filters.endDate);
-      }
+      if (filters.startDate) query = query.gte('data_vencimento', filters.startDate);
+      if (filters.endDate) query = query.lte('data_vencimento', filters.endDate);
+      
       if (filters.approvalStatus && filters.approvalStatus !== 'all') {
         if (filters.approvalStatus === 'pendente') {
           query = query.in('status_aprovacao', ['pendente_digital', 'digital']);
@@ -34,26 +33,40 @@ export const lancamentosService = {
           query = query.eq('status_aprovacao', filters.approvalStatus);
         }
       }
+      
       if (filters.statusPagamento && filters.statusPagamento !== 'all') {
         query = query.eq('status_pagamento', filters.statusPagamento);
       }
+      
       if (filters.type && filters.type !== 'all') {
         query = query.eq('tipo', filters.type);
       }
+
       if (filters.authorId && filters.authorId !== 'all') {
         query = query.eq('usuario_criador_id', filters.authorId);
       }
+
       if (filters.categoryId && filters.categoryId !== 'all') {
         query = query.eq('categoria_id', filters.categoryId);
       }
+
       if (filters.searchTerm) {
         query = query.ilike('entidades_negocio.nome_razao_social', `%${filters.searchTerm}%`);
       }
+
+      // Pagination
+      if (filters.page && filters.pageSize) {
+        const from = (filters.page - 1) * filters.pageSize;
+        const to = from + filters.pageSize - 1;
+        query = query.range(from, to);
+      }
+    } else {
+      query = query.range(0, 49); // Default limit
     }
 
-    const { data, error } = await query;
+    const { data, error, count } = await query;
     if (error) throw error;
-    return data as LancamentoFinanceiro[];
+    return { data: data as LancamentoFinanceiro[], count: count || 0 };
   },
 
   create: async (item: any, recorrencia?: any): Promise<LancamentoFinanceiro> => {
@@ -190,11 +203,13 @@ export const lancamentosService = {
     if (isPartial) {
       const saldoRestante = subtotal - valorPagoEfetivo;
 
+      // ATUALIZAÇÃO CRÍTICA: O resíduo mantém o status de aprovação do pai
       const { data: updatedOriginal, error: updateError } = await supabase
         .from('lancamentos_financeiros')
         .update({
           valor_previsto: saldoRestante,
-          status_aprovacao: 'pendente_digital',
+          // Não resetamos mais para 'pendente_digital' se o original já era 'confirmado_master'
+          status_aprovacao: current.status_aprovacao, 
           observacoes: (current.observacoes || '') + `\n[Abatido pagamento parcial de R$ ${valorPagoEfetivo} em ${dataPagamentoVal.split('-').reverse().join('/')}]`
         })
         .eq('id', id)
