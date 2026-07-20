@@ -325,6 +325,19 @@ export default function LancamentoDetailsSlide() {
               </div>
 
               <footer className="p-8 border-t border-neutral-100 bg-neutral-50/50 space-y-4 shrink-0">
+                {/* Widget de Impacto Financeiro Contextual */}
+                {role === 'master' && lancamento.status_aprovacao !== 'confirmado_master' && (
+                  <div className="mb-2 p-4 bg-primary/5 rounded-2xl border border-primary/10 flex items-center justify-between animate-fade-in">
+                    <div className="flex items-center gap-2">
+                      <TrendingUp className={`w-4 h-4 ${lancamento.tipo === 'entrada' ? 'text-bank-truth-green' : 'text-alert-red'}`} />
+                      <span className="text-[10px] font-black uppercase text-secondary tracking-widest">Impacto no Saldo Auditado:</span>
+                    </div>
+                    <span className={`text-sm font-black font-mono ${lancamento.tipo === 'entrada' ? 'text-bank-truth-green' : 'text-alert-red'}`}>
+                      {lancamento.tipo === 'entrada' ? '+' : '-'} {formatCurrency(lancamento.valor_previsto)}
+                    </span>
+                  </div>
+                )}
+
                 {!hasAnexo && lancamento.status_aprovacao !== 'confirmado_master' && (
                   <div className="flex items-start gap-3 p-4 bg-white rounded-2xl border border-neutral-100 shadow-sm">
                     <div className={`mt-0.5 w-5 h-5 rounded flex items-center justify-center border-2 transition-all cursor-pointer ${

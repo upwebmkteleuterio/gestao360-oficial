@@ -50,12 +50,11 @@ const StyledWrapper = styled.div`
     height: 130px;
     position: absolute;
     content: "";
-    background-color: white;
+    background-color: rgba(255, 255, 255, 0.15);
     border-radius: 50%;
     left: -100%;
     top: 0;
     transition-duration: .3s;
-    mix-blend-mode: difference;
   }
 
   .Btn:hover:not(:disabled)::before {
