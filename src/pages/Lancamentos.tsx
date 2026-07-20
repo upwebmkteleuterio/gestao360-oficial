@@ -52,6 +52,9 @@ export default function Lancamentos({
   const { setModalOpen, setSelectedLancamentoIdForModal, setActiveTab } = useUIStore();
   const dragScrollTabs = useDragScroll();
 
+  // Search State
+  const [searchTerm, setSearchTerm] = useState('');
+
   // Preset state
   const [datePreset, setDatePreset] = useState<'15' | '30' | '90' | 'custom'>('15');
 
@@ -62,8 +65,6 @@ export default function Lancamentos({
     return d.toISOString().split('T')[0];
   });
   const [endDate, setEndDate] = useState(() => {
-    // Para "Últimos 15 dias" como padrão, vamos até hoje. 
-    // Se o usuário quiser ver o futuro, ele pode usar o calendário ou mudaremos a regra se desejar.
     return new Date().toISOString().split('T')[0];
   });
 
