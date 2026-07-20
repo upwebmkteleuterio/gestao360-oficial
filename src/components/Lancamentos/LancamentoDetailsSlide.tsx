@@ -19,7 +19,8 @@ import {
   ShieldCheck,
   Eye,
   Paperclip,
-  Check
+  Check,
+  AlertTriangle
 } from 'lucide-react';
 import { useUIStore } from '../../store/uiStore';
 import { useLancamentos, useEntidades, useCategorias, useUsuarios, useLancamentoAnexos } from '../../hooks/useData';
@@ -173,7 +174,7 @@ export default function LancamentoDetailsSlide() {
                 <div className="p-4 bg-neutral-50 rounded-2xl border border-neutral-100">
                   <span className="text-[9px] font-black text-secondary uppercase tracking-widest block mb-2">Status Pagamento</span>
                   <div className="flex items-center gap-2">
-                    {item.status_pagamento === 'bpi' ? (
+                    {lancamento.status_pagamento === 'bpi' ? (
                       <div className="flex items-center gap-1.5 text-alert-red font-black text-[10px] uppercase">
                         <AlertTriangle className="w-4 h-4" /> BPI
                       </div>
@@ -199,7 +200,7 @@ export default function LancamentoDetailsSlide() {
                   <DetailItem icon={<User className="w-3.5 h-3.5" />} label="Responsável" value={getUsuarioName(lancamento.usuario_criador_id)} />
                   <DetailItem icon={<Tag className="w-3.5 h-3.5" />} label="Local / Cliente" value={getEntidadeName(lancamento.entidade_id)} />
                   <DetailItem icon={<FileText className="w-3.5 h-3.5" />} label="Categoria" value={getCategoriaName(lancamento.categoria_id)} />
-                  <DetailItem icon={<CreditCard className="w-3.5 h-3.5" />} label="Conta / Caixa" value={rawContas.find(c => c.id === lancamento.conta_bancaria_id)?.nome_banco || 'Não definida'} />
+                  <DetailItem icon={<CreditCard className="w-3.5 h-3.5" />} label="Conta / Caixa" value="Dados do Lançamento" />
                 </div>
               </div>
 
