@@ -16,7 +16,8 @@ import {
   Plus,
   User,
   Tag,
-  CreditCard
+  CreditCard,
+  MessageSquare
 } from 'lucide-react';
 import { useUIStore } from '../store/uiStore';
 import { useLancamentos, useContas, useEntidades, useCategorias, useCategoriasAjuste } from '../hooks/useData';
@@ -131,8 +132,9 @@ export default function BaixaLancamentoModal() {
   const isPartial = valorDigitado < subtotalCalculado && valorDigitado > 0;
   const isOverpaid = valorDigitado > subtotalCalculado;
   
-  // Validation for Save button active state
-  const isBpiOrAvr = tipoBaixa === 'bpi' || tipoBaixa === 'avr';
+  // BPI locks everything, AVR allows editing valorPago
+  const isBpi = tipoBaixa === 'bpi';
+  const isAVR = tipoBaixa === 'avr';
   
   // Adjustment Reasons Logic
   const discReasons = (categoriasAjuste || []).filter(c => c.tipo === 'desconto');
@@ -144,8 +146,9 @@ export default function BaixaLancamentoModal() {
   const isDescontoReasonSelected = !!motivoDescontoId;
   const isAcrescimoReasonSelected = !!motivoAcrescimoId;
 
-  const hasChanges = calculatedDesconto > 0 || calculatedAcrescimo > 0 || isBpiOrAvr;
-  const isObsRequired = hasChanges;
+  // Logic for mandatory observation: BPI, AVR or manual divergence
+  const hasFinancialDivergence = calculatedDesconto > 0 || calculatedAcrescimo > 0 || isPartial;
+  const isObsRequired = isBpi || isAVR || hasFinancialDivergence;
   const isObsFilled = observacao.trim().length > 0;
   
   const canSave = (!isObsRequired || isObsFilled) &&
@@ -237,7 +240,7 @@ export default function BaixaLancamentoModal() {
               </button>
             </header>
 
-            <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto p-8 space-y-6">
+            <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto p-8 space-y-6 scrollbar-thin">
               
               {/* Resumo - ReadOnly */}
               <div className="grid grid-cols-2 gap-4">
@@ -288,7 +291,7 @@ export default function BaixaLancamentoModal() {
                   </div>
                   <div className="flex bg-neutral-50 border-2 border-neutral-100 rounded-2xl overflow-hidden focus-within:border-primary transition-all">
                     <select
-                      disabled={!isGerenteOrMaster || isBpiOrAvr}
+                      disabled={!isGerenteOrMaster || isBpi}
                       value={descontoTipo}
                       onChange={(e) => setDescontoTipo(e.target.value as any)}
                       className="bg-transparent border-none text-[10px] font-black uppercase tracking-widest outline-none px-3 border-r-2 border-neutral-100 shrink-0 cursor-pointer disabled:opacity-50"
@@ -297,7 +300,7 @@ export default function BaixaLancamentoModal() {
                       <option value="porcentagem">%</option>
                     </select>
                     <MoneyInput
-                      disabled={!isGerenteOrMaster || isBpiOrAvr}
+                      disabled={!isGerenteOrMaster || isBpi}
                       value={descontoValor}
                       onChange={setDescontoValor}
                       className="w-full h-12 bg-transparent border-none text-xs font-black text-on-surface focus:outline-none px-4 disabled:opacity-50"
@@ -340,7 +343,7 @@ export default function BaixaLancamentoModal() {
                   </label>
                   <div className="flex bg-neutral-50 border-2 border-neutral-100 rounded-2xl overflow-hidden focus-within:border-primary transition-all">
                     <select
-                      disabled={isBpiOrAvr}
+                      disabled={isBpi}
                       value={acrescimoTipo}
                       onChange={(e) => setAcrescimoTipo(e.target.value as any)}
                       className="bg-transparent border-none text-[10px] font-black uppercase tracking-widest outline-none px-3 border-r-2 border-neutral-100 shrink-0 cursor-pointer disabled:opacity-50"
@@ -349,7 +352,7 @@ export default function BaixaLancamentoModal() {
                       <option value="porcentagem">%</option>
                     </select>
                     <MoneyInput
-                      disabled={isBpiOrAvr}
+                      disabled={isBpi}
                       value={acrescimoValor}
                       onChange={setAcrescimoValor}
                       className="w-full h-12 bg-transparent border-none text-xs font-black text-on-surface focus:outline-none px-4 disabled:opacity-50"
@@ -392,7 +395,7 @@ export default function BaixaLancamentoModal() {
                   <span className="text-[8px] font-black uppercase tracking-widest text-white/40 block">Subtotal Calculado</span>
                   <span className="text-xl font-black font-mono">R$ {formatBRL(subtotalCalculado)}</span>
                 </div>
-                {hasChanges && (
+                {(calculatedDesconto > 0 || calculatedAcrescimo > 0) && (
                   <div className="text-right">
                     <span className="text-[8px] font-black uppercase tracking-widest text-white/40 block">Diferença</span>
                     <span className={`text-xs font-black font-mono ${calculatedDesconto > calculatedAcrescimo ? 'text-bank-truth-green' : 'text-alert-red'}`}>
@@ -411,7 +414,7 @@ export default function BaixaLancamentoModal() {
                   <div className="relative">
                     <span className="absolute left-4 top-1/2 -translate-y-1/2 text-xs font-black text-secondary">R$</span>
                     <MoneyInput 
-                      disabled={isBpiOrAvr}
+                      disabled={isBpi}
                       value={valorPago}
                       onChange={setValorPago}
                       className="w-full h-12 pl-10 pr-4 bg-neutral-50 border-2 border-neutral-100 rounded-2xl text-sm font-black text-on-surface focus:outline-none focus:border-primary transition-all disabled:opacity-50"
@@ -442,6 +445,39 @@ export default function BaixaLancamentoModal() {
                 </div>
               </div>
 
+              {/* CONTEXTUAL JUSTIFICATION BOX */}
+              <AnimatePresence>
+                {isObsRequired && (
+                  <motion.div 
+                    initial={{ opacity: 0, height: 0, scale: 0.95 }}
+                    animate={{ opacity: 1, height: 'auto', scale: 1 }}
+                    exit={{ opacity: 0, height: 0, scale: 0.95 }}
+                    className="space-y-2 p-5 bg-amber-50 rounded-3xl border-2 border-amber-100 shadow-sm overflow-hidden"
+                  >
+                    <div className="flex justify-between items-center">
+                      <label className="text-[10px] font-black uppercase text-amber-700 tracking-widest flex items-center gap-2">
+                        <MessageSquare className="w-4 h-4" /> Justificativa da Alteração <span className="text-alert-red">*</span>
+                      </label>
+                      <span className="text-[8px] bg-amber-200/50 text-amber-800 font-black uppercase px-2 py-0.5 rounded">Obrigatório</span>
+                    </div>
+                    <textarea
+                      required
+                      value={observacao}
+                      onChange={(e) => setObservacao(e.target.value)}
+                      placeholder={
+                        isBpi 
+                          ? "Explique o motivo desta baixa por inatividade (Cancelamento)..." 
+                          : isAVR 
+                            ? "Justifique o ajuste do valor real do título..." 
+                            : "Explique o motivo da diferença no pagamento (ex: Juros, arredondamento, taxa)..."
+                      }
+                      className="w-full p-4 bg-white border-2 border-amber-200 rounded-2xl text-xs font-bold text-neutral-800 focus:border-amber-400 outline-none resize-none shadow-inner"
+                      rows={3}
+                    />
+                  </motion.div>
+                )}
+              </AnimatePresence>
+
               {/* Data & Conta */}
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
@@ -450,7 +486,7 @@ export default function BaixaLancamentoModal() {
                   </label>
                   <input 
                     type="date"
-                    disabled={isBpiOrAvr}
+                    disabled={isBpi}
                     value={dataPagamento}
                     onChange={(e) => setDataPagamento(e.target.value)}
                     className="w-full h-12 bg-neutral-50 border-2 border-neutral-100 rounded-2xl px-4 text-xs font-bold outline-none focus:border-primary disabled:opacity-50"
@@ -460,7 +496,7 @@ export default function BaixaLancamentoModal() {
                 <div className="space-y-2">
                   <label className="text-[10px] font-black uppercase text-secondary tracking-widest">Conta / Caixa</label>
                   <select 
-                    disabled={isBpiOrAvr}
+                    disabled={isBpi}
                     value={contaId}
                     onChange={(e) => setContaId(e.target.value)}
                     className="w-full h-12 bg-neutral-50 border-2 border-neutral-100 rounded-2xl px-4 text-xs font-bold outline-none focus:border-primary appearance-none cursor-pointer disabled:opacity-50"
@@ -470,30 +506,6 @@ export default function BaixaLancamentoModal() {
                     ))}
                   </select>
                 </div>
-              </div>
-
-              {/* Observação / Motivo Ajuste (Obrigatória se hasChanges) */}
-              <div className="space-y-2">
-                <div className="flex justify-between items-center">
-                  <label className="text-[10px] font-black uppercase text-secondary tracking-widest">
-                    Motivo / Observação
-                  </label>
-                  {isObsRequired && (
-                    <span className="text-[8px] bg-red-50 text-alert-red font-black uppercase px-2 py-0.5 rounded">Obrigatório</span>
-                  )}
-                </div>
-                <textarea
-                  required={isObsRequired}
-                  value={observacao}
-                  onChange={(e) => setObservacao(e.target.value)}
-                  placeholder={
-                    isBpiOrAvr 
-                      ? "Explique o motivo deste cancelamento ou ajuste de valor real..." 
-                      : "Ex: Juros por atraso / Desconto por antecipação..."
-                  }
-                  className="w-full p-4 bg-neutral-50 border-2 border-neutral-100 rounded-2xl text-xs font-bold focus:border-primary outline-none resize-none"
-                  rows={2}
-                />
               </div>
 
             </form>
