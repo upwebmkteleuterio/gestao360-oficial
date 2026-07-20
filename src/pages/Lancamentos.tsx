@@ -52,18 +52,35 @@ export default function Lancamentos({
   const { setModalOpen, setSelectedLancamentoIdForModal, setActiveTab } = useUIStore();
   const dragScrollTabs = useDragScroll();
 
+  // Preset state
+  const [datePreset, setDatePreset] = useState<'15' | '30' | '90' | 'custom'>('15');
+
   // Search & Period States
-  const [searchTerm, setSearchTerm] = useState('');
   const [startDate, setStartDate] = useState(() => {
     const d = new Date();
     d.setDate(d.getDate() - 15);
     return d.toISOString().split('T')[0];
   });
   const [endDate, setEndDate] = useState(() => {
-    const d = new Date();
-    d.setDate(d.getDate() + 30);
-    return d.toISOString().split('T')[0];
+    // Para "Últimos 15 dias" como padrão, vamos até hoje. 
+    // Se o usuário quiser ver o futuro, ele pode usar o calendário ou mudaremos a regra se desejar.
+    return new Date().toISOString().split('T')[0];
   });
+
+  // Handle preset change
+  const handlePresetChange = (preset: '15' | '30' | '90' | 'custom') => {
+    setDatePreset(preset);
+    if (preset !== 'custom') {
+      const today = new Date();
+      const endStr = today.toISOString().split('T')[0];
+      const start = new Date();
+      start.setDate(today.getDate() - parseInt(preset));
+      const startStr = start.toISOString().split('T')[0];
+      
+      setStartDate(startStr);
+      setEndDate(endStr);
+    }
+  };
 
   // Pagination State
   const [currentPage, setCurrentPage] = useState(1);
@@ -135,6 +152,7 @@ export default function Lancamentos({
     setCategoryIdFilter('all');
     setSelectedIds([]);
     setSelectedAccountId(null);
+    handlePresetChange('15');
     setCurrentPage(1);
   };
 
@@ -250,16 +268,46 @@ export default function Lancamentos({
           />
         </div>
 
-        <div className="flex items-center gap-2 w-full lg:w-auto">
-          <div className="flex bg-neutral-100 p-1 rounded-xl h-12">
-            <input type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} className="bg-transparent border-none text-[10px] font-black uppercase px-3 outline-none" />
+        <div className="flex items-center gap-3 w-full lg:w-auto">
+          {/* Period Shortcut Selector */}
+          <div className="flex bg-neutral-100 p-1 rounded-xl h-12 shrink-0">
+            {[
+              { id: '15', label: '15 dias' },
+              { id: '30', label: '30 dias' },
+              { id: '90', label: '90 dias' },
+              { id: 'custom', label: 'Personalizado' }
+            ].map(opt => (
+              <button
+                key={opt.id}
+                onClick={() => handlePresetChange(opt.id as any)}
+                className={`px-3 rounded-lg text-[9px] font-black uppercase tracking-tighter transition-all ${
+                  datePreset === opt.id ? 'bg-white text-primary shadow-sm' : 'text-neutral-400 hover:text-neutral-600'
+                }`}
+              >
+                {opt.label}
+              </button>
+            ))}
+          </div>
+
+          <div className={`flex bg-neutral-100 p-1 rounded-xl h-12 transition-all ${datePreset === 'custom' ? 'opacity-100' : 'opacity-50 pointer-events-none'}`}>
+            <input 
+              type="date" 
+              value={startDate} 
+              onChange={(e) => { setStartDate(e.target.value); setDatePreset('custom'); }} 
+              className="bg-transparent border-none text-[10px] font-black uppercase px-2 outline-none" 
+            />
             <div className="w-px h-4 bg-neutral-200 self-center" />
-            <input type="date" value={endDate} onChange={(e) => setEndDate(e.target.value)} className="bg-transparent border-none text-[10px] font-black uppercase px-3 outline-none" />
+            <input 
+              type="date" 
+              value={endDate} 
+              onChange={(e) => { setEndDate(e.target.value); setDatePreset('custom'); }} 
+              className="bg-transparent border-none text-[10px] font-black uppercase px-2 outline-none" 
+            />
           </div>
 
           <button
             onClick={() => setIsFilterPanelOpen(true)}
-            className={`h-12 w-12 flex items-center justify-center rounded-xl border-2 transition-all relative ${
+            className={`h-12 w-12 flex items-center justify-center rounded-xl border-2 transition-all relative shrink-0 ${
               hasActiveFilters ? 'border-primary bg-primary/5 text-primary shadow-sm' : 'border-neutral-100 text-neutral-400 hover:border-neutral-200'
             }`}
           >
