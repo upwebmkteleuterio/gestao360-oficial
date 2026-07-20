@@ -31,13 +31,21 @@ import { useDragScroll } from '../hooks/useDragScroll';
 import { LancamentoFinanceiro } from '../types';
 import { motion, AnimatePresence } from 'motion/react';
 import Button from '../components/Button';
+import BaixaLoteModal from '../components/Lancamentos/BaixaLoteModal';
 
 interface LancamentosProps {
   typeOverride?: 'entrada' | 'saida';
   titleOverride?: string;
+  statusPagamentoOverride?: 'aberto' | 'pago' | 'pago_parcial' | 'bpi';
+  statusAprovacaoOverride?: 'pendente_digital' | 'digital' | 'confirmado_master';
 }
 
-export default function Lancamentos({ typeOverride, titleOverride }: LancamentosProps) {
+export default function Lancamentos({
+  typeOverride,
+  titleOverride,
+  statusPagamentoOverride,
+  statusAprovacaoOverride
+}: LancamentosProps) {
   const { role } = useAuth();
   const dragScrollAccounts = useDragScroll();
   // Filter States
@@ -109,11 +117,11 @@ export default function Lancamentos({ typeOverride, titleOverride }: Lancamentos
     isBatchApproving,
     isLoading
   } = useLancamentos({
-
     searchTerm,
     startDate,
     endDate,
-    approvalStatus,
+    approvalStatus: statusAprovacaoOverride || approvalStatus,
+    statusPagamento: statusPagamentoOverride,
     type: typeFilter === 'all' ? undefined : typeFilter
   });
 
@@ -163,6 +171,7 @@ export default function Lancamentos({ typeOverride, titleOverride }: Lancamentos
 
   // Checkbox Selection State for Batch Actions
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
+  const [isBaixaLoteOpen, setIsBaixaLoteOpen] = useState(false);
   
   // Row action dropdown active state
   const [activeMenuId, setActiveMenuId] = useState<string | null>(null);
@@ -393,7 +402,16 @@ export default function Lancamentos({ typeOverride, titleOverride }: Lancamentos
               Aprovar ({selectedIds.length})
             </Button>
           )}
-
+          {selectedIds.length > 0 && (
+            <Button
+              variant="outline"
+              onClick={() => setIsBaixaLoteOpen(true)}
+              className="bg-bank-truth-green/10 text-bank-truth-green border-bank-truth-green/20 hover:bg-bank-truth-green hover:text-white"
+            >
+              Baixar ({selectedIds.length})
+              <CheckCircle2 className="w-4 h-4" />
+            </Button>
+          )}
         </div>
 
       </div>
@@ -1050,6 +1068,13 @@ export default function Lancamentos({ typeOverride, titleOverride }: Lancamentos
           </div>
         </div>
       )}
+
+      <BaixaLoteModal
+        isOpen={isBaixaLoteOpen}
+        onClose={() => setIsBaixaLoteOpen(false)}
+        selectedIds={selectedIds}
+        onSuccess={() => setSelectedIds([])}
+      />
     </div>
   );
 }

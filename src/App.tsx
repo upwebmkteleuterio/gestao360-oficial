@@ -14,7 +14,7 @@ import { useNotifications } from './hooks/useData';
 // Custom layout components
 import Sidebar from './components/Sidebar';
 import NovoLancamentoDrawer from './components/NovoLancamentoDrawer';
-import ComprovanteDrawer from './components/ComprovanteDrawer';
+import LancamentoDetailsSlide from './components/Lancamentos/LancamentoDetailsSlide';
 import CadastroRapidoModal from './components/CadastroRapidoModal';
 import BaixaLancamentoModal from './components/BaixaLancamentoModal';
 import AITestSuite from './components/AITestSuite';
@@ -241,7 +241,7 @@ function AppContent() {
 
               {/* Global Drawers & Slide Panels */}
               <NovoLancamentoDrawer />
-              <ComprovanteDrawer />
+              <LancamentoDetailsSlide />
               <CadastroRapidoModal />
               <BaixaLancamentoModal />
               {/* <AITestSuite /> */}

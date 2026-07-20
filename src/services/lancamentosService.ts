@@ -6,6 +6,7 @@ export interface LancamentoFilters {
   startDate?: string;
   endDate?: string;
   approvalStatus?: string;
+  statusPagamento?: string;
   type?: string;
 }
 
@@ -26,6 +27,9 @@ export const lancamentosService = {
       }
       if (filters.approvalStatus && filters.approvalStatus !== 'all') {
         query = query.eq('status_aprovacao', filters.approvalStatus);
+      }
+      if (filters.statusPagamento && filters.statusPagamento !== 'all') {
+        query = query.eq('status_pagamento', filters.statusPagamento);
       }
       if (filters.type && filters.type !== 'all') {
         query = query.eq('tipo', filters.type);
@@ -217,15 +221,16 @@ export const lancamentosService = {
     
     if (getError) throw getError;
 
+    const valorPagoEfetivo = data.valor_pago > 0 ? data.valor_pago : current.valor_previsto;
     const subtotal = current.valor_previsto - (data.valor_desconto || 0) + (data.valor_acrescimo || 0);
-    const isPartial = data.valor_pago < subtotal;
+    const isPartial = valorPagoEfetivo < subtotal;
     const isBPI = data.tipo_baixa === 'bpi';
     const isAVR = data.tipo_baixa === 'avr';
     const dataPagamentoVal = data.data_pagamento || new Date().toISOString().split('T')[0];
     const contaBancariaVal = data.conta_bancaria_id || current.conta_bancaria_id;
 
     if (isPartial) {
-      const saldoRestante = subtotal - data.valor_pago;
+      const saldoRestante = subtotal - valorPagoEfetivo;
 
       // Keep original record ID as "aberto" (unpaid) but with the remaining amount (the resíduo)
       const { data: updatedOriginal, error: updateError } = await supabase
@@ -233,7 +238,7 @@ export const lancamentosService = {
         .update({
           valor_previsto: saldoRestante,
           status_aprovacao: 'pendente_digital', // Force re-approval for residue
-          observacoes: (current.observacoes || '') + `\n[Abatido pagamento parcial de R$ ${data.valor_pago} em ${dataPagamentoVal.split('-').reverse().join('/')}]`
+          observacoes: (current.observacoes || '') + `\n[Abatido pagamento parcial de R$ ${valorPagoEfetivo} em ${dataPagamentoVal.split('-').reverse().join('/')}]`
         })
 
         .eq('id', id)
@@ -248,8 +253,8 @@ export const lancamentosService = {
         .from('lancamentos_financeiros')
         .insert([{
           ...rest,
-          valor_previsto: data.valor_pago,
-          valor_recebido: data.valor_pago,
+          valor_previsto: valorPagoEfetivo,
+          valor_recebido: valorPagoEfetivo,
           status_pagamento: isBPI ? 'bpi' : 'pago',
           data_pagamento: dataPagamentoVal,
           conta_bancaria_id: contaBancariaVal,
@@ -270,7 +275,7 @@ export const lancamentosService = {
       const { data: updated, error: updateError } = await supabase
         .from('lancamentos_financeiros')
         .update({
-          valor_recebido: isBPI ? 0 : data.valor_pago,
+          valor_recebido: isBPI ? 0 : valorPagoEfetivo,
           status_pagamento: isBPI ? 'bpi' : 'pago',
           data_pagamento: dataPagamentoVal,
           conta_bancaria_id: contaBancariaVal,
@@ -281,7 +286,7 @@ export const lancamentosService = {
           motivo_desconto_id: data.motivo_desconto_id || null,
           motivo_acrescimo_id: data.motivo_acrescimo_id || null,
           // If AVR, adjust the final value
-          valor_previsto: isAVR ? data.valor_pago : (isBPI ? current.valor_previsto : subtotal)
+          valor_previsto: isAVR ? valorPagoEfetivo : (isBPI ? current.valor_previsto : subtotal)
         })
 
         .eq('id', id)
