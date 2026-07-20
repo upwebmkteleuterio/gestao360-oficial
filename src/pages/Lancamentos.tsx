@@ -24,7 +24,9 @@ import {
   FileText,
   User,
   Tag,
-  Coins
+  Coins,
+  Building2,
+  Landmark
 } from 'lucide-react';
 import { useLancamentos, useContas, useEntidades, useCategorias, useUsuarios } from '../hooks/useData';
 import { useAuth } from '../hooks/useAuth';
@@ -33,7 +35,6 @@ import { useDragScroll } from '../hooks/useDragScroll';
 import { LancamentoFinanceiro } from '../types';
 import { motion, AnimatePresence } from 'motion/react';
 import Button from '../components/Button';
-import { Landmark, Building2 } from 'lucide-react';
 
 interface LancamentosProps {
   typeOverride?: 'entrada' | 'saida';
@@ -80,6 +81,9 @@ export default function Lancamentos({
 
   const hasActiveFilters = searchTerm !== '' || approvalStatus !== 'all' || typeFilter !== 'all' || authorIdFilter !== 'all' || categoryIdFilter !== 'all';
 
+  // Checkbox Selection State for Batch Approval (Master only)
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
+  
   // Row action dropdown active state
   const [activeMenuId, setActiveMenuId] = useState<string | null>(null);
 
@@ -216,7 +220,7 @@ export default function Lancamentos({
             <Building2 className="w-4 h-4" /> Filtrar por Conta
           </h4>
           {selectedAccountId && (
-            <button
+            <button 
               onClick={() => setSelectedAccountId(null)}
               className="text-[10px] font-black text-primary uppercase tracking-widest hover:underline"
             >
@@ -224,9 +228,9 @@ export default function Lancamentos({
             </button>
           )}
         </div>
-        <div
-          ref={dragScrollTabs.ref}
-          {...dragScrollTabs.props}
+        <div 
+          ref={dragScrollTabs.ref} 
+          {...dragScrollTabs.props} 
           className="flex gap-4 overflow-x-auto pb-2 scroll-smooth select-none no-scrollbar"
         >
           {accountCardsData.map((acc) => {
@@ -613,7 +617,6 @@ export default function Lancamentos({
           </div>
         )}
       </AnimatePresence>
-
     </div>
   );
 }
