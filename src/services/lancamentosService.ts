@@ -9,7 +9,6 @@ export interface LancamentoFilters {
   type?: string;
   responsibleId?: string;
   categoryId?: string;
-  costCenterId?: string;
   clientId?: string;
   status?: string;
 }
@@ -40,9 +39,6 @@ export const lancamentosService = {
       }
       if (filters.categoryId && filters.categoryId !== 'all') {
         query = query.eq('categoria_id', filters.categoryId);
-      }
-      if (filters.costCenterId && filters.costCenterId !== 'all') {
-        query = query.eq('centro_custo_id', filters.costCenterId);
       }
       if (filters.clientId && filters.clientId !== 'all') {
         query = query.eq('entidade_id', filters.clientId);
@@ -226,8 +222,7 @@ export const lancamentosService = {
     valor_acrescimo?: number,
     motivo_ajuste?: string,
     motivo_desconto_id?: string,
-    motivo_acrescimo_id?: string,
-    hora_pagamento?: string
+    motivo_acrescimo_id?: string
   }): Promise<LancamentoFinanceiro> => {
 
     const { data: { user } } = await supabase.auth.getUser();
@@ -248,7 +243,6 @@ export const lancamentosService = {
     const isAVR = data.tipo_baixa === 'avr';
     const dataPagamentoVal = data.data_pagamento || new Date().toISOString().split('T')[0];
     const contaBancariaVal = data.conta_bancaria_id || current.conta_bancaria_id;
-    const horaPagamentoVal = data.hora_pagamento || null;
 
     if (isPartial) {
       const saldoRestante = subtotal - data.valor_pago;
@@ -278,7 +272,6 @@ export const lancamentosService = {
           valor_recebido: data.valor_pago,
           status_pagamento: isBPI ? 'bpi' : 'pago',
           data_pagamento: dataPagamentoVal,
-          hora_pagamento: horaPagamentoVal,
           conta_bancaria_id: contaBancariaVal,
           tipo_baixa: data.tipo_baixa || 'financeira',
           desconto_valor: data.valor_desconto || 0,
@@ -300,7 +293,6 @@ export const lancamentosService = {
           valor_recebido: isBPI ? 0 : data.valor_pago,
           status_pagamento: isBPI ? 'bpi' : 'pago',
           data_pagamento: dataPagamentoVal,
-          hora_pagamento: horaPagamentoVal,
           conta_bancaria_id: contaBancariaVal,
           tipo_baixa: data.tipo_baixa || 'financeira',
           desconto_valor: data.valor_desconto || 0,
