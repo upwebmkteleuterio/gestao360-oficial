@@ -17,7 +17,6 @@ import ComprovanteDrawer from './components/ComprovanteDrawer';
 import CadastroRapidoModal from './components/CadastroRapidoModal';
 import BaixaLancamentoModal from './components/BaixaLancamentoModal';
 import AprovarLancamentoModal from './components/AprovarLancamentoModal';
-import AITestSuite from './components/AITestSuite';
 
 import NewLaunchButton from './components/NewLaunchButton';
 
@@ -225,7 +224,6 @@ function AppContent() {
               <CadastroRapidoModal />
               <BaixaLancamentoModal />
               <AprovarLancamentoModal />
-              <AITestSuite />
             </div>
           </PrivateRoute>
         }
