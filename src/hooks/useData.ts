@@ -28,8 +28,10 @@ export function useNotifications() {
   useEffect(() => {
     if (!user?.id) return;
 
+    // Usando um nome único para o canal para evitar colisões
+    const channelName = `notifications-${user.id}-${Math.random().toString(36).slice(2, 9)}`;
     const channel = supabase
-      .channel('schema-db-changes')
+      .channel(channelName)
       .on(
         'postgres_changes',
         {
