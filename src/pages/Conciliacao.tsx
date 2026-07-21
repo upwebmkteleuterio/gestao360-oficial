@@ -130,11 +130,13 @@ export default function Conciliacao() {
   }, [lancamentos, conciliacoes, erpSearch, entidades, selectedTransacaoForConciliationId, transacoes, selectedContaId, periodFilter, selectedMonth, customStartDate, customEndDate]);
 
   const getEntidadeName = (id: string) => entidades.find(e => e.id === id)?.nome_razao_social || 'Desconhecido';
+  
   const valueFormatter = (val: number, type?: 'entrada' | 'saida') => {
     const absVal = Math.abs(val);
     const formatted = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(absVal);
     return (type === 'saida' || (type === undefined && val < 0)) ? `-${formatted}` : formatted;
   };
+
   const formatShorthandDate = (dateStr: string) => {
     const parts = dateStr.split('-');
     if (parts.length >= 3) {
@@ -145,6 +147,7 @@ export default function Conciliacao() {
     return dateStr;
   };
 
+  // CSV Import Preview logic
   const [csvPreviewRows, setCsvPreviewRows] = useState<any[]>([]);
   const [csvHeaders, setCsvHeaders] = useState<string[]>([]);
   const [columnMapping, setColumnMapping] = useState({ data: '', valor: '', descricao: '', documento: '' });
@@ -301,7 +304,7 @@ export default function Conciliacao() {
             <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setModalOpen('isImportarCSVOpen', false)} className="absolute inset-0 bg-black/40 backdrop-blur-xs" />
             <motion.form initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.9, opacity: 0 }} onSubmit={handleImportCSVSubmit} className="bg-white w-full max-w-[520px] rounded-3xl shadow-2xl border-2 border-neutral-100 flex flex-col relative z-20">
               <header className="px-8 py-6 border-b bg-neutral-50/50 flex justify-between"><div><h2 className="text-sm font-black uppercase">Importar Extrato</h2><p className="text-[9px] text-primary uppercase">Escolha a natureza do arquivo</p></div><button type="button" onClick={() => setModalOpen('isImportarCSVOpen', false)}><X className="w-5 h-5" /></button></header>
-              <div className="p-8 space-y-6">
+              <div className="p-8 space-y-6 max-h-[75vh] overflow-y-auto">
                 <div className="space-y-4">
                   <h3 className="text-[10px] font-black uppercase text-neutral-900">1. Natureza da Importação</h3>
                   <div className="flex bg-neutral-100 p-1 rounded-xl h-12">
@@ -318,10 +321,51 @@ export default function Conciliacao() {
                   {!csvContentText ? (
                     <div onClick={() => fileInputRef.current?.click()} className="border-4 border-dashed rounded-3xl p-10 text-center cursor-pointer bg-neutral-50"><input type="file" ref={fileInputRef} onChange={(e) => e.target.files?.[0] && processFile(e.target.files[0])} accept=".csv" className="hidden" /><Upload className="w-7 h-7 mx-auto text-primary mb-2" /><p className="text-[9px] font-black uppercase">Clique para selecionar o CSV</p></div>
                   ) : (
-                    <div className="space-y-4">
-                      {[{f:'data',l:'Data'},{f:'valor',l:'Valor'},{f:'descricao',l:'Descrição'},{f:'documento',l:'Doc/NSU (Opc)'}].map(it => (
-                        <div key={it.f} className="flex items-center gap-4"><span className="w-32 text-[9px] font-black uppercase text-neutral-600">{it.l}</span><select value={columnMapping[it.f as keyof typeof columnMapping]} onChange={(e) => setColumnMapping(p => ({...p,[it.f]:e.target.value}))} className="flex-1 h-10 bg-neutral-50 border-2 rounded-xl px-3 text-[9px] font-black uppercase"><option value="">Não mapear</option>{csvHeaders.map(h => <option key={h} value={h}>{h}</option>)}</select></div>
-                      ))}
+                    <div className="space-y-6 animate-fade-in bg-white border-2 border-neutral-100 rounded-3xl p-6 shadow-sm">
+                      <div className="space-y-4">
+                        {[{f:'data',l:'Data',i:Calendar},{f:'valor',l:'Valor',i:Coins},{f:'descricao',l:'Descrição',i:FileSpreadsheet},{f:'documento',l:'Doc/NSU (Opc)',i:Hash}].map(it => (
+                          <div key={it.f} className="flex items-center gap-4">
+                            <div className="w-32 shrink-0 flex items-center gap-2 text-[9px] font-black text-neutral-600 uppercase">
+                              <it.i className="w-3 h-3" />
+                              {it.l}
+                            </div>
+                            <select value={columnMapping[it.f as keyof typeof columnMapping]} onChange={(e) => setColumnMapping(p => ({...p,[it.f]:e.target.value}))} className="flex-1 h-10 bg-neutral-50 border-2 rounded-xl px-3 text-[9px] font-black uppercase outline-none focus:border-primary">
+                              <option value="">Não mapear</option>
+                              {csvHeaders.map(h => <option key={h} value={h}>{h}</option>)}
+                            </select>
+                          </div>
+                        ))}
+                      </div>
+
+                      <div className="space-y-2 pt-2 border-t border-neutral-50">
+                        <h3 className="text-[9px] font-black text-neutral-400 uppercase tracking-[0.2em]">Preview dos Lançamentos</h3>
+                        <div className="border border-neutral-100 rounded-xl overflow-hidden bg-neutral-50/50">
+                          <table className="w-full text-[8px] text-left">
+                            <thead className="bg-neutral-100 border-b border-neutral-100">
+                              <tr>
+                                {Object.entries(columnMapping).filter(([_, v]) => v).map(([k, h]) => (
+                                  <th key={k} className="p-2 font-black uppercase text-neutral-500">{h}</th>
+                                ))}
+                              </tr>
+                            </thead>
+                            <tbody>
+                              {csvPreviewRows.map((row, i) => (
+                                <tr key={i} className="border-b border-neutral-100/50 last:border-0">
+                                  {Object.values(columnMapping).filter(v => v).map((h: string) => (
+                                    <td key={h} className="p-2 font-bold text-neutral-600 truncate max-w-[120px] uppercase">
+                                      {h === columnMapping.valor ? (
+                                        <span className={parseFloat(row[h]?.toString().replace(',', '.') || '0') < 0 ? 'text-alert-red' : 'text-bank-truth-green'}>
+                                          {row[h]}
+                                        </span>
+                                      ) : row[h]}
+                                    </td>
+                                  ))}
+                                </tr>
+                              ))}
+                            </tbody>
+                          </table>
+                        </div>
+                      </div>
                     </div>
                   )}
                 </div>
