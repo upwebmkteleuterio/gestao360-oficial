@@ -162,7 +162,7 @@ export default function Lancamentos({
     setSearchTerm('');
     setApprovalStatus('all');
     setTypeFilter(typeOverride || 'all');
-    setAuthorIdIdFilter('all');
+    setAuthorIdFilter('all');
     setCategoryIdFilter('all');
     setSelectedIds([]);
     setSelectedAccountId(null);
@@ -430,7 +430,7 @@ export default function Lancamentos({
                           </div>
                         ) : item.status_pagamento === 'quitação_pendente' ? (
                           <div className="flex flex-col">
-                            <span className="text-amber-600 font-black text-[9px] uppercase">Quitação Pendente</span>
+                            <span className="text-amber-600 font-black text-[9px] uppercase">{isMaster ? 'Confirme Baixa' : 'Pendente Gestor'}</span>
                             <span className="text-[9px] text-neutral-400 font-mono">{item.data_pagamento?.split('-').reverse().join('/')}</span>
                           </div>
                         ) : (
@@ -448,7 +448,7 @@ export default function Lancamentos({
                           </span>
                         ) : item.status_pagamento === 'quitação_pendente' ? (
                           <span className="inline-flex items-center px-2.5 py-0.5 rounded bg-amber-50 text-amber-600 font-black border border-amber-200 text-[9px] uppercase tracking-tighter animate-pulse">
-                            Confirme Baixa
+                            {isMaster ? 'Confirme Baixa' : 'Pendente Gestor'}
                           </span>
                         ) : item.status_aprovacao === 'confirmado_master' ? (
                           <span className="inline-flex items-center px-2.5 py-0.5 rounded bg-neutral-900 text-white font-black text-[9px] uppercase tracking-tighter">
@@ -645,7 +645,7 @@ export default function Lancamentos({
                     </label>
                     <select
                       value={authorIdFilter}
-                      onChange={(e) => setAuthorIdIdFilter(e.target.value)}
+                      onChange={(e) => setAuthorIdFilter(e.target.value)}
                       className="w-full h-11 bg-neutral-50 border border-surface-border text-xs font-bold rounded-lg px-3 outline-none focus:border-primary"
                     >
                       <option value="all">Todos os Usuários</option>

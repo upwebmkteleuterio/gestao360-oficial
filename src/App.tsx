@@ -76,7 +76,7 @@ function NotificationDropdown() {
               <h3 className="text-xs font-black uppercase tracking-wider text-on-surface">Notificações</h3>
               {unreadCount > 0 && (
                 <button
-                  onClick={() => markAllAsRead()}
+                  onClick={(e) => { e.stopPropagation(); markAllAsRead(); }}
                   className="text-[10px] font-bold text-primary hover:underline"
                 >
                   Marcar todas como lidas
@@ -84,7 +84,7 @@ function NotificationDropdown() {
               )}
 
             </div>
-            <div className="max-h-[350px] overflow-y-auto">
+            <div className="max-h-[350px] overflow-y-auto scrollbar-thin">
               {notifications.length === 0 ? (
                 <div className="p-8 text-center text-on-surface-variant/40">
                   <Bell className="w-8 h-8 mx-auto mb-2 opacity-20" />
@@ -95,18 +95,18 @@ function NotificationDropdown() {
                   <div
                     key={n.id}
                     onClick={() => {
-                      markAsRead(n.id);
+                      if (!n.read) markAsRead(n.id);
                       if (n.link) {
                         // Navegação com Deep Link
                         navigate(n.link);
                       }
                       setIsOpen(false);
                     }}
-                    className={`p-4 border-b border-surface-border hover:bg-surface-low-low transition-colors cursor-pointer relative ${!n.read ? 'bg-primary/5' : ''}`}
+                    className={`p-4 border-b border-surface-border hover:bg-neutral-50 transition-colors cursor-pointer relative ${!n.read ? 'bg-primary/5' : ''}`}
                   >
                     {!n.read && <div className="absolute left-1.5 top-1/2 -translate-y-1/2 w-1.5 h-1.5 bg-primary rounded-full"></div>}
                     <div className="flex flex-col gap-0.5">
-                      <p className="text-xs font-bold text-on-surface">{n.title}</p>
+                      <p className={`text-xs font-bold ${!n.read ? 'text-neutral-900' : 'text-neutral-500'}`}>{n.title}</p>
                       <p className="text-[11px] text-on-surface-variant line-clamp-2">{n.message}</p>
                       <div className="flex items-center gap-1 mt-1.5 text-[9px] font-bold text-secondary uppercase tracking-tight">
                         <Clock className="w-3 h-3" />

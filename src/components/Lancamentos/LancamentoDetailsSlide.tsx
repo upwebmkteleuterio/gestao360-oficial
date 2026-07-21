@@ -228,7 +228,7 @@ export default function LancamentoDetailsSlide() {
                         </div>
                       ) : lancamento.status_pagamento === 'quitação_pendente' ? (
                         <div className="flex items-center gap-1.5 text-amber-600 font-black text-[10px] uppercase">
-                          <Clock className="w-4 h-4" /> Quitação Pendente
+                          <Clock className="w-4 h-4" /> {isMaster ? 'Confirme Baixa' : 'Pendente Gestor'}
                         </div>
                       ) : lancamento.status_pagamento === 'pago' ? (
                         <div className="flex items-center gap-1.5 text-bank-truth-green font-black text-[10px] uppercase">
