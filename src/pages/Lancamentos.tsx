@@ -169,7 +169,10 @@ export default function Lancamentos({
   };
 
   const toggleSelectAll = () => {
-    const selectable = filteredLancamentos.filter(l => l.status_aprovacao !== 'confirmado_master' && l.status_pagamento !== 'bpi');
+    const selectable = filteredLancamentos.filter(l => 
+      (l.status_aprovacao !== 'confirmado_master' || l.status_pagamento === 'quitação_pendente') && 
+      l.status_pagamento !== 'bpi'
+    );
     if (selectedIds.length === selectable.length) {
       setSelectedIds([]);
     } else {
@@ -272,7 +275,7 @@ export default function Lancamentos({
         </div>
 
         <div className="flex flex-wrap items-center gap-3">
-          {role === 'master' && (
+          {(role === 'master' || role === 'gerente') && (
             <Button
               onClick={() => handleBatchApprove()}
               disabled={selectedIds.length === 0 || isBatchApproving}
@@ -355,7 +358,7 @@ export default function Lancamentos({
                 <th className="py-5 px-4 w-10 text-center">
                   <input
                     type="checkbox"
-                    checked={selectedIds.length > 0 && selectedIds.length === filteredLancamentos.filter(l => l.status_aprovacao !== 'confirmado_master' && l.status_pagamento !== 'bpi').length}
+                    checked={selectedIds.length > 0 && selectedIds.length === filteredLancamentos.filter(l => (l.status_aprovacao !== 'confirmado_master' || l.status_pagamento === 'quitação_pendente') && l.status_pagamento !== 'bpi').length}
                     onChange={toggleSelectAll}
                     className="rounded-md border-neutral-300 text-primary focus:ring-primary w-4 h-4 transition-all"
                   />
@@ -377,7 +380,7 @@ export default function Lancamentos({
               ) : (
                 filteredLancamentos.map((item) => {
                   const isSelected = selectedIds.includes(item.id);
-                  const isPendente = item.status_aprovacao !== 'confirmado_master' && item.status_pagamento !== 'bpi';
+                  const isAprovacaoPendente = (item.status_aprovacao !== 'confirmado_master' || item.status_pagamento === 'quitação_pendente') && item.status_pagamento !== 'bpi';
                   
                   return (
                     <tr
@@ -389,7 +392,7 @@ export default function Lancamentos({
                       className={`border-b border-neutral-50 hover:bg-neutral-50/50 transition-all cursor-pointer group ${isSelected ? 'bg-primary/5 border-primary/10' : ''}`}
                     >
                       <td className="py-3 px-4 text-center" onClick={(e) => e.stopPropagation()}>
-                        {isPendente && (
+                        {isAprovacaoPendente && (
                           <input
                             type="checkbox"
                             checked={isSelected}
@@ -434,6 +437,10 @@ export default function Lancamentos({
                           <span className="inline-flex items-center px-2.5 py-0.5 rounded bg-red-50 text-alert-red font-black border border-red-100 text-[9px] uppercase tracking-tighter">
                             BPI
                           </span>
+                        ) : item.status_pagamento === 'quitação_pendente' ? (
+                          <span className="inline-flex items-center px-2.5 py-0.5 rounded bg-amber-50 text-amber-600 font-black border border-amber-200 text-[9px] uppercase tracking-tighter animate-pulse">
+                            Confirme Baixa
+                          </span>
                         ) : item.status_aprovacao === 'confirmado_master' ? (
                           <span className="inline-flex items-center px-2.5 py-0.5 rounded bg-neutral-900 text-white font-black text-[9px] uppercase tracking-tighter">
                             Confirmado
@@ -447,7 +454,7 @@ export default function Lancamentos({
                       <td className="py-3 px-4 text-right" onClick={(e) => e.stopPropagation()}>
                         <div className="flex items-center justify-end gap-2">
                           <div className="flex items-center gap-1.5 mr-2">
-                            {role === 'master' && item.status_aprovacao !== 'confirmado_master' && item.status_pagamento !== 'bpi' && (
+                            {(role === 'master' || role === 'gerente') && isAprovacaoPendente && (
                               <button
                                 onClick={() => {
                                   setSelectedLancamentoIdForModal(item.id);
@@ -459,7 +466,7 @@ export default function Lancamentos({
                               </button>
                             )}
 
-                            {(role === 'master' || role === 'gerente') && item.status_aprovacao === 'confirmado_master' && item.status_pagamento !== 'pago' && item.status_pagamento !== 'bpi' && (
+                            {(role === 'master' || role === 'gerente') && item.status_aprovacao === 'confirmado_master' && item.status_pagamento !== 'pago' && item.status_pagamento !== 'bpi' && item.status_pagamento !== 'quitação_pendente' && (
                               <button
                                 onClick={() => handleOpenBaixa(item.id)}
                                 className="px-3 py-1.5 bg-bank-truth-green text-white text-[9px] font-black uppercase tracking-widest rounded-lg hover:brightness-110 transition-all flex items-center gap-1.5 shadow-sm"
@@ -485,7 +492,7 @@ export default function Lancamentos({
                                   exit={{ opacity: 0, scale: 0.95, y: -10 }}
                                   className="absolute right-0 top-full mt-2 w-48 bg-white border border-neutral-100 rounded-2xl shadow-2xl z-50 p-2 overflow-hidden"
                                 >
-                                  {(role === 'master' || role === 'gerente') && item.status_pagamento !== 'pago' && (
+                                  {(role === 'master' || role === 'gerente') && item.status_pagamento !== 'pago' && item.status_pagamento !== 'quitação_pendente' && (
                                     <button onClick={() => handleOpenBaixa(item.id)} className="w-full flex items-center gap-3 px-4 py-3 text-bank-truth-green hover:bg-emerald-50 rounded-xl transition-all">
                                       <CheckCircle2 className="w-4 h-4" />
                                       <span className="text-[10px] font-black uppercase tracking-widest">Dar Baixa</span>

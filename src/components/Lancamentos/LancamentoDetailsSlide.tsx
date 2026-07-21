@@ -100,12 +100,19 @@ export default function LancamentoDetailsSlide() {
     if (!lancamento) return;
     setLoadingAction(true);
     try {
+      const updateData: any = {
+        status_aprovacao: 'confirmado_master',
+        data_aprovacao: new Date().toISOString()
+      };
+
+      // REGRA DE NEGÓCIO: Se o título aguardava aprovação de quitação, ela é efetivada agora.
+      if (lancamento.status_pagamento === 'quitação_pendente') {
+        updateData.status_pagamento = 'pago';
+      }
+
       await updateLancamento({
         id: lancamento.id,
-        data: {
-          status_aprovacao: 'confirmado_master',
-          data_aprovacao: new Date().toISOString()
-        }
+        data: updateData
       });
       handleClose();
     } catch (err: any) {
@@ -136,6 +143,7 @@ export default function LancamentoDetailsSlide() {
   };
 
   const hasAnexo = anexos.length > 0;
+  const isQuitacaoPendente = lancamento?.status_pagamento === 'quitação_pendente';
   const canApprove = hasAnexo || dispensarComprovante;
 
   return (
@@ -327,11 +335,13 @@ export default function LancamentoDetailsSlide() {
 
               <footer className="p-8 border-t border-neutral-100 bg-neutral-50/50 space-y-4 shrink-0">
                 {/* Widget de Impacto Financeiro Contextual */}
-                {role === 'master' && lancamento.status_aprovacao !== 'confirmado_master' && (
+                {(role === 'master' || role === 'gerente') && (lancamento.status_aprovacao !== 'confirmado_master' || isQuitacaoPendente) && (
                   <div className="mb-2 p-4 bg-primary/5 rounded-2xl border border-primary/10 flex items-center justify-between animate-fade-in">
                     <div className="flex items-center gap-2">
                       <TrendingUp className={`w-4 h-4 ${lancamento.tipo === 'entrada' ? 'text-bank-truth-green' : 'text-alert-red'}`} />
-                      <span className="text-[10px] font-black uppercase text-secondary tracking-widest">Impacto no Saldo Auditado:</span>
+                      <span className="text-[10px] font-black uppercase text-secondary tracking-widest">
+                        {isQuitacaoPendente ? 'Impacto no Saldo Real:' : 'Impacto no Saldo Auditado:'}
+                      </span>
                     </div>
                     <span className={`text-sm font-black font-mono ${lancamento.tipo === 'entrada' ? 'text-bank-truth-green' : 'text-alert-red'}`}>
                       {lancamento.tipo === 'entrada' ? '+' : '-'} {formatCurrency(lancamento.valor_previsto)}
@@ -339,7 +349,7 @@ export default function LancamentoDetailsSlide() {
                   </div>
                 )}
 
-                {!hasAnexo && lancamento.status_aprovacao !== 'confirmado_master' && (
+                {!hasAnexo && (lancamento.status_aprovacao !== 'confirmado_master' || isQuitacaoPendente) && (
                   <div className="flex items-start gap-3 p-4 bg-white rounded-2xl border border-neutral-100 shadow-sm">
                     <div className={`mt-0.5 w-5 h-5 rounded flex items-center justify-center border-2 transition-all cursor-pointer ${
                       dispensarComprovante ? 'bg-primary border-primary' : 'bg-white border-neutral-200'
@@ -358,7 +368,7 @@ export default function LancamentoDetailsSlide() {
                 )}
 
                 <div className="flex gap-3">
-                  {lancamento.status_aprovacao === 'confirmado_master' ? (
+                  {lancamento.status_aprovacao === 'confirmado_master' && !isQuitacaoPendente ? (
                     <button 
                       onClick={handleReprovar}
                       disabled={loadingAction}
@@ -382,8 +392,8 @@ export default function LancamentoDetailsSlide() {
                           canApprove ? 'bg-neutral-900 hover:bg-black' : 'bg-neutral-300 cursor-not-allowed'
                         }`}
                       >
-                        {loadingAction ? <Clock className="w-4 h-4 animate-spin" /> : <ShieldCheck className="w-4 h-4" />}
-                        Aprovar Agora
+                        {loadingAction ? <Loader2 className="w-4 h-4 animate-spin" /> : <ShieldCheck className="w-4 h-4" />}
+                        {isQuitacaoPendente ? 'Confirmar Quitação' : 'Aprovar Agora'}
                       </button>
                     </>
                   )}
