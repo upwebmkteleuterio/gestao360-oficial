@@ -46,6 +46,8 @@ export default function LancamentoDetailsSlide() {
   const { data: categorias = [] } = useCategorias();
   const { data: usuarios = [] } = useUsuarios();
 
+  const isMaster = role === 'master';
+
   // Escutar a URL para abrir o painel globalmente
   useEffect(() => {
     const idFromUrl = searchParams.get('id');
@@ -97,7 +99,7 @@ export default function LancamentoDetailsSlide() {
   };
 
   const handleAprovar = async () => {
-    if (!lancamento) return;
+    if (!lancamento || !isMaster) return;
     setLoadingAction(true);
     try {
       const updateData: any = {
@@ -123,7 +125,7 @@ export default function LancamentoDetailsSlide() {
   };
 
   const handleReprovar = async () => {
-    if (!lancamento) return;
+    if (!lancamento || !isMaster) return;
     if (!confirm('Deseja realmente reprovar este lançamento? Ele voltará para o status Pendente.')) return;
     setLoadingAction(true);
     try {
@@ -334,8 +336,8 @@ export default function LancamentoDetailsSlide() {
               </div>
 
               <footer className="p-8 border-t border-neutral-100 bg-neutral-50/50 space-y-4 shrink-0">
-                {/* Widget de Impacto Financeiro Contextual */}
-                {(role === 'master' || role === 'gerente') && (lancamento.status_aprovacao !== 'confirmado_master' || isQuitacaoPendente) && (
+                {/* Widget de Impacto Financeiro Contextual - Apenas Master vê */}
+                {isMaster && (lancamento.status_aprovacao !== 'confirmado_master' || isQuitacaoPendente) && (
                   <div className="mb-2 p-4 bg-primary/5 rounded-2xl border border-primary/10 flex items-center justify-between animate-fade-in">
                     <div className="flex items-center gap-2">
                       <TrendingUp className={`w-4 h-4 ${lancamento.tipo === 'entrada' ? 'text-bank-truth-green' : 'text-alert-red'}`} />
@@ -349,7 +351,7 @@ export default function LancamentoDetailsSlide() {
                   </div>
                 )}
 
-                {!hasAnexo && (lancamento.status_aprovacao !== 'confirmado_master' || isQuitacaoPendente) && (
+                {isMaster && !hasAnexo && (lancamento.status_aprovacao !== 'confirmado_master' || isQuitacaoPendente) && (
                   <div className="flex items-start gap-3 p-4 bg-white rounded-2xl border border-neutral-100 shadow-sm">
                     <div className={`mt-0.5 w-5 h-5 rounded flex items-center justify-center border-2 transition-all cursor-pointer ${
                       dispensarComprovante ? 'bg-primary border-primary' : 'bg-white border-neutral-200'
@@ -368,34 +370,44 @@ export default function LancamentoDetailsSlide() {
                 )}
 
                 <div className="flex gap-3">
-                  {lancamento.status_aprovacao === 'confirmado_master' && !isQuitacaoPendente ? (
-                    <button 
-                      onClick={handleReprovar}
-                      disabled={loadingAction}
-                      className="flex-1 h-12 bg-white border-2 border-alert-red/20 text-alert-red hover:bg-alert-red hover:text-white transition-all rounded-xl text-[10px] font-black uppercase tracking-widest flex items-center justify-center gap-2 shadow-sm"
-                    >
-                      <XCircle className="w-4 h-4" /> Reprovar Lançamento
-                    </button>
-                  ) : (
+                  {isMaster ? (
                     <>
-                      <button 
-                        onClick={handleReprovar}
-                        disabled={loadingAction}
-                        className="flex-1 h-12 bg-white border-2 border-neutral-200 text-secondary hover:border-alert-red hover:text-alert-red transition-all rounded-xl text-[10px] font-black uppercase tracking-widest flex items-center justify-center gap-2 shadow-sm"
-                      >
-                        <XCircle className="w-4 h-4" /> Reprovar
-                      </button>
-                      <button 
-                        onClick={handleAprovar}
-                        disabled={!canApprove || loadingAction}
-                        className={`flex-[2] h-12 text-white transition-all rounded-xl text-[10px] font-black uppercase tracking-[0.2em] flex items-center justify-center gap-2 shadow-lg shadow-primary/20 ${
-                          canApprove ? 'bg-neutral-900 hover:bg-black' : 'bg-neutral-300 cursor-not-allowed'
-                        }`}
-                      >
-                        {loadingAction ? <Loader2 className="w-4 h-4 animate-spin" /> : <ShieldCheck className="w-4 h-4" />}
-                        {isQuitacaoPendente ? 'Confirmar Quitação' : 'Aprovar Agora'}
-                      </button>
+                      {lancamento.status_aprovacao === 'confirmado_master' && !isQuitacaoPendente ? (
+                        <button 
+                          onClick={handleReprovar}
+                          disabled={loadingAction}
+                          className="flex-1 h-12 bg-white border-2 border-alert-red/20 text-alert-red hover:bg-alert-red hover:text-white transition-all rounded-xl text-[10px] font-black uppercase tracking-widest flex items-center justify-center gap-2 shadow-sm"
+                        >
+                          <XCircle className="w-4 h-4" /> Reprovar Lançamento
+                        </button>
+                      ) : (
+                        <>
+                          <button 
+                            onClick={handleReprovar}
+                            disabled={loadingAction}
+                            className="flex-1 h-12 bg-white border-2 border-neutral-200 text-secondary hover:border-alert-red hover:text-alert-red transition-all rounded-xl text-[10px] font-black uppercase tracking-widest flex items-center justify-center gap-2 shadow-sm"
+                          >
+                            <XCircle className="w-4 h-4" /> Reprovar
+                          </button>
+                          <button 
+                            onClick={handleAprovar}
+                            disabled={!canApprove || loadingAction}
+                            className={`flex-[2] h-12 text-white transition-all rounded-xl text-[10px] font-black uppercase tracking-[0.2em] flex items-center justify-center gap-2 shadow-lg shadow-primary/20 ${
+                              canApprove ? 'bg-neutral-900 hover:bg-black' : 'bg-neutral-300 cursor-not-allowed'
+                            }`}
+                          >
+                            {loadingAction ? <Loader2 className="w-4 h-4 animate-spin" /> : <ShieldCheck className="w-4 h-4" />}
+                            {isQuitacaoPendente ? 'Confirmar Quitação' : 'Aprovar Agora'}
+                          </button>
+                        </>
+                      )}
                     </>
+                  ) : (
+                    <div className="w-full p-4 bg-neutral-50 rounded-2xl border border-neutral-100 text-center">
+                      <p className="text-[10px] font-black uppercase text-secondary tracking-widest">
+                        Aprovação restrita ao nível Master Admin
+                      </p>
+                    </div>
                   )}
                 </div>
               </footer>
