@@ -29,6 +29,7 @@ import { TransacaoBanco, LancamentoFinanceiro } from '../types';
 import Button from '../components/Button';
 
 export default function Conciliacao() {
+  // Hooks de Dados
   const { 
     conciliacoes = [], 
     transacoes = [], 
@@ -43,6 +44,7 @@ export default function Conciliacao() {
   const { data: lancamentos = [] } = useLancamentos();
   const { data: entidades = [] } = useEntidades();
 
+  // Estados Globais (Zustand)
   const { 
     currentUserId,
     isImportarCSVOpen,
@@ -59,6 +61,7 @@ export default function Conciliacao() {
     setCurrentConciliationId
   } = useUIStore();
 
+  // Estados Locais
   const [selectedContaId, setSelectedContaId] = useState<string>('');
   const [erpSearch, setErpSearch] = useState('');
   const [periodFilter, setPeriodFilter] = useState<'month' | 'custom'>('month');
@@ -69,23 +72,44 @@ export default function Conciliacao() {
   const [customStartDate, setCustomStartDate] = useState('');
   const [customEndDate, setCustomEndDate] = useState('');
   
+  // Estados de Importação CSV
   const [csvContentText, setCsvContentText] = useState('');
   const [selectedImportContaId, setSelectedImportContaId] = useState('');
   const [importMode, setImportMode] = useState<'entrada' | 'saida' | 'ambos'>('ambos');
   const [isDragging, setIsDragging] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  // Estados de Classificação de Diferença
   const [diffType, setDiffType] = useState<'juros' | 'multa' | 'desconto' | 'tarifa' | 'pagamento_parcial' | 'ajuste_manual'>('tarifa');
   const [diffJustification, setDiffJustification] = useState('');
 
-  // Inicializa com a primeira conta disponível
+  // Inicialização Automática da Conta
   useEffect(() => {
     if (contas.length > 0 && !selectedContaId) {
-      setSelectedContaId(contas[0].id);
-      setSelectedImportContaId(contas[0].id);
+      const firstId = contas[0].id;
+      setSelectedContaId(firstId);
+      setSelectedImportContaId(firstId);
     }
-  }, [contas]);
+  }, [contas, selectedContaId]);
 
+  // VARIÁVEIS DE WORKSPACE (Resolvendo o Uncaught ReferenceError)
+  const selectedTxForWorkspace = useMemo(() => {
+    if (!selectedTransacaoForConciliationId) return null;
+    return transacoes.find(t => t.id === selectedTransacaoForConciliationId) || null;
+  }, [selectedTransacaoForConciliationId, transacoes]);
+
+  const selectedLancForWorkspace = useMemo(() => {
+    if (!selectedLancamentoForConciliationId) return null;
+    return lancamentos.find(l => l.id === selectedLancamentoForConciliationId) || null;
+  }, [selectedLancamentoForConciliationId, lancamentos]);
+
+  const draftDifferenceAmount = useMemo(() => {
+    if (!selectedTxForWorkspace || !selectedLancForWorkspace) return 0;
+    const erpVal = selectedLancForWorkspace.tipo === 'saida' ? -selectedLancForWorkspace.valor_previsto : selectedLancForWorkspace.valor_previsto;
+    return selectedTxForWorkspace.valor - erpVal;
+  }, [selectedTxForWorkspace, selectedLancForWorkspace]);
+
+  // Listagem de Transações Filtradas
   const bankStatements = useMemo(() => {
     return transacoes
       .filter(tx => {
@@ -102,9 +126,9 @@ export default function Conciliacao() {
       });
   }, [transacoes, selectedContaId, conciliacoes, lancamentos, periodFilter, selectedMonth, customStartDate, customEndDate]);
 
+  // Listagem de Lançamentos ERP Disponíveis
   const availableLaunches = useMemo(() => {
-    const activeTx = transacoes.find(t => t.id === selectedTransacaoForConciliationId);
-    let filtered = lancamentos.filter(l => {
+    return lancamentos.filter(l => {
       if (l.conta_bancaria_id !== selectedContaId) return false;
       if (conciliacoes.some(con => con.lancamento_id === l.id)) return false;
       if (periodFilter === 'month') {
@@ -120,23 +144,9 @@ export default function Conciliacao() {
       }
       return true;
     });
+  }, [lancamentos, conciliacoes, erpSearch, entidades, selectedContaId, periodFilter, selectedMonth, customStartDate, customEndDate]);
 
-    if (activeTx) {
-      filtered = [...filtered].sort((a, b) => {
-        const score = (l: LancamentoFinanceiro) => {
-          let s = 0;
-          const erpVal = l.tipo === 'saida' ? -l.valor_previsto : l.valor_previsto;
-          if (Math.abs(activeTx.valor - erpVal) < 0.01) s += 100;
-          const dayDiff = Math.abs((new Date(activeTx.data_transacao).getTime() - new Date(l.data_vencimento).getTime()) / (1000 * 60 * 60 * 24));
-          if (dayDiff === 0) s += 50; else if (dayDiff <= 3) s += 20;
-          return s;
-        };
-        return score(b) - score(a);
-      });
-    }
-    return filtered;
-  }, [lancamentos, conciliacoes, erpSearch, entidades, selectedTransacaoForConciliationId, transacoes, selectedContaId, periodFilter, selectedMonth, customStartDate, customEndDate]);
-
+  // Funções Auxiliares
   const getEntidadeName = (id: string) => entidades.find(e => e.id === id)?.nome_razao_social || 'Desconhecido';
   
   const valueFormatter = (val: number, type?: 'entrada' | 'saida') => {
@@ -155,6 +165,7 @@ export default function Conciliacao() {
     return dateStr;
   };
 
+  // Lógica de Preview e Mapeamento de CSV
   const [csvPreviewRows, setCsvPreviewRows] = useState<any[]>([]);
   const [csvHeaders, setCsvHeaders] = useState<string[]>([]);
   const [columnMapping, setColumnMapping] = useState({ data: '', valor: '', descricao: '', documento: '' });
@@ -190,6 +201,7 @@ export default function Conciliacao() {
     reader.readAsText(file);
   };
 
+  // Ações de Conciliação
   const handleImportCSVSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!csvContentText.trim() || !columnMapping.data || !columnMapping.valor || !columnMapping.descricao || !selectedImportContaId) return;
@@ -205,9 +217,10 @@ export default function Conciliacao() {
         const val = parseFloat(valRaw.replace(',', '.').replace(/[^\d.-]/g, ''));
         return { data: rowData[columnMapping.data], valor: val, descricao: rowData[columnMapping.descricao], documento: rowData[columnMapping.documento] || '' };
       }).filter(r => r.data && !isNaN(r.valor));
+      
       await importCSV({ contaBancariaId: selectedImportContaId, rows: rowsToImport, importMode });
       setCsvContentText(''); setCsvPreviewRows([]); setModalOpen('isImportarCSVOpen', false);
-      alert(`${rowsToImport.length} transações importadas!`);
+      alert(`${rowsToImport.length} transações importadas com sucesso!`);
     } catch (err: any) { alert('Falha: ' + err.message); }
   };
 
@@ -224,11 +237,15 @@ export default function Conciliacao() {
       const lanc = lancamentos.find(l => l.id === selectedLancamentoForConciliationId);
       if (!tx || !lanc) return;
       const newCon = await linkConciliacao({ lancamentoId: lanc.id, transacaoBancoId: tx.id, usuarioId: currentUserId });
+      
       const erpVal = lanc.tipo === 'saida' ? -lanc.valor_previsto : lanc.valor_previsto;
       const diff = tx.valor - erpVal;
+      
       if (Math.abs(diff) > 0.01) {
-        setCurrentConciliationId(newCon.id); setCurrentConciliationDifferenceValue(diff);
-        setModalOpen('isVincularConciliarOpen', false); setModalOpen('isClassificarDiferencaOpen', true);
+        setCurrentConciliationId(newCon.id); 
+        setCurrentConciliationDifferenceValue(diff);
+        setModalOpen('isVincularConciliarOpen', false); 
+        setModalOpen('isClassificarDiferencaOpen', true);
       } else {
         setModalOpen('isVincularConciliarOpen', false);
       }
@@ -252,15 +269,6 @@ export default function Conciliacao() {
     } catch (err: any) { alert('Erro: ' + err.message); }
   };
 
-  const selectedTxForWorkspace = useMemo(() => transacoes.find(t => t.id === selectedTransacaoForConciliationId) || null, [selectedTransacaoForConciliationId, transacoes]);
-  const selectedLancForWorkspace = useMemo(() => lancamentos.find(l => l.id === selectedLancamentoForConciliationId) || null, [selectedLancamentoForConciliationId, lancamentos]);
-  
-  const draftDifferenceAmount = useMemo(() => {
-    if (!selectedTxForWorkspace || !selectedLancForWorkspace) return 0;
-    const erpVal = selectedLancForWorkspace.tipo === 'saida' ? -selectedLancForWorkspace.valor_previsto : selectedLancForWorkspace.valor_previsto;
-    return selectedTxForWorkspace.valor - erpVal;
-  }, [selectedTxForWorkspace, selectedLancForWorkspace]);
-
   return (
     <div className="space-y-6">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
@@ -271,7 +279,7 @@ export default function Conciliacao() {
         <div className="flex flex-wrap items-center gap-4">
           <div className="flex bg-neutral-100 p-1 rounded-xl border border-neutral-200 h-12 items-center">
             {contas.map(c => (
-              <button key={c.id} onClick={() => { setSelectedContaId(c.id); setSelectedImportContaId(c.id); }} className={`px-4 py-2 font-black text-[10px] uppercase tracking-widest rounded-lg transition-all h-full ${selectedContaId === c.id ? 'bg-white text-neutral-900 shadow-sm' : 'text-neutral-500 hover:text-neutral-900'}`}>{c.nome}</button>
+              <button key={c.id} onClick={() => setSelectedContaId(c.id)} className={`px-4 py-2 font-black text-[10px] uppercase tracking-widest rounded-lg transition-all h-full ${selectedContaId === c.id ? 'bg-white text-neutral-900 shadow-sm' : 'text-neutral-500 hover:text-neutral-900'}`}>{c.nome}</button>
             ))}
           </div>
           <button onClick={() => setModalOpen('isImportarCSVOpen', true)} className="px-6 py-2 bg-neutral-900 text-white font-black text-[10px] uppercase tracking-widest rounded-lg hover:bg-neutral-800 transition-all shadow-md flex items-center gap-2 h-12"><FileSpreadsheet className="w-4 h-4" /> Importar CSV</button>
@@ -303,7 +311,7 @@ export default function Conciliacao() {
           <div className="p-5 space-y-3 max-h-[600px] overflow-y-auto">{bankStatements.length === 0 ? <div className="py-20 text-center opacity-60"><Upload className="w-8 h-8 mx-auto mb-4" /><p className="text-[10px] font-black uppercase">Nenhuma transação</p></div> : 
             bankStatements.map(tx => (
               <div key={tx.id} onClick={() => !tx.status_conciliacao && setSelectedTransacaoForConciliationId(tx.id)} className={`p-4 rounded-xl border-2 flex items-center justify-between transition-all ${tx.status_conciliacao ? 'bg-white opacity-50' : selectedTransacaoForConciliationId === tx.id ? 'border-primary bg-primary/5' : 'border-neutral-100 bg-white hover:border-neutral-300 cursor-pointer shadow-sm'}`}>
-                <div className="w-16 font-black text-[10px] text-neutral-500">{formatShorthandDate(tx.data_transacao)}</div>
+                <div className="w-16 font-black text-[10px] text-neutral-500">{tx.data_transacao.split('-').reverse().slice(0,2).join('/')}</div>
                 <div className="flex-1 min-w-0 pr-4"><p className={`text-sm font-black truncate ${tx.status_conciliacao ? 'line-through text-neutral-400' : 'text-neutral-900'}`}>{tx.descricao_banco}</p><span className="text-[9px] uppercase text-neutral-400">{tx.status_conciliacao ? 'Conciliado' : tx.valor < 0 ? 'Débito' : 'Crédito'}</span></div>
                 <div className="text-right flex items-center gap-4"><div><p className={`text-sm font-black ${tx.status_conciliacao ? 'line-through' : tx.valor < 0 ? 'text-alert-red' : 'text-bank-truth-green'}`}>{valueFormatter(tx.valor)}</p></div>{tx.status_conciliacao ? <button onClick={(e) => { e.stopPropagation(); handleUnlink(tx.conciliation!.id); }} className="p-2 hover:bg-red-50 text-neutral-400 hover:text-alert-red rounded-lg"><Unlink className="w-4 h-4" /></button> : <ChevronRight className="w-4 h-4 text-primary" />}</div>
               </div>
@@ -315,7 +323,7 @@ export default function Conciliacao() {
           <div className="p-5 space-y-3 max-h-[600px] overflow-y-auto">{availableLaunches.length === 0 ? <div className="py-20 text-center opacity-40 uppercase font-black text-[10px]">Totalmente Conciliado</div> : 
             availableLaunches.map(l => (
               <div key={l.id} className="bg-white border-2 border-neutral-100 rounded-xl p-4 flex items-center justify-between shadow-sm">
-                <div className="w-16 font-black text-[10px] text-neutral-500">{formatShorthandDate(l.data_vencimento)}</div>
+                <div className="w-16 font-black text-[10px] text-neutral-500">{l.data_vencimento.split('-').reverse().slice(0,2).join('/')}</div>
                 <div className="flex-1 pr-4"><p className="text-sm font-black truncate">{getEntidadeName(l.entidade_id)}</p><span className="text-[9px] uppercase text-neutral-400">{l.observacoes}</span></div>
                 <div className="text-right flex items-center gap-5"><div><p className="text-sm font-black">{valueFormatter(l.valor_previsto, l.tipo)}</p></div><button onClick={() => { setSelectedLancamentoForConciliationId(l.id); setModalOpen('isVincularConciliarOpen', true); }} className="px-4 py-2 font-black text-[9px] uppercase tracking-widest rounded-lg flex items-center gap-2 bg-neutral-900 text-white shadow-sm"><Link2 className="w-3.5 h-3.5" /> Vincular</button></div>
               </div>
@@ -328,7 +336,7 @@ export default function Conciliacao() {
         {isImportarCSVOpen && (
           <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
             <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setModalOpen('isImportarCSVOpen', false)} className="absolute inset-0 bg-black/40 backdrop-blur-xs" />
-            <motion.form initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.9, opacity: 0 }} onSubmit={handleImportCSVSubmit} className="bg-white w-full max-w-[520px] rounded-3xl shadow-2xl border-2 border-neutral-100 flex flex-col relative z-20">
+            <motion.form initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.9, opacity: 0 }} onSubmit={handleImportCSVSubmit} className="bg-white w-full max-w-[520px] rounded-3xl shadow-2xl border-2 border-neutral-100 flex flex-col relative z-20 overflow-hidden">
               <header className="px-8 py-6 border-b bg-neutral-50/50 flex justify-between"><div><h2 className="text-sm font-black uppercase">Importar Extrato</h2><p className="text-[9px] text-primary uppercase">Escolha a natureza do arquivo</p></div><button type="button" onClick={() => setModalOpen('isImportarCSVOpen', false)}><X className="w-5 h-5" /></button></header>
               <div className="p-8 space-y-6 max-h-[75vh] overflow-y-auto">
                 <div className="space-y-4">
