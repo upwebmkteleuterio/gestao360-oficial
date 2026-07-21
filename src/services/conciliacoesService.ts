@@ -34,13 +34,22 @@ export const conciliacoesService = {
   ): Promise<boolean> => {
     const normalizeDate = (dateStr: string) => {
       if (!dateStr) return new Date().toISOString().split('T')[0];
-      if (dateStr.includes('/')) {
-        const [day, month, year] = dateStr.split('/');
+      
+      // 1. Remove horários (pega apenas a primeira parte antes do espaço)
+      const cleanDate = dateStr.trim().split(' ')[0];
+      
+      // 2. Tenta converter DD/MM/YYYY para YYYY-MM-DD
+      if (cleanDate.includes('/')) {
+        const [day, month, year] = cleanDate.split('/');
         if (day && month && year) {
-          return `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`;
+          // Garante que o ano tenha 4 dígitos e mes/dia tenham 2
+          const y = year.length === 2 ? `20${year}` : year;
+          return `${y}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`;
         }
       }
-      return dateStr;
+      
+      // 3. Se já estiver no formato ISO ou similar, apenas retorna
+      return cleanDate;
     };
 
     const transacoes = rows.map(row => {
