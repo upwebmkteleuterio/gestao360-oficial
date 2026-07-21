@@ -22,10 +22,9 @@ export function useNotifications() {
     queryKey: ['notifications', user?.id],
     queryFn: notificationsService.getAll,
     enabled: !!user?.id,
-    refetchInterval: 60000, // Fallback de 1 minuto
+    refetchInterval: 60000,
   });
 
-  // REALTIME: Escutar novas notificações
   useEffect(() => {
     if (!user?.id) return;
 
@@ -40,7 +39,6 @@ export function useNotifications() {
           filter: `user_id=eq.${user.id}`
         },
         () => {
-          // Atualiza a lista instantaneamente quando algo muda no banco
           queryClient.invalidateQueries({ queryKey: ['notifications', user.id] });
         }
       )
@@ -94,32 +92,10 @@ export function useFinancialSummary(filters?: { accountId?: string, costCenterId
 
 export function useEntidades() {
   const queryClient = useQueryClient();
-  
-  const query = useQuery({
-    queryKey: ['entidades'],
-    queryFn: entidadesService.getAll
-  });
-
-  const createMutation = useMutation({
-    mutationFn: entidadesService.create,
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['entidades'] });
-    }
-  });
-
-  const updateMutation = useMutation({
-    mutationFn: ({ id, data }: { id: string, data: any }) => entidadesService.update(id, data),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['entidades'] });
-    }
-  });
-
-  const deleteMutation = useMutation({
-    mutationFn: entidadesService.delete,
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['entidades'] });
-    }
-  });
+  const query = useQuery({ queryKey: ['entidades'], queryFn: entidadesService.getAll });
+  const createMutation = useMutation({ mutationFn: entidadesService.create, onSuccess: () => queryClient.invalidateQueries({ queryKey: ['entidades'] }) });
+  const updateMutation = useMutation({ mutationFn: ({ id, data }: { id: string, data: any }) => entidadesService.update(id, data), onSuccess: () => queryClient.invalidateQueries({ queryKey: ['entidades'] }) });
+  const deleteMutation = useMutation({ mutationFn: entidadesService.delete, onSuccess: () => queryClient.invalidateQueries({ queryKey: ['entidades'] }) });
 
   return {
     ...query,
@@ -134,19 +110,8 @@ export function useEntidades() {
 
 export function useEntidadeDocuments(entidadeId: string | null) {
   const queryClient = useQueryClient();
-
-  const query = useQuery({
-    queryKey: ['entidadeDocuments', entidadeId],
-    queryFn: () => entidadeId ? entidadesService.getDocuments(entidadeId) : Promise.resolve([]),
-    enabled: !!entidadeId
-  });
-
-  const deleteMutation = useMutation({
-    mutationFn: ({ id, path }: { id: string, path: string }) => entidadesService.deleteDocument(id, path),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['entidadeDocuments', entidadeId] });
-    }
-  });
+  const query = useQuery({ queryKey: ['entidadeDocuments', entidadeId], queryFn: () => entidadeId ? entidadesService.getDocuments(entidadeId) : Promise.resolve([]), enabled: !!entidadeId });
+  const deleteMutation = useMutation({ mutationFn: ({ id, path }: { id: string, path: string }) => entidadesService.deleteDocument(id, path), onSuccess: () => queryClient.invalidateQueries({ queryKey: ['entidadeDocuments', entidadeId] }) });
 
   return {
     ...query,
@@ -158,256 +123,54 @@ export function useEntidadeDocuments(entidadeId: string | null) {
 
 export function useCentrosCusto() {
   const queryClient = useQueryClient();
+  const query = useQuery({ queryKey: ['centrosCusto'], queryFn: centrosCustoService.getAll });
+  const createMutation = useMutation({ mutationFn: centrosCustoService.create, onSuccess: () => queryClient.invalidateQueries({ queryKey: ['centrosCusto'] }) });
+  const updateMutation = useMutation({ mutationFn: ({ id, data }: { id: string, data: any }) => centrosCustoService.update(id, data), onSuccess: () => queryClient.invalidateQueries({ queryKey: ['centrosCusto'] }) });
+  const deleteMutation = useMutation({ mutationFn: centrosCustoService.delete, onSuccess: () => queryClient.invalidateQueries({ queryKey: ['centrosCusto'] }) });
 
-  const query = useQuery({
-    queryKey: ['centrosCusto'],
-    queryFn: centrosCustoService.getAll
-  });
-
-  const createMutation = useMutation({
-    mutationFn: centrosCustoService.create,
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['centrosCusto'] });
-    }
-  });
-
-  const updateMutation = useMutation({
-    mutationFn: ({ id, data }: { id: string, data: any }) => centrosCustoService.update(id, data),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['centrosCusto'] });
-    }
-  });
-
-  const deleteMutation = useMutation({
-    mutationFn: centrosCustoService.delete,
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['centrosCusto'] });
-    }
-  });
-
-  return {
-    ...query,
-    createCC: createMutation.mutateAsync,
-    updateCC: updateMutation.mutateAsync,
-    deleteCC: deleteMutation.mutateAsync,
-    isCreating: createMutation.isPending
-  };
+  return { ...query, createCC: createMutation.mutateAsync, updateCC: updateMutation.mutateAsync, deleteCC: deleteMutation.mutateAsync, isCreating: createMutation.isPending };
 }
 
 export function useCategorias() {
   const queryClient = useQueryClient();
+  const query = useQuery({ queryKey: ['categorias'], queryFn: categoriasService.getAll });
+  const createMutation = useMutation({ mutationFn: categoriasService.create, onSuccess: () => queryClient.invalidateQueries({ queryKey: ['categorias'] }) });
+  const updateMutation = useMutation({ mutationFn: ({ id, data }: { id: string, data: any }) => categoriasService.update(id, data), onSuccess: () => queryClient.invalidateQueries({ queryKey: ['categorias'] }) });
+  const deleteMutation = useMutation({ mutationFn: categoriasService.delete, onSuccess: () => queryClient.invalidateQueries({ queryKey: ['categorias'] }) });
 
-  const query = useQuery({
-    queryKey: ['categorias'],
-    queryFn: categoriasService.getAll
-  });
-
-  const createMutation = useMutation({
-    mutationFn: categoriasService.create,
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['categorias'] });
-    }
-  });
-
-  const updateMutation = useMutation({
-    mutationFn: ({ id, data }: { id: string, data: any }) => categoriasService.update(id, data),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['categorias'] });
-    }
-  });
-
-  const deleteMutation = useMutation({
-    mutationFn: categoriasService.delete,
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['categorias'] });
-    }
-  });
-
-  return {
-    ...query,
-    createCategory: createMutation.mutateAsync,
-    updateCategory: updateMutation.mutateAsync,
-    deleteCategory: deleteMutation.mutateAsync,
-    isCreating: createMutation.isPending
-  };
+  return { ...query, createCategory: createMutation.mutateAsync, updateCategory: updateMutation.mutateAsync, deleteCategory: deleteMutation.mutateAsync, isCreating: createMutation.isPending };
 }
 
 export function useCategoriasAjuste() {
   const queryClient = useQueryClient();
-
-  const query = useQuery({
-    queryKey: ['categoriasAjuste'],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from('categorias_ajuste')
-        .select('*')
-        .order('nome');
-      if (error) throw error;
-      return data;
-    }
-  });
-
-  const createMutation = useMutation({
-    mutationFn: async (data: { nome: string, tipo: 'desconto' | 'acrescimo' }) => {
-      const { data: { user } } = await supabase.auth.getUser();
-      const { data: result, error } = await supabase
-        .from('categorias_ajuste')
-        .insert([{ ...data, user_id: user?.id }])
-        .select()
-        .single();
-      if (error) throw error;
-      return result;
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['categoriasAjuste'] });
-    }
-  });
-
-  const updateMutation = useMutation({
-    mutationFn: async ({ id, data }: { id: string, data: any }) => {
-      const { error } = await supabase
-        .from('categorias_ajuste')
-        .update(data)
-        .eq('id', id);
-      if (error) throw error;
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['categoriasAjuste'] });
-    }
-  });
-
-  const deleteMutation = useMutation({
-    mutationFn: async (id: string) => {
-      const { error } = await supabase
-        .from('categorias_ajuste')
-        .delete()
-        .eq('id', id);
-      if (error) throw error;
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['categoriasAjuste'] });
-    }
-  });
-
-  return {
-    ...query,
-    categoriasAjuste: query.data || [],
-    createCategoriaAjuste: createMutation.mutateAsync,
-    updateCategoriaAjuste: updateMutation.mutateAsync,
-    deleteCategoriaAjuste: deleteMutation.mutateAsync,
-    isCreating: createMutation.isPending
-  };
+  const query = useQuery({ queryKey: ['categoriasAjuste'], queryFn: async () => { const { data, error } = await supabase.from('categorias_ajuste').select('*').order('nome'); if (error) throw error; return data; } });
+  const createMutation = useMutation({ mutationFn: async (data: { nome: string, tipo: 'desconto' | 'acrescimo' }) => { const { data: { user } } = await supabase.auth.getUser(); const { data: result, error } = await supabase.from('categorias_ajuste').insert([{ ...data, user_id: user?.id }]).select().single(); if (error) throw error; return result; }, onSuccess: () => queryClient.invalidateQueries({ queryKey: ['categoriasAjuste'] }) });
+  
+  return { ...query, categoriasAjuste: query.data || [], createCategoriaAjuste: createMutation.mutateAsync, isCreating: createMutation.isPending };
 }
 
 export function useContas() {
   const queryClient = useQueryClient();
+  const query = useQuery({ queryKey: ['contas'], queryFn: contasService.getAll });
+  const createMutation = useMutation({ mutationFn: (item: any) => contasService.create(item), onSuccess: () => queryClient.invalidateQueries({ queryKey: ['contas'] }) });
+  const updateMutation = useMutation({ mutationFn: ({ id, data }: { id: string, data: any }) => contasService.update(id, data), onSuccess: () => queryClient.invalidateQueries({ queryKey: ['contas'] }) });
+  const deleteMutation = useMutation({ mutationFn: (id: string) => contasService.delete(id), onSuccess: () => queryClient.invalidateQueries({ queryKey: ['contas'] }) });
 
-  const query = useQuery({
-    queryKey: ['contas'],
-    queryFn: contasService.getAll
-  });
-
-  const createMutation = useMutation({
-    mutationFn: (item: any) => contasService.create(item),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['contas'] });
-    }
-  });
-
-  const updateMutation = useMutation({
-    mutationFn: ({ id, data }: { id: string, data: any }) => contasService.update(id, data),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['contas'] });
-    }
-  });
-
-  const deleteMutation = useMutation({
-    mutationFn: (id: string) => contasService.delete(id),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['contas'] });
-    }
-  });
-
-  return {
-    ...query,
-    createAccount: createMutation.mutateAsync,
-    updateAccount: updateMutation.mutateAsync,
-    deleteAccount: deleteMutation.mutateAsync,
-    isCreating: createMutation.isPending
-  };
+  return { ...query, createAccount: createMutation.mutateAsync, updateAccount: updateMutation.mutateAsync, deleteAccount: deleteMutation.mutateAsync, isCreating: createMutation.isPending };
 }
 
 export function useLancamentos(filters?: any) {
   const queryClient = useQueryClient();
-
   const { role } = useAuth();
   const isMaster = role === 'master';
 
-  const query = useQuery({
-    queryKey: ['lancamentos', filters],
-    queryFn: () => lancamentosService.getAll(filters)
-  });
-
-  const createMutation = useMutation({
-    mutationFn: ({ item, recorrencia }: { item: any, recorrencia?: any }) => lancamentosService.create(item, recorrencia),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['lancamentos'] });
-    }
-  });
-
-  const updateMutation = useMutation({
-    mutationFn: ({ id, data, mode }: { id: string, data: any, mode?: 'single' | 'all' }) =>
-      lancamentosService.update(id, data, mode),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['lancamentos'] });
-      queryClient.invalidateQueries({ queryKey: ['auditoriaLogs'] });
-    }
-  });
-
-  const deleteMutation = useMutation({
-    mutationFn: ({ id, mode }: { id: string, mode?: 'single' | 'all' }) => lancamentosService.delete(id, mode),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['lancamentos'] });
-      queryClient.invalidateQueries({ queryKey: ['auditoriaLogs'] });
-    }
-  });
-
-  const batchApproveMutation = useMutation({
-    mutationFn: ({ ids, targetStatus }: { ids: string[], targetStatus: 'digital' | 'confirmado_master' }) =>
-      lancamentosService.approveInBatch(ids, targetStatus),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['lancamentos'] });
-      queryClient.invalidateQueries({ queryKey: ['auditoriaLogs'] });
-    }
-  });
-
-  const baixaMutation = useMutation({
-    mutationFn: ({ id, data }: { id: string, data: {
-      valor_pago: number,
-      data_pagamento: string,
-      conta_bancaria_id: string,
-      tipo_baixa?: 'financeira' | 'bpi' | 'avr',
-      valor_desconto?: number,
-      valor_acrescimo?: number,
-      motivo_ajuste?: string,
-      motivo_desconto_id?: string,
-      motivo_acrescimo_id?: string
-    } }) =>
-      lancamentosService.baixaLancamento(id, data, isMaster),
-
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['lancamentos'] });
-      queryClient.invalidateQueries({ queryKey: ['auditoriaLogs'] });
-    }
-  });
-
-  const estornoMutation = useMutation({
-    mutationFn: (id: string) => lancamentosService.estornarLancamento(id),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['lancamentos'] });
-      queryClient.invalidateQueries({ queryKey: ['auditoriaLogs'] });
-    }
-  });
+  const query = useQuery({ queryKey: ['lancamentos', filters], queryFn: () => lancamentosService.getAll(filters) });
+  const createMutation = useMutation({ mutationFn: ({ item, recorrencia }: { item: any, recorrencia?: any }) => lancamentosService.create(item, recorrencia), onSuccess: () => queryClient.invalidateQueries({ queryKey: ['lancamentos'] }) });
+  const updateMutation = useMutation({ mutationFn: ({ id, data, mode }: { id: string, data: any, mode?: 'single' | 'all' }) => lancamentosService.update(id, data, mode), onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['lancamentos'] }); queryClient.invalidateQueries({ queryKey: ['auditoriaLogs'] }); } });
+  const deleteMutation = useMutation({ mutationFn: ({ id, mode }: { id: string, mode?: 'single' | 'all' }) => lancamentosService.delete(id, mode), onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['lancamentos'] }); queryClient.invalidateQueries({ queryKey: ['auditoriaLogs'] }); } });
+  const batchApproveMutation = useMutation({ mutationFn: ({ ids, targetStatus }: { ids: string[], targetStatus: 'digital' | 'confirmado_master' }) => lancamentosService.approveInBatch(ids, targetStatus), onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['lancamentos'] }); queryClient.invalidateQueries({ queryKey: ['auditoriaLogs'] }); } });
+  const baixaMutation = useMutation({ mutationFn: ({ id, data }: { id: string, data: any }) => lancamentosService.baixaLancamento(id, data, isMaster), onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['lancamentos'] }); queryClient.invalidateQueries({ queryKey: ['auditoriaLogs'] }); } });
+  const estornoMutation = useMutation({ mutationFn: (id: string) => lancamentosService.estornarLancamento(id), onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['lancamentos'] }); queryClient.invalidateQueries({ queryKey: ['auditoriaLogs'] }); } });
 
   return {
     ...query,
@@ -427,58 +190,23 @@ export function useLancamentos(filters?: any) {
 }
 
 export function useLancamento(id: string | null) {
-  return useQuery({
-    queryKey: ['lancamento', id],
-    queryFn: () => id ? lancamentosService.getById(id) : Promise.resolve(null),
-    enabled: !!id
-  });
+  return useQuery({ queryKey: ['lancamento', id], queryFn: () => id ? lancamentosService.getById(id) : Promise.resolve(null), enabled: !!id });
 }
 
 export function useLancamentoAnexos(lancamentoId: string | null) {
   const queryClient = useQueryClient();
+  const query = useQuery({ queryKey: ['lancamentoAnexos', lancamentoId], queryFn: () => lancamentoId ? lancamentosService.getAnexos(lancamentoId) : Promise.resolve([]), enabled: !!lancamentoId });
+  const deleteMutation = useMutation({ mutationFn: ({ id, path }: { id: string, path: string }) => lancamentosService.deleteAnexo(id, path), onSuccess: () => queryClient.invalidateQueries({ queryKey: ['lancamentoAnexos', lancamentoId] }) });
 
-  const query = useQuery({
-    queryKey: ['lancamentoAnexos', lancamentoId],
-    queryFn: () => lancamentoId ? lancamentosService.getAnexos(lancamentoId) : Promise.resolve([]),
-    enabled: !!lancamentoId
-  });
-
-  const deleteMutation = useMutation({
-    mutationFn: ({ id, path }: { id: string, path: string }) => lancamentosService.deleteAnexo(id, path),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['lancamentoAnexos', lancamentoId] });
-    }
-  });
-
-  return {
-    ...query,
-    anexos: query.data || [],
-    deleteAnexo: deleteMutation.mutateAsync,
-    isDeleting: deleteMutation.isPending
-  };
+  return { ...query, anexos: query.data || [], deleteAnexo: deleteMutation.mutateAsync, isDeleting: deleteMutation.isPending };
 }
 
 export function useRecorrencias() {
   const queryClient = useQueryClient();
+  const query = useQuery({ queryKey: ['recorrencias'], queryFn: recorrenciasService.getAll });
+  const stopMutation = useMutation({ mutationFn: recorrenciasService.stopRecorrencia, onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['recorrencias'] }); queryClient.invalidateQueries({ queryKey: ['lancamentos'] }); } });
 
-  const query = useQuery({
-    queryKey: ['recorrencias'],
-    queryFn: recorrenciasService.getAll
-  });
-
-  const stopMutation = useMutation({
-    mutationFn: recorrenciasService.stopRecorrencia,
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['recorrencias'] });
-      queryClient.invalidateQueries({ queryKey: ['lancamentos'] });
-    }
-  });
-
-  return {
-    ...query,
-    stopRecorrencia: stopMutation.mutateAsync,
-    isStopping: stopMutation.isPending
-  };
+  return { ...query, stopRecorrencia: stopMutation.mutateAsync, isStopping: stopMutation.isPending };
 }
 
 export function useConciliacao() {
@@ -486,63 +214,34 @@ export function useConciliacao() {
   const { role } = useAuth();
   const isMaster = role === 'master';
 
-  const conciliacoesQuery = useQuery({
-    queryKey: ['conciliacoes'],
-    queryFn: conciliacoesService.getConciliacoes
-  });
-
-  const diferencasQuery = useQuery({
-    queryKey: ['diferencas'],
-    queryFn: conciliacoesService.getDiferencas
-  });
-
-  const transacoesQuery = useQuery({
-    queryKey: ['transacoes'],
-    queryFn: conciliacoesService.getAllTransacoes
-  });
+  const conciliacoesQuery = useQuery({ queryKey: ['conciliacoes'], queryFn: conciliacoesService.getConciliacoes });
+  const transacoesQuery = useQuery({ queryKey: ['transacoes'], queryFn: conciliacoesService.getAllTransacoes });
 
   const importMutation = useMutation({
-    mutationFn: ({ contaBancariaId, rows }: { contaBancariaId: string, rows: any[] }) => 
-      conciliacoesService.importCSV(contaBancariaId, rows),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['transacoes'] });
-    }
+    mutationFn: ({ contaBancariaId, rows, importMode }: { contaBancariaId: string, rows: any[], importMode: 'entrada' | 'saida' | 'ambos' }) => 
+      conciliacoesService.importCSV(contaBancariaId, rows, importMode),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['transacoes'] })
   });
 
   const linkMutation = useMutation({
     mutationFn: ({ lancamentoId, transacaoBancoId, usuarioId }: { lancamentoId: string, transacaoBancoId: string, usuarioId: string }) =>
       conciliacoesService.linkConciliacao(lancamentoId, transacaoBancoId, usuarioId, isMaster),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['conciliacoes'] });
-      queryClient.invalidateQueries({ queryKey: ['transacoes'] });
-      queryClient.invalidateQueries({ queryKey: ['lancamentos'] });
-      queryClient.invalidateQueries({ queryKey: ['auditoriaLogs'] });
-    }
+    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['conciliacoes'] }); queryClient.invalidateQueries({ queryKey: ['transacoes'] }); queryClient.invalidateQueries({ queryKey: ['lancamentos'] }); }
   });
 
   const unlinkMutation = useMutation({
     mutationFn: ({ conciliacaoId, usuarioId }: { conciliacaoId: string, usuarioId: string }) => 
       conciliacoesService.unlinkConciliacao(conciliacaoId, usuarioId),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['conciliacoes'] });
-      queryClient.invalidateQueries({ queryKey: ['transacoes'] });
-      queryClient.invalidateQueries({ queryKey: ['lancamentos'] });
-      queryClient.invalidateQueries({ queryKey: ['diferencas'] });
-      queryClient.invalidateQueries({ queryKey: ['auditoriaLogs'] });
-    }
+    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['conciliacoes'] }); queryClient.invalidateQueries({ queryKey: ['transacoes'] }); queryClient.invalidateQueries({ queryKey: ['lancamentos'] }); }
   });
 
   const classifyDifferenceMutation = useMutation({
-    mutationFn: ({ conciliacaoId, tipoDiferenca, valorDiferenca, observacaoJustificativa }: { conciliacaoId: string, tipoDiferenca: TipoDiferenca, valorDiferenca: number, observacaoJustificativa: string }) => 
-      conciliacoesService.classifyDifference(conciliacaoId, tipoDiferenca, valorDiferenca, observacaoJustificativa),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['diferencas'] });
-    }
+    mutationFn: (data: any) => conciliacoesService.classifyDifference(data.conciliacaoId, data.tipoDiferenca, data.valorDiferenca, data.observacaoJustificativa),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['diferencas'] })
   });
 
   return {
     conciliacoes: conciliacoesQuery.data || [],
-    diferencas: diferencasQuery.data || [],
     transacoes: transacoesQuery.data || [],
     isFetchingTransacoes: transacoesQuery.isPending,
     isLinking: linkMutation.isPending,
@@ -556,37 +255,13 @@ export function useConciliacao() {
 
 export function useUsuarios() {
   const queryClient = useQueryClient();
+  const query = useQuery({ queryKey: ['usuarios'], queryFn: usuariosService.getAll });
+  const createMutation = useMutation({ mutationFn: usuariosService.create, onSuccess: () => queryClient.invalidateQueries({ queryKey: ['usuarios'] }) });
+  const updateMutation = useMutation({ mutationFn: ({ id, data }: { id: string, data: any }) => usuariosService.update(id, data), onSuccess: () => queryClient.invalidateQueries({ queryKey: ['usuarios'] }) });
 
-  const query = useQuery({
-    queryKey: ['usuarios'],
-    queryFn: usuariosService.getAll
-  });
-
-  const createMutation = useMutation({
-    mutationFn: usuariosService.create,
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['usuarios'] });
-    }
-  });
-
-  const updateMutation = useMutation({
-    mutationFn: ({ id, data }: { id: string, data: any }) => usuariosService.update(id, data),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['usuarios'] });
-    }
-  });
-
-  return {
-    ...query,
-    inviteUser: createMutation.mutateAsync,
-    updateUser: updateMutation.mutateAsync,
-    isInviting: createMutation.isPending
-  };
+  return { ...query, inviteUser: createMutation.mutateAsync, updateUser: updateMutation.mutateAsync, isInviting: createMutation.isPending };
 }
 
 export function useAuditoriaLogs() {
-  return useQuery({
-    queryKey: ['auditoriaLogs'],
-    queryFn: auditoriaService.getAll
-  });
+  return useQuery({ queryKey: ['auditoriaLogs'], queryFn: auditoriaService.getAll });
 }

@@ -27,10 +27,13 @@ export const conciliacoesService = {
     return data as TransacaoBanco[];
   },
 
-  importCSV: async (contaBancariaId: string, rows: any[]): Promise<boolean> => {
+  importCSV: async (
+    contaBancariaId: string, 
+    rows: any[], 
+    importMode: 'entrada' | 'saida' | 'ambos' = 'ambos'
+  ): Promise<boolean> => {
     const normalizeDate = (dateStr: string) => {
       if (!dateStr) return new Date().toISOString().split('T')[0];
-      // Tenta converter DD/MM/YYYY para YYYY-MM-DD
       if (dateStr.includes('/')) {
         const [day, month, year] = dateStr.split('/');
         if (day && month && year) {
@@ -42,7 +45,15 @@ export const conciliacoesService = {
 
     const transacoes = rows.map(row => {
       const dataIso = normalizeDate(row.data);
-      const valor = row.valor || 0;
+      let valor = row.valor || 0;
+      
+      // Ajuste de sinal baseado no modo de importação
+      if (importMode === 'saida') {
+        valor = -Math.abs(valor);
+      } else if (importMode === 'entrada') {
+        valor = Math.abs(valor);
+      }
+      
       const descricao = row.descricao || 'Sem descrição';
       const doc = row.documento || '';
 
@@ -53,7 +64,6 @@ export const conciliacoesService = {
         descricao_banco: descricao,
         numero_documento: doc,
         tipo_movimento: valor < 0 ? 'saida' : 'entrada',
-        // Hash robusto para evitar duplicatas: conta + data + valor + descricao + doc
         hash_transacao: `${contaBancariaId}-${dataIso}-${valor}-${descricao}-${doc}`,
         status_conciliacao: false
       };
