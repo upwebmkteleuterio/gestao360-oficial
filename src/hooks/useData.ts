@@ -308,7 +308,7 @@ export function useContas() {
   });
 
   const createMutation = useMutation({
-    mutationFn: status === 'ativo' ? contasService.create : async (item: any) => { throw new Error('Cannot create inactive account'); },
+    mutationFn: (item: any) => contasService.create(item),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['contas'] });
     }
@@ -322,7 +322,7 @@ export function useContas() {
   });
 
   const deleteMutation = useMutation({
-    mutationFn: contasService.delete,
+    mutationFn: (id: string) => contasService.delete(id),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['contas'] });
     }
@@ -483,6 +483,8 @@ export function useRecorrencias() {
 
 export function useConciliacao() {
   const queryClient = useQueryClient();
+  const { role } = useAuth();
+  const isMaster = role === 'master';
 
   const conciliacoesQuery = useQuery({
     queryKey: ['conciliacoes'],

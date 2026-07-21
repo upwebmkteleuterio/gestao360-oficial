@@ -20,7 +20,8 @@ import {
   ArrowDownCircle,
   ArrowUpCircle,
   Loader2,
-  Calendar
+  Calendar,
+  Hash
 } from 'lucide-react';
 import { useConciliacao, useContas, useLancamentos, useEntidades } from '../hooks/useData';
 import { useUIStore } from '../store/uiStore';
@@ -241,7 +242,8 @@ export default function Conciliacao() {
   const [columnMapping, setColumnMapping] = useState({
     data: '',
     valor: '',
-    descricao: ''
+    descricao: '',
+    documento: ''
   });
 
   const processFile = (file: File) => {
@@ -266,12 +268,13 @@ export default function Conciliacao() {
         setCsvPreviewRows(preview);
 
         // Auto-detection logic
-        const newMapping = { data: '', valor: '', descricao: '' };
+        const newMapping = { data: '', valor: '', descricao: '', documento: '' };
         headers.forEach(h => {
           const lower = h.toLowerCase();
           if (lower.includes('dat') || lower.includes('venc')) newMapping.data = h;
           if (lower.includes('val') || lower.includes('quant') || lower.includes('amo')) newMapping.valor = h;
           if (lower.includes('desc') || lower.includes('hist') || lower.includes('obs')) newMapping.descricao = h;
+          if (lower.includes('doc') || lower.includes('nsu') || lower.includes('id')) newMapping.documento = h;
         });
         setColumnMapping(newMapping);
       }
@@ -299,7 +302,8 @@ export default function Conciliacao() {
         return {
           data: rowData[columnMapping.data],
           valor: val,
-          descricao: rowData[columnMapping.descricao]
+          descricao: rowData[columnMapping.descricao],
+          documento: rowData[columnMapping.documento] || ''
         };
       }).filter(r => r.data && !isNaN(r.valor));
 
@@ -558,7 +562,12 @@ export default function Conciliacao() {
                     <div className="w-16 shrink-0 font-black text-[10px] text-neutral-500">{formatShorthandDate(tx.data_transacao)}</div>
                     <div className="flex-1 min-w-0 pr-4">
                       <p className={`text-sm font-black truncate ${isReconciled ? 'line-through text-neutral-400' : 'text-neutral-900'}`}>{tx.descricao_banco}</p>
-                      <span className="text-[9px] font-black uppercase tracking-widest text-neutral-400">{getTxSubtext(tx)}</span>
+                      <div className="flex items-center gap-2">
+                        <span className="text-[9px] font-black uppercase tracking-widest text-neutral-400">{getTxSubtext(tx)}</span>
+                        {tx.numero_documento && (
+                          <span className="text-[8px] font-bold text-primary bg-primary/5 px-1.5 py-0.5 rounded border border-primary/10">DOC: {tx.numero_documento}</span>
+                        )}
+                      </div>
                     </div>
                     <div className="text-right shrink-0 flex items-center gap-4">
                       <div>
@@ -642,7 +651,13 @@ export default function Conciliacao() {
                   <div className="p-5 rounded-2xl border-l-8 border-primary border-2 border-neutral-100 bg-white shadow-sm space-y-4">
                     <div className="flex justify-between items-center"><span className="font-black text-xs uppercase tracking-widest flex items-center gap-2 text-neutral-800"><Building className="w-4 h-4" /> Extrato Bancário</span><span className="font-black text-[10px] text-neutral-400">{formatFullShorthandDate(selectedTxForWorkspace.data_transacao)}</span></div>
                     <div className="bg-neutral-50 p-4 rounded-xl border border-neutral-100 font-mono text-[11px] font-black text-neutral-900 leading-relaxed uppercase">{selectedTxForWorkspace.descricao_banco}</div>
-                    <div className="flex justify-between items-end pt-3 border-t border-neutral-100"><span className="text-[10px] font-black text-neutral-400 uppercase">Valor Total</span><span className={`font-black text-xl ${selectedTxForWorkspace.valor < 0 ? 'text-alert-red' : 'text-bank-truth-green'}`}>{valueFormatter(selectedTxForWorkspace.valor)}</span></div>
+                    <div className="flex justify-between items-end pt-3 border-t border-neutral-100">
+                      <div className="flex flex-col">
+                         <span className="text-[10px] font-black text-neutral-400 uppercase">Valor Total</span>
+                         {selectedTxForWorkspace.numero_documento && <span className="text-[9px] text-primary font-black uppercase mt-1">DOC: {selectedTxForWorkspace.numero_documento}</span>}
+                      </div>
+                      <span className={`font-black text-xl ${selectedTxForWorkspace.valor < 0 ? 'text-alert-red' : 'text-bank-truth-green'}`}>{valueFormatter(selectedTxForWorkspace.valor)}</span>
+                    </div>
                   </div>
                 </div>
                 <div className="flex justify-center select-none"><div className="w-12 h-12 rounded-2xl bg-neutral-50 border-2 border-neutral-100 flex items-center justify-center shadow-sm text-neutral-400"><Link2 className="w-6 h-6" /></div></div>
@@ -787,15 +802,23 @@ export default function Conciliacao() {
                       <div className="space-y-4">
                         <h3 className="text-[9px] font-black text-neutral-400 uppercase tracking-[0.2em]">Mapeamento de Dados</h3>
                         <div className="grid grid-cols-1 gap-3">
-                          {['data', 'valor', 'descricao'].map((field) => (
-                            <div key={field} className="flex items-center gap-4">
-                              <div className="w-20 shrink-0 text-[9px] font-black text-neutral-600 uppercase">{field === 'data' ? 'Data' : field === 'valor' ? 'Valor' : 'Descrição'}</div>
+                          {[
+                            { field: 'data', label: 'Data', icon: Calendar },
+                            { field: 'valor', label: 'Valor', icon: Coins },
+                            { field: 'descricao', label: 'Descrição', icon: FileSpreadsheet },
+                            { field: 'documento', label: 'Doc/NSU (Opcional)', icon: Hash }
+                          ].map((item) => (
+                            <div key={item.field} className="flex items-center gap-4">
+                              <div className="w-32 shrink-0 flex items-center gap-2 text-[9px] font-black text-neutral-600 uppercase">
+                                <item.icon className="w-3 h-3" />
+                                {item.label}
+                              </div>
                               <select
-                                value={columnMapping[field as keyof typeof columnMapping]}
-                                onChange={(e) => setColumnMapping(prev => ({ ...prev, [field]: e.target.value }))}
+                                value={columnMapping[item.field as keyof typeof columnMapping]}
+                                onChange={(e) => setColumnMapping(prev => ({ ...prev, [item.field]: e.target.value }))}
                                 className="flex-1 h-10 bg-neutral-50 border-2 border-neutral-200 rounded-xl px-3 text-[9px] font-black uppercase tracking-widest focus:border-primary outline-none appearance-none cursor-pointer"
                               >
-                                <option value="">Selecionar...</option>
+                                <option value="">Não mapear</option>
                                 {csvHeaders.map(h => <option key={h} value={h}>{h}</option>)}
                               </select>
                             </div>
@@ -809,7 +832,9 @@ export default function Conciliacao() {
                           <table className="w-full text-[8px] text-left">
                             <thead className="bg-neutral-100 border-b border-neutral-100">
                               <tr>
-                                {Object.values(columnMapping).filter(v => v).map(h => <th key={h} className="p-2 font-black uppercase text-neutral-500">{h}</th>)}
+                                {Object.entries(columnMapping).filter(([_, v]) => v).map(([k, h]) => (
+                                  <th key={k} className="p-2 font-black uppercase text-neutral-500">{h}</th>
+                                ))}
                               </tr>
                             </thead>
                             <tbody>
@@ -833,7 +858,7 @@ export default function Conciliacao() {
                 <Button
                   type="submit"
                   disabled={!csvContentText.trim() || !columnMapping.data || !columnMapping.valor || !columnMapping.descricao}
-                  className="!bg-neutral-900 shadow-xl"
+                  className="bg-neutral-900 shadow-xl"
                 >
                   Finalizar e Importar
                 </Button>

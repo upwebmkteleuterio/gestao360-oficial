@@ -28,15 +28,36 @@ export const conciliacoesService = {
   },
 
   importCSV: async (contaBancariaId: string, rows: any[]): Promise<boolean> => {
-    const transacoes = rows.map(row => ({
-      conta_bancaria_id: contaBancariaId,
-      data_transacao: row.data,
-      valor: row.valor,
-      descricao_banco: row.descricao,
-      tipo_movimento: row.valor < 0 ? 'debito' : 'credito',
-      hash_transacao: `${contaBancariaId}-${row.data}-${row.valor}-${row.descricao}`,
-      status_conciliacao: false
-    }));
+    const normalizeDate = (dateStr: string) => {
+      if (!dateStr) return new Date().toISOString().split('T')[0];
+      // Tenta converter DD/MM/YYYY para YYYY-MM-DD
+      if (dateStr.includes('/')) {
+        const [day, month, year] = dateStr.split('/');
+        if (day && month && year) {
+          return `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`;
+        }
+      }
+      return dateStr;
+    };
+
+    const transacoes = rows.map(row => {
+      const dataIso = normalizeDate(row.data);
+      const valor = row.valor || 0;
+      const descricao = row.descricao || 'Sem descrição';
+      const doc = row.documento || '';
+
+      return {
+        conta_bancaria_id: contaBancariaId,
+        data_transacao: dataIso,
+        valor: valor,
+        descricao_banco: descricao,
+        numero_documento: doc,
+        tipo_movimento: valor < 0 ? 'saida' : 'entrada',
+        // Hash robusto para evitar duplicatas: conta + data + valor + descricao + doc
+        hash_transacao: `${contaBancariaId}-${dataIso}-${valor}-${descricao}-${doc}`,
+        status_conciliacao: false
+      };
+    });
 
     const { error } = await supabase
       .from('transacoes_banco')
@@ -60,7 +81,6 @@ export const conciliacoesService = {
     
     if (error) throw error;
 
-    // Update statuses - depends on whether it's a master or not
     const finalStatus = isMaster ? 'pago' : 'quitação_pendente';
     await supabase.from('lancamentos_financeiros').update({ status_pagamento: finalStatus }).eq('id', lancamentoId);
     await supabase.from('transacoes_banco').update({ status_conciliacao: true }).eq('id', transacaoBancoId);

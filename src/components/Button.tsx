@@ -5,9 +5,9 @@ export interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
   children?: ReactNode;
 }
 
-export const Button: React.FC<ButtonProps> = ({ children, ...props }) => {
+export const Button: React.FC<ButtonProps> = ({ children, className, ...props }) => {
   return (
-    <StyledWrapper>
+    <StyledWrapper className={className}>
       <button className="Btn" {...props}>
         {children}
       </button>
@@ -16,33 +16,44 @@ export const Button: React.FC<ButtonProps> = ({ children, ...props }) => {
 }
 
 const StyledWrapper = styled.div`
+  display: inline-flex;
+  
   .Btn {
     min-width: 130px;
-    height: 40px;
+    height: 44px;
     display: flex;
     align-items: center;
     justify-content: center;
     background-color: rgb(15, 15, 15);
     border: none;
     color: white;
-    font-weight: 600;
+    font-weight: 700;
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
     gap: 8px;
     cursor: pointer;
-    box-shadow: 5px 5px 10px rgba(0, 0, 0, 0.103);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
     position: relative;
     overflow: hidden;
-    transition-duration: .3s;
-    padding: 0 16px;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    padding: 0 24px;
+    border-radius: 12px;
   }
+
+  /* Support for Tailwind background overrides */
+  &.bg-neutral-900 .Btn { background-color: #171717; }
+  &.bg-primary .Btn { background-color: var(--primary); }
 
   .Btn svg {
     width: 16px;
-    fill: white;
+    fill: currentColor;
   }
 
   .Btn:disabled {
-    opacity: 0.5;
+    opacity: 0.4;
     cursor: not-allowed;
+    filter: grayscale(1);
   }
 
   .Btn::before {
@@ -50,22 +61,20 @@ const StyledWrapper = styled.div`
     height: 130px;
     position: absolute;
     content: "";
-    background-color: rgba(255, 255, 255, 0.15);
+    background-color: rgba(255, 255, 255, 0.1);
     border-radius: 50%;
     left: -100%;
     top: 0;
-    transition-duration: .3s;
+    transition-duration: .4s;
   }
 
   .Btn:hover:not(:disabled)::before {
-    transition-duration: .3s;
     transform: translate(100%,-50%);
     border-radius: 0;
   }
 
   .Btn:active:not(:disabled) {
-    transform: translate(5px,5px);
-    transition-duration: .3s;
+    transform: scale(0.96);
   }
 `;
 
