@@ -475,7 +475,7 @@ export default function Lancamentos({
                               </button>
                             )}
 
-                            {isMaster && item.status_aprovacao === 'confirmado_master' && item.status_pagamento !== 'pago' && item.status_pagamento !== 'bpi' && item.status_pagamento !== 'quitação_pendente' && (
+                            {item.status_aprovacao === 'confirmado_master' && item.status_pagamento === 'aberto' && (
                               <button
                                 onClick={() => handleOpenBaixa(item.id)}
                                 className="px-3 py-1.5 bg-bank-truth-green text-white text-[9px] font-black uppercase tracking-widest rounded-lg hover:brightness-110 transition-all flex items-center gap-1.5 shadow-sm"
@@ -501,7 +501,7 @@ export default function Lancamentos({
                                   exit={{ opacity: 0, scale: 0.95, y: -10 }}
                                   className="absolute right-0 top-full mt-2 w-48 bg-white border border-neutral-100 rounded-2xl shadow-2xl z-50 p-2 overflow-hidden"
                                 >
-                                  {item.status_pagamento !== 'pago' && item.status_pagamento !== 'bpi' && item.status_pagamento !== 'quitação_pendente' && (
+                                  {item.status_pagamento === 'aberto' && item.status_aprovacao === 'confirmado_master' && (
                                     <button onClick={() => handleOpenBaixa(item.id)} className="w-full flex items-center gap-3 px-4 py-3 text-bank-truth-green hover:bg-emerald-50 rounded-xl transition-all">
                                       <CheckCircle2 className="w-4 h-4" />
                                       <span className="text-[10px] font-black uppercase tracking-widest">Dar Baixa</span>
