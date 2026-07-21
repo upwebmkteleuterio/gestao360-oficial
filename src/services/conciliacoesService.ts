@@ -9,7 +9,10 @@ export const conciliacoesService = {
   },
 
   getAllTransacoes: async (): Promise<TransacaoBanco[]> => {
-    const { data, error } = await supabase.from('transacoes_banco').select('*').order('data_transacao', { ascending: false });
+    const { data, error } = await supabase
+      .from('transacoes_banco')
+      .select('*')
+      .order('data_transacao', { ascending: false });
     if (error) throw error;
     return data as TransacaoBanco[];
   },
@@ -32,6 +35,8 @@ export const conciliacoesService = {
     rows.forEach(row => {
       const dataIso = normalizeDate(row.data);
       let valor = row.valor || 0;
+      
+      // Sanitização de valor para garantir que débitos sejam negativos e créditos positivos
       if (importMode === 'saida') valor = -Math.abs(valor);
       else if (importMode === 'entrada') valor = Math.abs(valor);
       
@@ -59,24 +64,45 @@ export const conciliacoesService = {
     const { error } = await supabase.from('transacoes_banco').upsert(transacoes, { onConflict: 'hash_transacao' });
     
     if (error) {
-      throw new Error(`[Erro ${error.code}] ${error.message}`);
+      throw new Error(`[Erro de Banco] ${error.message}`);
     }
     return true;
+  },
+
+  // Nova função para limpar transações importadas que não foram utilizadas
+  cleanupUnreconciled: async (contaId: string): Promise<void> => {
+    const { error } = await supabase
+      .from('transacoes_banco')
+      .delete()
+      .eq('conta_bancaria_id', contaId)
+      .eq('status_conciliacao', false);
+    
+    if (error) throw error;
   },
 
   linkConciliacao: async (lancamentoId: string, transacaoBancoId: string, usuarioId: string, isMaster: boolean = true): Promise<Conciliacao> => {
     const { data, error } = await supabase.from('conciliacoes').insert([{ lancamento_id: lancamentoId, transacao_banco_id: transacaoBancoId, usuario_conciliador_id: usuarioId, data_conciliacao: new Date().toISOString() }]).select().single();
     if (error) throw error;
+    
     const finalStatus = isMaster ? 'pago' : 'quitação_pendente';
-    await supabase.from('lancamentos_financeiros').update({ status_pagamento: finalStatus }).eq('id', lancamentoId);
+    
+    // Capturamos a data da transação para usar como data de pagamento real
+    const { data: tx } = await supabase.from('transacoes_banco').select('data_transacao, valor').eq('id', transacaoBancoId).single();
+
+    await supabase.from('lancamentos_financeiros').update({ 
+      status_pagamento: finalStatus,
+      data_pagamento: tx?.data_transacao || new Date().toISOString().split('T')[0],
+      valor_recebido: Math.abs(tx?.valor || 0)
+    }).eq('id', lancamentoId);
+
     await supabase.from('transacoes_banco').update({ status_conciliacao: true }).eq('id', transacaoBancoId);
     return data as Conciliacao;
   },
 
-  unlinkConciliacao: async (conciliacaoId: string, usuarioId: string): Promise<boolean> => {
+  unlinkConciliacao: async (conciliacaoId: string): Promise<boolean> => {
     const { data: con } = await supabase.from('conciliacoes').select('*').eq('id', conciliacaoId).single();
     if (con) {
-      await supabase.from('lancamentos_financeiros').update({ status_pagamento: 'aberto' }).eq('id', con.lancamento_id);
+      await supabase.from('lancamentos_financeiros').update({ status_pagamento: 'aberto', data_pagamento: null, valor_recebido: 0 }).eq('id', con.lancamento_id);
       await supabase.from('transacoes_banco').update({ status_conciliacao: false }).eq('id', con.transacao_banco_id);
       await supabase.from('conciliacoes').delete().eq('id', conciliacaoId);
     }

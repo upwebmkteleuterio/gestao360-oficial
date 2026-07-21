@@ -126,7 +126,7 @@ export function useCentrosCusto() {
   const query = useQuery({ queryKey: ['centrosCusto'], queryFn: centrosCustoService.getAll });
   const createMutation = useMutation({ mutationFn: centrosCustoService.create, onSuccess: () => queryClient.invalidateQueries({ queryKey: ['centrosCusto'] }) });
   const updateMutation = useMutation({ mutationFn: ({ id, data }: { id: string, data: any }) => centrosCustoService.update(id, data), onSuccess: () => queryClient.invalidateQueries({ queryKey: ['centrosCusto'] }) });
-  const deleteMutation = useMutation({ mutationFn: centrosCustoService.delete, onSuccess: () => queryClient.invalidateQueries({ queryKey: ['centrosCusto'] }) });
+  const deleteMutation = useMutation({ mutationFn: ({ id }: { id: string }) => centrosCustoService.delete(id), onSuccess: () => queryClient.invalidateQueries({ queryKey: ['centrosCusto'] }) });
 
   return { ...query, createCC: createMutation.mutateAsync, updateCC: updateMutation.mutateAsync, deleteCC: deleteMutation.mutateAsync, isCreating: createMutation.isPending };
 }
@@ -136,7 +136,7 @@ export function useCategorias() {
   const query = useQuery({ queryKey: ['categorias'], queryFn: categoriasService.getAll });
   const createMutation = useMutation({ mutationFn: categoriasService.create, onSuccess: () => queryClient.invalidateQueries({ queryKey: ['categorias'] }) });
   const updateMutation = useMutation({ mutationFn: ({ id, data }: { id: string, data: any }) => categoriasService.update(id, data), onSuccess: () => queryClient.invalidateQueries({ queryKey: ['categorias'] }) });
-  const deleteMutation = useMutation({ mutationFn: categoriasService.delete, onSuccess: () => queryClient.invalidateQueries({ queryKey: ['categorias'] }) });
+  const deleteMutation = useMutation({ mutationFn: (id: string) => categoriasService.delete(id), onSuccess: () => queryClient.invalidateQueries({ queryKey: ['categorias'] }) });
 
   return { ...query, createCategory: createMutation.mutateAsync, updateCategory: updateMutation.mutateAsync, deleteCategory: deleteMutation.mutateAsync, isCreating: createMutation.isPending };
 }
@@ -145,8 +145,10 @@ export function useCategoriasAjuste() {
   const queryClient = useQueryClient();
   const query = useQuery({ queryKey: ['categoriasAjuste'], queryFn: async () => { const { data, error } = await supabase.from('categorias_ajuste').select('*').order('nome'); if (error) throw error; return data; } });
   const createMutation = useMutation({ mutationFn: async (data: { nome: string, tipo: 'desconto' | 'acrescimo' }) => { const { data: { user } } = await supabase.auth.getUser(); const { data: result, error } = await supabase.from('categorias_ajuste').insert([{ ...data, user_id: user?.id }]).select().single(); if (error) throw error; return result; }, onSuccess: () => queryClient.invalidateQueries({ queryKey: ['categoriasAjuste'] }) });
-  
-  return { ...query, categoriasAjuste: query.data || [], createCategoriaAjuste: createMutation.mutateAsync, isCreating: createMutation.isPending };
+  const updateMutation = useMutation({ mutationFn: async ({ id, data }: { id: string, data: any }) => { const { error } = await supabase.from('categorias_ajuste').update(data).eq('id', id); if (error) throw error; return true; }, onSuccess: () => queryClient.invalidateQueries({ queryKey: ['categoriasAjuste'] }) });
+  const deleteMutation = useMutation({ mutationFn: async (id: string) => { const { error } = await supabase.from('categorias_ajuste').update({ status: 'inativo' }).eq('id', id); if (error) throw error; return true; }, onSuccess: () => queryClient.invalidateQueries({ queryKey: ['categoriasAjuste'] }) });
+
+  return { ...query, categoriasAjuste: query.data || [], createCategoriaAjuste: createMutation.mutateAsync, updateCategoriaAjuste: updateMutation.mutateAsync, deleteCategoriaAjuste: deleteMutation.mutateAsync, isCreating: createMutation.isPending };
 }
 
 export function useContas() {
@@ -211,7 +213,7 @@ export function useRecorrencias() {
 
 export function useConciliacao() {
   const queryClient = useQueryClient();
-  const { role } = useAuth();
+  const { role, user } = useAuth();
   const isMaster = role === 'master';
 
   const conciliacoesQuery = useQuery({ queryKey: ['conciliacoes'], queryFn: conciliacoesService.getConciliacoes });
@@ -226,13 +228,26 @@ export function useConciliacao() {
   const linkMutation = useMutation({
     mutationFn: ({ lancamentoId, transacaoBancoId, usuarioId }: { lancamentoId: string, transacaoBancoId: string, usuarioId: string }) =>
       conciliacoesService.linkConciliacao(lancamentoId, transacaoBancoId, usuarioId, isMaster),
-    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['conciliacoes'] }); queryClient.invalidateQueries({ queryKey: ['transacoes'] }); queryClient.invalidateQueries({ queryKey: ['lancamentos'] }); }
+    onSuccess: () => { 
+      queryClient.invalidateQueries({ queryKey: ['conciliacoes'] }); 
+      queryClient.invalidateQueries({ queryKey: ['transacoes'] }); 
+      queryClient.invalidateQueries({ queryKey: ['lancamentos'] }); 
+    }
   });
 
   const unlinkMutation = useMutation({
-    mutationFn: ({ conciliacaoId, usuarioId }: { conciliacaoId: string, usuarioId: string }) => 
-      conciliacoesService.unlinkConciliacao(conciliacaoId, usuarioId),
-    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['conciliacoes'] }); queryClient.invalidateQueries({ queryKey: ['transacoes'] }); queryClient.invalidateQueries({ queryKey: ['lancamentos'] }); }
+    mutationFn: ({ conciliacaoId }: { conciliacaoId: string }) => 
+      conciliacoesService.unlinkConciliacao(conciliacaoId),
+    onSuccess: () => { 
+      queryClient.invalidateQueries({ queryKey: ['conciliacoes'] }); 
+      queryClient.invalidateQueries({ queryKey: ['transacoes'] }); 
+      queryClient.invalidateQueries({ queryKey: ['lancamentos'] }); 
+    }
+  });
+
+  const cleanupMutation = useMutation({
+    mutationFn: (contaId: string) => conciliacoesService.cleanupUnreconciled(contaId),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['transacoes'] })
   });
 
   const classifyDifferenceMutation = useMutation({
@@ -246,9 +261,11 @@ export function useConciliacao() {
     isFetchingTransacoes: transacoesQuery.isPending,
     isLinking: linkMutation.isPending,
     isUnlinking: unlinkMutation.isPending,
+    isCleaning: cleanupMutation.isPending,
     importCSV: importMutation.mutateAsync,
     linkConciliacao: linkMutation.mutateAsync,
     unlinkConciliacao: unlinkMutation.mutateAsync,
+    cleanupTransacoes: cleanupMutation.mutateAsync,
     classifyDifference: classifyDifferenceMutation.mutateAsync
   };
 }
