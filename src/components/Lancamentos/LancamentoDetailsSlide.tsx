@@ -22,10 +22,12 @@ import {
   Paperclip,
   Check,
   AlertTriangle,
-  Loader2
+  Loader2,
+  TrendingUp
 } from 'lucide-react';
 import { useUIStore } from '../../store/uiStore';
 import { useLancamento, useEntidades, useCategorias, useUsuarios, useLancamentoAnexos, useLancamentos } from '../../hooks/useData';
+import { useAuth } from '../../hooks/useAuth';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 
@@ -38,7 +40,8 @@ export default function LancamentoDetailsSlide() {
     setSelectedLancamentoIdForModal 
   } = useUIStore();
 
-  const { updateLancamento, baixaLancamento } = useLancamentos();
+  const { role } = useAuth();
+  const { updateLancamento } = useLancamentos();
   const { data: entidades = [] } = useEntidades();
   const { data: categorias = [] } = useCategorias();
   const { data: usuarios = [] } = useUsuarios();
@@ -53,7 +56,7 @@ export default function LancamentoDetailsSlide() {
   }, [searchParams]);
 
   const { data: lancamento, isLoading: loadingItem } = useLancamento(selectedLancamentoIdForModal);
-  const { anexos = [], isLoading: loadingAnexos } = useLancamentoAnexos(selectedLancamentoIdForModal);
+  const { anexos = [] } = useLancamentoAnexos(selectedLancamentoIdForModal);
 
   const [dispensarComprovante, setDispensarComprovante] = useState(false);
   const [loadingAction, setLoadingAction] = useState(false);
@@ -289,11 +292,9 @@ export default function LancamentoDetailsSlide() {
                     <Paperclip className="w-4 h-4" /> Comprovantes e Anexos
                   </h4>
                   
-                  {loadingAnexos ? (
-                    <div className="p-12 flex justify-center"><Clock className="w-6 h-6 animate-spin text-secondary" /></div>
-                  ) : anexos.length > 0 ? (
-                    <div className="grid grid-cols-1 gap-2">
-                      {anexos.map((anexo: any) => (
+                  <div className="grid grid-cols-1 gap-2">
+                    {anexos.length > 0 ? (
+                      anexos.map((anexo: any) => (
                         <a 
                           key={anexo.id}
                           href={anexo.url}
@@ -312,15 +313,15 @@ export default function LancamentoDetailsSlide() {
                           </div>
                           <ExternalLink className="w-4 h-4 text-secondary group-hover:text-primary transition-colors" />
                         </a>
-                      ))}
-                    </div>
-                  ) : (
-                    <div className="p-8 bg-neutral-50 rounded-2xl border-2 border-dashed border-neutral-200 flex flex-col items-center justify-center text-center">
-                      <Paperclip className="w-8 h-8 text-neutral-300 mb-2" />
-                      <p className="text-[10px] font-black uppercase text-secondary">Nenhum comprovante anexado</p>
-                      <p className="text-[8px] font-bold text-neutral-400 uppercase mt-1">É necessário um anexo para aprovação direta</p>
-                    </div>
-                  )}
+                      ))
+                    ) : (
+                      <div className="p-8 bg-neutral-50 rounded-2xl border-2 border-dashed border-neutral-200 flex flex-col items-center justify-center text-center">
+                        <Paperclip className="w-8 h-8 text-neutral-300 mb-2" />
+                        <p className="text-[10px] font-black uppercase text-secondary">Nenhum comprovante anexado</p>
+                        <p className="text-[8px] font-bold text-neutral-400 uppercase mt-1">É necessário um anexo para aprovação direta</p>
+                      </div>
+                    )}
+                  </div>
                 </div>
               </div>
 
