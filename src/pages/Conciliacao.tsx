@@ -2,35 +2,24 @@ import React, { useState, useMemo, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import {
   FileSpreadsheet,
-  Check,
   Link2,
   Unlink,
-  ArrowRight,
   Search,
   Upload,
   HelpCircle,
   AlertTriangle,
   ChevronRight,
-  Info,
   X,
   Plus,
   Coins,
-  ShieldCheck,
   Building,
-  ArrowDownCircle,
-  ArrowUpCircle,
-  Loader2,
   Calendar,
-  Hash,
-  Terminal,
-  Activity,
-  Zap
+  Hash
 } from 'lucide-react';
 import { useConciliacao, useContas, useLancamentos, useEntidades } from '../hooks/useData';
 import { useUIStore } from '../store/uiStore';
 import { TransacaoBanco, LancamentoFinanceiro } from '../types';
 import Button from '../components/Button';
-import { conciliacoesService } from '../services/conciliacoesService';
 
 export default function Conciliacao() {
   const { 
@@ -62,9 +51,6 @@ export default function Conciliacao() {
     return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
   });
 
-  const [diagnosticLogs, setDiagnosticLogs] = useState<string[]>([]);
-  const [isDiagnosticRunning, setIsDiagnosticRunning] = useState(false);
-
   const [csvContentText, setCsvContentText] = useState('');
   const [selectedImportContaId, setSelectedImportContaId] = useState('');
   const [importMode, setImportMode] = useState<'entrada' | 'saida' | 'ambos'>('ambos');
@@ -82,16 +68,6 @@ export default function Conciliacao() {
       setSelectedImportContaId(contas[0].id);
     }
   }, [contas, selectedContaId]);
-
-  const addLog = (msg: string) => setDiagnosticLogs(prev => [...prev, `[${new Date().toLocaleTimeString()}] ${msg}`]);
-
-  const runHealthCheck = async () => {
-    setIsDiagnosticRunning(true);
-    setDiagnosticLogs(["Iniciando testes técnicos..."]);
-    const result = await conciliacoesService.runDiagnostic();
-    setDiagnosticLogs(result.logs);
-    setIsDiagnosticRunning(false);
-  };
 
   const processFile = (file: File) => {
     const reader = new FileReader();
@@ -126,7 +102,6 @@ export default function Conciliacao() {
 
   const handleImportCSVSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    addLog("Iniciando processo de importação...");
     try {
       const lines = csvContentText.split('\n').filter(l => l.trim());
       const separator = lines[0].includes(';') ? ';' : ',';
@@ -141,11 +116,10 @@ export default function Conciliacao() {
       }).filter(r => r.data && !isNaN(r.valor));
       
       await importCSV({ contaBancariaId: selectedImportContaId, rows: rowsToImport, importMode });
-      addLog("✅ Importação concluída!");
       setModalOpen('isImportarCSVOpen', false);
+      alert('Importação concluída com sucesso!');
     } catch (err: any) {
-      addLog(`❌ ERRO: ${err.message}`);
-      alert('Erro na importação. Veja o console de diagnóstico.');
+      alert('Erro na importação: ' + err.message);
     }
   };
 
@@ -169,6 +143,23 @@ export default function Conciliacao() {
     } catch (err: any) { alert('Erro: ' + err.message); }
   };
 
+  const handleClassifyDiffSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!currentConciliationId) return;
+    try {
+      await classifyDifference({
+        conciliacaoId: currentConciliationId,
+        tipoDiferenca: diffType,
+        valorDiferenca: currentConciliationDifferenceValue,
+        observacaoJustificativa: diffJustification
+      });
+      setModalOpen('isClassificarDiferencaOpen', false);
+      setCurrentConciliationId(null);
+      setCurrentConciliationDifferenceValue(0);
+      setDiffJustification('');
+    } catch (err: any) { alert('Erro: ' + err.message); }
+  };
+
   const handleUnlink = async (conId: string) => {
     if (confirm('Desvincular conciliação?')) {
       try { await unlinkConciliacao({ conciliacaoId: conId, usuarioId: currentUserId }); } catch (err: any) { alert('Erro: ' + err.message); }
@@ -186,23 +177,22 @@ export default function Conciliacao() {
 
   const selectedTxForWorkspace = useMemo(() => transacoes.find(t => t.id === selectedTransacaoForConciliationId) || null, [selectedTransacaoForConciliationId, transacoes]);
   const selectedLancForWorkspace = useMemo(() => lancamentos.find(l => l.id === selectedLancamentoForConciliationId) || null, [selectedLancamentoForConciliationId, lancamentos]);
-
   const valueFormatter = (val: number) => new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(val);
 
+  const draftDifferenceAmount = useMemo(() => {
+    if (!selectedTxForWorkspace || !selectedLancForWorkspace) return 0;
+    const erpVal = selectedLancForWorkspace.tipo === 'saida' ? -selectedLancForWorkspace.valor_previsto : selectedLancForWorkspace.valor_previsto;
+    return selectedTxForWorkspace.valor - erpVal;
+  }, [selectedTxForWorkspace, selectedLancForWorkspace]);
+
   return (
-    <div className="space-y-6 pb-40">
+    <div className="space-y-6">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl font-black uppercase tracking-tighter text-neutral-900">Conciliação de Verdade</h1>
-          <p className="text-[10px] font-black uppercase tracking-widest text-neutral-400 mt-1">Eliminando a adivinhação com diagnóstico em tempo real</p>
+          <p className="text-[10px] font-black uppercase tracking-widest text-neutral-400 mt-1">Sincronização de Verdade Bancária Integrada</p>
         </div>
-        <div className="flex gap-3">
-          <button onClick={runHealthCheck} disabled={isDiagnosticRunning} className="px-6 h-12 bg-white border-2 border-neutral-100 text-neutral-600 font-black text-[10px] uppercase tracking-widest rounded-xl hover:bg-neutral-50 transition-all flex items-center gap-2">
-            {isDiagnosticRunning ? <Loader2 className="w-4 h-4 animate-spin" /> : <Zap className="w-4 h-4 text-amber-500" />}
-            Testar Conexão
-          </button>
-          <button onClick={() => setModalOpen('isImportarCSVOpen', true)} className="px-8 h-12 bg-neutral-900 text-white font-black text-[10px] uppercase tracking-widest rounded-xl hover:bg-black transition-all flex items-center gap-2 shadow-xl"><FileSpreadsheet className="w-4 h-4" /> Importar CSV</button>
-        </div>
+        <button onClick={() => setModalOpen('isImportarCSVOpen', true)} className="px-8 h-12 bg-neutral-900 text-white font-black text-[10px] uppercase tracking-widest rounded-xl hover:bg-black transition-all flex items-center gap-2 shadow-xl"><FileSpreadsheet className="w-4 h-4" /> Importar CSV</button>
       </div>
 
       <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
@@ -231,29 +221,6 @@ export default function Conciliacao() {
         </div>
       </div>
 
-      {/* Console */}
-      <div className="fixed bottom-0 left-0 right-0 z-40 p-4 lg:pl-24 pointer-events-none">
-        <div className="max-w-7xl mx-auto pointer-events-auto">
-          <div className="bg-neutral-900 border-2 border-neutral-800 rounded-t-3xl shadow-2xl overflow-hidden">
-            <header className="px-6 py-3 border-b border-neutral-800 flex justify-between items-center bg-black/50">
-              <div className="flex items-center gap-2"><Terminal className="w-4 h-4 text-emerald-500" /><span className="text-[10px] font-black uppercase text-neutral-400 tracking-[0.2em]">Senior Diagnostic Console</span></div>
-              <button onClick={() => setDiagnosticLogs([])} className="text-[8px] font-black text-neutral-500 uppercase hover:text-white transition-colors">Limpar Logs</button>
-            </header>
-            <div className="p-4 h-32 overflow-y-auto font-mono text-[10px] space-y-1 scrollbar-thin">
-              {diagnosticLogs.length === 0 ? <p className="text-neutral-600 italic">Aguardando atividades...</p> : 
-                diagnosticLogs.map((log, i) => (
-                  <div key={i} className={`flex gap-3 ${log.includes('❌') ? 'text-red-400' : log.includes('✅') ? 'text-emerald-400' : 'text-neutral-400'}`}>
-                    <span className="opacity-30">[{i+1}]</span>
-                    <span>{log}</span>
-                  </div>
-                ))
-              }
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Modais */}
       <AnimatePresence>
         {isImportarCSVOpen && (
           <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
@@ -304,7 +271,8 @@ export default function Conciliacao() {
               <header className="px-8 py-6 border-b bg-neutral-50 flex justify-between items-center"><h2 className="text-lg font-black uppercase tracking-tighter">Conciliar Itens</h2><button onClick={() => setModalOpen('isVincularConciliarOpen', false)}><X className="w-6 h-6" /></button></header>
               <div className="flex-1 p-8 space-y-6">
                 <div className="p-6 rounded-[24px] border-2 border-neutral-100 bg-neutral-50/50 space-y-2"><span className="text-[10px] font-black uppercase text-neutral-400">Origem Banco</span><p className="font-black text-xs uppercase">{selectedTxForWorkspace.descricao_banco}</p><p className="font-black text-xl text-neutral-900">{valueFormatter(selectedTxForWorkspace.valor)}</p></div>
-                <div className="p-6 rounded-[24px] border-2 border-primary/20 bg-primary/5 space-y-2"><span className="text-[10px] font-black uppercase text-primary">Previsão ERP</span><p className="font-black text-xs uppercase">{getEntidadeName(selectedLancForWorkspace.entidade_id)}</p><p className="font-black text-xl text-primary">{valueFormatter(selectedLancForWorkspace.valor_previsto)}</p></div>
+                <div className="flex justify-center"><Link2 className="w-8 h-8 text-neutral-300" /></div>
+                <div className="p-6 rounded-[24px] border-2 border-primary/20 bg-primary/5 space-y-2"><span className="text-[10px] font-black uppercase text-primary">Previsão ERP</span><p className="font-black text-xs uppercase">{entidades.find(e => e.id === selectedLancForWorkspace.entidade_id)?.nome_razao_social || 'N/A'}</p><p className="font-black text-xl text-primary">{valueFormatter(selectedLancForWorkspace.valor_previsto)}</p></div>
               </div>
               <footer className="p-8 border-t bg-neutral-50">
                 <div className="flex justify-between items-center mb-4"><span className="text-[10px] font-black uppercase text-neutral-400">Diferença</span><span className="text-xs font-black px-4 py-1.5 rounded-full bg-neutral-900 text-white">{valueFormatter(draftDifferenceAmount)}</span></div>
