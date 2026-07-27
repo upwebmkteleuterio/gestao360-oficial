@@ -40,6 +40,7 @@ import { LancamentoFinanceiro } from '../types';
 import { motion, AnimatePresence } from 'motion/react';
 import Button from '../components/Button';
 import AccountFilterCards from '../components/Lancamentos/AccountFilterCards';
+import LancamentoActionMenu from '../components/Lancamentos/LancamentoActionMenu';
 
 interface LancamentosProps {
   typeOverride?: 'entrada' | 'saida';
@@ -77,7 +78,6 @@ export default function Lancamentos({
     return new Date().toISOString().split('T')[0];
   });
 
-  // Handle preset change
   const handlePresetChange = (preset: '15' | '30' | '90' | 'custom') => {
     setDatePreset(preset);
     if (preset !== 'custom') {
@@ -105,8 +105,9 @@ export default function Lancamentos({
   useEffect(() => {
     setStatusPagamento(statusPagamentoOverride || 'pago');
     setTypeFilter(typeOverride || 'all');
-    setSelectedIds([]); // Limpa seleções ao trocar de tela
+    setSelectedIds([]); 
   }, [statusPagamentoOverride, typeOverride]);
+
   const [authorIdFilter, setAuthorIdIdFilter] = useState('all');
   const [categoryIdFilter, setCategoryIdFilter] = useState('all');
   const [contaIdFilter, setContaIdFilter] = useState('all');
@@ -118,17 +119,11 @@ export default function Lancamentos({
   const [motivoAcrescimoFilter, setMotivoAcrescimoFilter] = useState('all');
   const [isFilterPanelOpen, setIsFilterPanelOpen] = useState(false);
 
-  useEffect(() => {
-    if (typeOverride) setTypeFilter(typeOverride);
-  }, [typeOverride]);
-
   const hasActiveFilters = searchTerm !== '' || approvalStatus !== 'all' || typeFilter !== (typeOverride || 'all') || authorIdFilter !== 'all' || categoryIdFilter !== 'all' || contaIdFilter !== 'all' || centroCustoIdFilter !== 'all' || condicaoFilter !== 'all' || temDescontoFilter !== 'all' || temAcrescimoFilter !== 'all' || motivoDescontoFilter !== 'all' || motivoAcrescimoFilter !== 'all';
 
-  // Checkbox Selection State for Batch Approve
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [activeMenuId, setActiveMenuId] = useState<string | null>(null);
 
-  // FETCH DATA FROM SERVER
   const {
     data: allLancamentos = [],
     totalCount = 0,
@@ -169,7 +164,6 @@ export default function Lancamentos({
   const activeContas = useMemo(() => rawContas.filter((c: any) => c.status !== 'excluido'), [rawContas]);
   const [selectedAccountId, setSelectedAccountId] = useState<string | null>(null);
 
-  // Deep Linking logic: Open modal if ID is in URL
   useEffect(() => {
     const lancamentoId = searchParams.get('id');
     if (lancamentoId) {
@@ -178,7 +172,6 @@ export default function Lancamentos({
     }
   }, [searchParams, setSelectedLancamentoIdForModal, setModalOpen]);
 
-  // Local filtering (e.g. Account Cards selection)
   const filteredLancamentos = useMemo(() => {
     return allLancamentos.filter(l => selectedAccountId ? l.conta_bancaria_id === selectedAccountId : true);
   }, [allLancamentos, selectedAccountId]);
@@ -285,7 +278,6 @@ export default function Lancamentos({
 
   const { data: contasSaldos = [] } = useContasSaldos();
 
-  // Calculate balances for account cards based on global real-time totals from database
   const accountCardsData = useMemo(() => {
     return activeContas.map(acc => {
       const saldoObj = contasSaldos.find(s => s.conta_id === acc.id);
@@ -339,16 +331,10 @@ export default function Lancamentos({
     }
 
     const days = getDaysOverdue(item.data_vencimento);
-    if (days > 0) {
+    if (days >= 0) {
       return (
         <span className="inline-flex items-center px-2.5 py-0.5 rounded bg-red-50 text-alert-red font-black border border-red-200 text-[9px] uppercase tracking-tighter animate-pulse">
           Atrasado
-        </span>
-      );
-    } else if (days === 0) {
-      return (
-        <span className="inline-flex items-center px-2.5 py-0.5 rounded bg-amber-50 text-amber-600 font-black border border-amber-200 text-[9px] uppercase tracking-tighter">
-          Hoje
         </span>
       );
     } else {
@@ -409,7 +395,6 @@ export default function Lancamentos({
         </div>
 
         <div className="flex items-center gap-3 w-full lg:w-auto">
-          {/* Period Shortcut Selector */}
           <div className="flex bg-neutral-100 p-1 rounded-xl h-12 shrink-0">
             {[
               { id: '15', label: '15 dias' },
@@ -457,7 +442,6 @@ export default function Lancamentos({
         </div>
       </div>
 
-      {/* Table grid */}
       <div className="bg-white border-2 border-neutral-100 rounded-[32px] overflow-hidden shadow-sm">
         <div className="overflow-x-auto scrollbar-thin">
           <table className="w-full text-left border-collapse min-w-[1000px]">
@@ -506,7 +490,8 @@ export default function Lancamentos({
                 filteredLancamentos.map((item) => {
                   const isSelected = selectedIds.includes(item.id);
                   const isAprovacaoPendente = (item.status_aprovacao !== 'confirmado_master' || item.status_pagamento === 'quitação_pendente') && item.status_pagamento !== 'bpi';
-                  
+                  const days = getDaysOverdue(item.data_vencimento);
+
                   return (
                     <tr
                       key={item.id}
@@ -530,9 +515,16 @@ export default function Lancamentos({
                         <>
                           <td className="py-3 px-4">
                             <div className="flex flex-col">
-                              <span className="text-neutral-900 font-black uppercase tracking-tighter truncate max-w-[200px]">
-                                {entidades.find(e => e.id === item.entidade_id)?.nome_razao_social || 'N/A'}
-                              </span>
+                              <div className="flex items-center gap-2">
+                                <span className="text-neutral-900 font-black uppercase tracking-tighter truncate max-w-[200px]">
+                                  {entidades.find(e => e.id === item.entidade_id)?.nome_razao_social || 'N/A'}
+                                </span>
+                                {item.numero_parcela && (
+                                  <span className="text-[10px] font-black text-primary bg-primary/5 px-1.5 py-0.5 rounded border border-primary/10 whitespace-nowrap">
+                                    {item.numero_parcela}/{item.quantidade_total_parcelas || '?'}
+                                  </span>
+                                )}
+                              </div>
                               <span className="text-[9px] text-neutral-400 uppercase tracking-widest font-bold">
                                 {item.observacoes || 'Sem descrição'}
                               </span>
@@ -541,12 +533,15 @@ export default function Lancamentos({
                           <td className="py-3 px-4 whitespace-nowrap font-mono text-xs">
                             {item.status_pagamento === 'pago' ? (
                               <span className="text-neutral-300 font-normal">-</span>
-                            ) : (() => {
-                              const days = getDaysOverdue(item.data_vencimento);
-                              if (days > 0) return <span className="text-alert-red font-black">{days} dia(s)</span>;
-                              if (days === 0) return <span className="text-alert-red font-black">Hoje</span>;
-                              return <span className="text-neutral-300 font-normal">-</span>;
-                            })()}
+                            ) : (
+                              days > 0 ? (
+                                <span className="text-alert-red font-black">{days} dia(s)</span>
+                              ) : days === 0 ? (
+                                <span className="text-alert-red font-black">Hoje</span>
+                              ) : (
+                                <span className="text-neutral-300 font-normal">-</span>
+                              )
+                            )}
                           </td>
                           <td className="py-3 px-4 whitespace-nowrap text-neutral-500 font-mono">
                             {(item.data_competencia || item.data_vencimento).split('-').reverse().join('/')}
@@ -583,7 +578,14 @@ export default function Lancamentos({
                           </td>
                           <td className="py-3 px-4">
                             <div className="flex flex-col">
-                              <span className="text-neutral-900 font-black uppercase tracking-tighter truncate max-w-[200px]">{entidades.find(e => e.id === item.entidade_id)?.nome_razao_social || 'N/A'}</span>
+                              <div className="flex items-center gap-2">
+                                <span className="text-neutral-900 font-black uppercase tracking-tighter truncate max-w-[200px]">{entidades.find(e => e.id === item.entidade_id)?.nome_razao_social || 'N/A'}</span>
+                                {item.numero_parcela && (
+                                  <span className="text-[10px] font-black text-primary bg-primary/5 px-1.5 py-0.5 rounded border border-primary/10 whitespace-nowrap">
+                                    {item.numero_parcela}/{item.quantidade_total_parcelas || '?'}
+                                  </span>
+                                )}
+                              </div>
                               <span className="text-[9px] text-neutral-400 uppercase tracking-widest font-bold">{item.observacoes || 'Sem descrição'}</span>
                             </div>
                           </td>
@@ -657,7 +659,7 @@ export default function Lancamentos({
                             )}
                           </div>
 
-                          <LancamentoActionMenu
+                          <LancamentoActionMenu 
                             item={item}
                             isMaster={isMaster}
                             isActive={activeMenuId === item.id}
@@ -774,32 +776,6 @@ export default function Lancamentos({
                   </div>
                 </div>
 
-                <div className="space-y-3">
-                  <label className="text-[10px] font-black uppercase tracking-[0.2em] text-secondary flex items-center gap-2">
-                    <CheckCircle2 className="w-4 h-4" /> Status de Aprovação
-                  </label>
-                  <div className="grid grid-cols-1 gap-2">
-                    {[
-                      { id: 'all', label: 'Todos' },
-                      { id: 'confirmado_master', label: 'Confirmado' },
-                      { id: 'pendente', label: 'Pendente' },
-                      { id: 'reprovado', label: 'Reprovado' },
-                      { id: 'bpi', label: 'BPI' }
-                    ].map(opt => (
-                      <button
-                        key={opt.id}
-                        onClick={() => setApprovalStatus(opt.id)}
-                        className={`px-4 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest border-2 transition-all text-left flex items-center justify-between ${
-                          approvalStatus === opt.id ? 'border-primary bg-primary/5 text-primary' : 'border-neutral-100 bg-neutral-50 text-secondary hover:border-neutral-200'
-                        }`}
-                      >
-                        {opt.label}
-                        {approvalStatus === opt.id && <div className="w-2 h-2 bg-primary rounded-full" />}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-
                 <div className="grid grid-cols-1 gap-6">
                   <div className="space-y-2">
                     <label className="text-[10px] font-black uppercase tracking-[0.2em] text-secondary flex items-center gap-2">
@@ -856,83 +832,6 @@ export default function Lancamentos({
                       {centrosCusto.filter((cc: any) => cc.status !== 'excluido').map(cc => <option key={cc.id} value={cc.id}>{cc.nome}</option>)}
                     </select>
                   </div>
-
-                  <div className="space-y-2">
-                    <label className="text-[10px] font-black uppercase tracking-[0.2em] text-secondary flex items-center gap-2">
-                      <Repeat className="w-4 h-4" /> Condição
-                    </label>
-                    <select
-                      value={condicaoFilter}
-                      onChange={(e) => setCondicaoFilter(e.target.value)}
-                      className="w-full h-11 bg-neutral-50 border border-surface-border text-xs font-bold rounded-lg px-3 outline-none focus:border-primary"
-                    >
-                      <option value="all">Todas as Condições</option>
-                      <option value="a_vista">À Vista</option>
-                      <option value="a_prazo">A Prazo</option>
-                    </select>
-                  </div>
-
-                  <div className="space-y-2">
-                    <label className="text-[10px] font-black uppercase tracking-[0.2em] text-secondary flex items-center gap-2">
-                      <TrendingDown className="w-4 h-4" /> Desconto
-                    </label>
-                    <select
-                      value={temDescontoFilter}
-                      onChange={(e) => setTemDescontoFilter(e.target.value)}
-                      className="w-full h-11 bg-neutral-50 border border-surface-border text-xs font-bold rounded-lg px-3 outline-none focus:border-primary"
-                    >
-                      <option value="all">Todos</option>
-                      <option value="sim">Com Desconto</option>
-                      <option value="nao">Sem Desconto</option>
-                    </select>
-                  </div>
-
-                  {temDescontoFilter !== 'all' && (
-                    <div className="space-y-2 animate-in fade-in slide-in-from-top-1">
-                      <label className="text-[10px] font-black uppercase tracking-[0.2em] text-secondary flex items-center gap-2">
-                        <Tag className="w-4 h-4" /> Motivo do Desconto
-                      </label>
-                      <select
-                        value={motivoDescontoFilter}
-                        onChange={(e) => setMotivoDescontoFilter(e.target.value)}
-                        className="w-full h-11 bg-neutral-50 border border-surface-border text-xs font-bold rounded-lg px-3 outline-none focus:border-primary"
-                      >
-                        <option value="all">Todos os Motivos</option>
-                        {categoriasAjuste.filter((c: any) => c.tipo === 'desconto' && c.status !== 'inativo').map((r: any) => <option key={r.id} value={r.id}>{r.nome}</option>)}
-                      </select>
-                    </div>
-                  )}
-
-                  <div className="space-y-2">
-                    <label className="text-[10px] font-black uppercase tracking-[0.2em] text-secondary flex items-center gap-2">
-                      <TrendingUp className="w-4 h-4" /> Acréscimo
-                    </label>
-                    <select
-                      value={temAcrescimoFilter}
-                      onChange={(e) => setTemAcrescimoFilter(e.target.value)}
-                      className="w-full h-11 bg-neutral-50 border border-surface-border text-xs font-bold rounded-lg px-3 outline-none focus:border-primary"
-                    >
-                      <option value="all">Todos</option>
-                      <option value="sim">Com Acréscimo</option>
-                      <option value="nao">Sem Acréscimo</option>
-                    </select>
-                  </div>
-
-                  {temAcrescimoFilter !== 'all' && (
-                    <div className="space-y-2 animate-in fade-in slide-in-from-top-1">
-                      <label className="text-[10px] font-black uppercase tracking-[0.2em] text-secondary flex items-center gap-2">
-                        <Tag className="w-4 h-4" /> Motivo do Acréscimo
-                      </label>
-                      <select
-                        value={motivoAcrescimoFilter}
-                        onChange={(e) => setMotivoAcrescimoFilter(e.target.value)}
-                        className="w-full h-11 bg-neutral-50 border border-surface-border text-xs font-bold rounded-lg px-3 outline-none focus:border-primary"
-                      >
-                        <option value="all">Todos os Motivos</option>
-                        {categoriasAjuste.filter((c: any) => c.tipo === 'acrescimo' && c.status !== 'inativo').map((r: any) => <option key={r.id} value={r.id}>{r.nome}</option>)}
-                      </select>
-                    </div>
-                  )}
                 </div>
               </div>
 
