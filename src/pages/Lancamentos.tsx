@@ -339,10 +339,16 @@ export default function Lancamentos({
     }
 
     const days = getDaysOverdue(item.data_vencimento);
-    if (days >= 0) {
+    if (days > 0) {
       return (
         <span className="inline-flex items-center px-2.5 py-0.5 rounded bg-red-50 text-alert-red font-black border border-red-200 text-[9px] uppercase tracking-tighter animate-pulse">
           Atrasado
+        </span>
+      );
+    } else if (days === 0) {
+      return (
+        <span className="inline-flex items-center px-2.5 py-0.5 rounded bg-amber-50 text-amber-600 font-black border border-amber-200 text-[9px] uppercase tracking-tighter">
+          Hoje
         </span>
       );
     } else {
