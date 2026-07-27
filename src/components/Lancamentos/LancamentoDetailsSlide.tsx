@@ -134,7 +134,10 @@ export default function LancamentoDetailsSlide() {
         id: lancamento.id,
         data: {
           status_aprovacao: 'reprovado',
-          data_aprovacao: null
+          data_aprovacao: null,
+          status_pagamento: 'aberto',
+          valor_recebido: 0,
+          data_pagamento: null
         }
       });
       handleClose();

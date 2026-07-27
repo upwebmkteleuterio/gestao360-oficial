@@ -98,6 +98,7 @@ export default function Lancamentos({
 
   // Advanced Filters
   const [approvalStatus, setApprovalStatus] = useState('all');
+  const [statusPagamento, setStatusPagamento] = useState<string>(statusPagamentoOverride || 'pago');
   const [typeFilter, setTypeFilter] = useState<'all' | 'entrada' | 'saida'>(typeOverride || 'all');
   const [authorIdFilter, setAuthorIdIdFilter] = useState('all');
   const [categoryIdFilter, setCategoryIdFilter] = useState('all');
@@ -134,7 +135,7 @@ export default function Lancamentos({
     startDate,
     endDate,
     approvalStatus: statusAprovacaoOverride || approvalStatus,
-    statusPagamento: statusPagamentoOverride,
+    statusPagamento: statusPagamento,
     type: typeFilter === 'all' ? undefined : typeFilter,
     authorId: authorIdFilter,
     categoryId: categoryIdFilter,
@@ -198,6 +199,7 @@ export default function Lancamentos({
   const clearFiltersShortcut = () => {
     setSearchTerm('');
     setApprovalStatus('all');
+    setStatusPagamento(statusPagamentoOverride || 'pago');
     setTypeFilter(typeOverride || 'all');
     setAuthorIdIdFilter('all');
     setCategoryIdFilter('all');
@@ -767,6 +769,32 @@ export default function Lancamentos({
                     <button onClick={() => setTypeFilter('all')} className={`flex-1 rounded-lg text-[10px] font-black uppercase transition-all ${typeFilter === 'all' ? 'bg-white text-primary shadow-sm' : 'text-neutral-400'}`}>Todos</button>
                     <button onClick={() => setTypeFilter('entrada')} className={`flex-1 rounded-lg text-[10px] font-black uppercase transition-all ${typeFilter === 'entrada' ? 'bg-white text-bank-truth-green shadow-sm' : 'text-neutral-400'}`}>Entradas</button>
                     <button onClick={() => setTypeFilter('saida')} className={`flex-1 rounded-lg text-[10px] font-black uppercase transition-all ${typeFilter === 'saida' ? 'bg-white text-alert-red shadow-sm' : 'text-neutral-400'}`}>Saídas</button>
+                  </div>
+                </div>
+
+                <div className="space-y-3">
+                  <label className="text-[10px] font-black uppercase tracking-[0.2em] text-secondary flex items-center gap-2">
+                    <CreditCard className="w-4 h-4" /> Status de Pagamento
+                  </label>
+                  <div className="grid grid-cols-2 gap-2">
+                    {[
+                      { id: 'all', label: 'Todos' },
+                      { id: 'pago', label: 'Liquidados' },
+                      { id: 'aberto', label: 'Em Aberto' },
+                      { id: 'quitação_pendente', label: 'Pend. Gestor' },
+                    ].map(opt => (
+                      <button
+                        key={opt.id}
+                        type="button"
+                        onClick={() => setStatusPagamento(opt.id)}
+                        className={`px-4 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest border-2 transition-all text-left flex items-center justify-between ${
+                          statusPagamento === opt.id ? 'border-primary bg-primary/5 text-primary' : 'border-neutral-100 bg-neutral-50 text-secondary hover:border-neutral-200'
+                        }`}
+                      >
+                        {opt.label}
+                        {statusPagamento === opt.id && <div className="w-2 h-2 bg-primary rounded-full" />}
+                      </button>
+                    ))}
                   </div>
                 </div>
 
