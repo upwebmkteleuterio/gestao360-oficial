@@ -104,13 +104,13 @@ export default function LancamentoDetailsSlide() {
     try {
       const updateData: any = {
         status_aprovacao: 'confirmado_master',
-        data_aprovacao: new Date().toISOString()
+        data_aprovacao: new Date().toISOString(),
+        status_pagamento: 'pago',
+        data_pagamento: lancamento.data_pagamento || new Date().toISOString().split('T')[0],
+        valor_recebido: lancamento.valor_recebido && lancamento.valor_recebido > 0
+          ? lancamento.valor_recebido
+          : (lancamento.valor_previsto - (lancamento.desconto_valor || 0) + (lancamento.acrescimo_valor || 0))
       };
-
-      // REGRA DE NEGÓCIO: Se o título aguardava aprovação de quitação, ela é efetivada agora.
-      if (lancamento.status_pagamento === 'quitação_pendente') {
-        updateData.status_pagamento = 'pago';
-      }
 
       await updateLancamento({
         id: lancamento.id,
@@ -342,7 +342,7 @@ export default function LancamentoDetailsSlide() {
                     <div className="flex items-center gap-2">
                       <TrendingUp className={`w-4 h-4 ${lancamento.tipo === 'entrada' ? 'text-bank-truth-green' : 'text-alert-red'}`} />
                       <span className="text-[10px] font-black uppercase text-secondary tracking-widest">
-                        {isQuitacaoPendente ? 'Impacto no Saldo Real:' : 'Impacto no Saldo Auditado:'}
+                        {isQuitacaoPendente ? 'Impacto no Saldo Real:' : 'Impacto no Saldo Confirmado:'}
                       </span>
                     </div>
                     <span className={`text-sm font-black font-mono ${lancamento.tipo === 'entrada' ? 'text-bank-truth-green' : 'text-alert-red'}`}>

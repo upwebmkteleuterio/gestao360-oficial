@@ -31,7 +31,7 @@ import {
   Repeat
 } from 'lucide-react';
 import { useSearchParams } from 'react-router-dom';
-import { useLancamentos, useContas, useEntidades, useCategorias, useUsuarios, useCentrosCusto, useCategoriasAjuste } from '../hooks/useData';
+import { useLancamentos, useContas, useEntidades, useCategorias, useUsuarios, useCentrosCusto, useCategoriasAjuste, useContasSaldos } from '../hooks/useData';
 import { useAuth } from '../hooks/useAuth';
 import { useUIStore } from '../store/uiStore';
 import { useDragScroll } from '../hooks/useDragScroll';
@@ -273,34 +273,76 @@ export default function Lancamentos({
     }
   };
 
-  // Calculate balances for account cards based on current dataset
+  const { data: contasSaldos = [] } = useContasSaldos();
+
+  // Calculate balances for account cards based on global real-time totals from database
   const accountCardsData = useMemo(() => {
     return activeContas.map(acc => {
-      const accLaunches = allLancamentos.filter(l => l.conta_bancaria_id === acc.id);
-      
-      // Saldo Auditado (Pago)
-      const auditado = accLaunches
-        .filter(l => l.status_pagamento === 'pago')
-        .reduce((sum, l) => {
-          const val = Number(l.valor_recebido || l.valor_previsto) || 0;
-          return l.tipo === 'entrada' ? sum + val : sum - val;
-        }, 0);
-
-      // Saldo Operacional (Pago + Quitação Pendente)
-      const operacional = accLaunches
-        .filter(l => ['pago', 'quitação_pendente'].includes(l.status_pagamento))
-        .reduce((sum, l) => {
-          const val = Number(l.valor_recebido || l.valor_previsto) || 0;
-          return l.tipo === 'entrada' ? sum + val : sum - val;
-        }, 0);
-
+      const saldoObj = contasSaldos.find(s => s.conta_id === acc.id);
       return {
         ...acc,
-        auditadoBalance: (acc.saldo_inicial || 0) + auditado,
-        operacionalBalance: (acc.saldo_inicial || 0) + operacional
+        auditadoBalance: saldoObj ? Number(saldoObj.saldo_confirmado) : (acc.saldo_inicial || 0),
+        operacionalBalance: saldoObj ? Number(saldoObj.saldo_operacional) : (acc.saldo_inicial || 0)
       };
     });
-  }, [activeContas, allLancamentos]);
+  }, [activeContas, contasSaldos]);
+
+  const isOperationalView = !!typeOverride;
+
+  const getDaysOverdue = (dateStr: string): number => {
+    if (!dateStr) return -1;
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const due = new Date(dateStr + 'T00:00:00');
+    const diffTime = today.getTime() - due.getTime();
+    return Math.floor(diffTime / (1000 * 3600 * 24));
+  };
+
+  const renderStatusBadge = (item: LancamentoFinanceiro) => {
+    if (item.status_pagamento === 'bpi') {
+      return (
+        <span className="inline-flex items-center px-2.5 py-0.5 rounded bg-red-50 text-alert-red font-black border border-red-100 text-[9px] uppercase tracking-tighter">
+          BPI
+        </span>
+      );
+    }
+    if (item.status_pagamento === 'pago') {
+      return (
+        <span className="inline-flex items-center px-2.5 py-0.5 rounded bg-emerald-50 text-bank-truth-green font-black border border-emerald-200 text-[9px] uppercase tracking-tighter">
+          Pago
+        </span>
+      );
+    }
+    if (item.status_pagamento === 'quitação_pendente') {
+      return (
+        <span className="inline-flex items-center px-2.5 py-0.5 rounded bg-amber-50 text-amber-600 font-black border border-amber-200 text-[9px] uppercase tracking-tighter animate-pulse">
+          {isMaster ? 'Confirme Baixa' : 'Pendente Gestor'}
+        </span>
+      );
+    }
+    if (item.status_aprovacao === 'reprovado') {
+      return (
+        <span className="inline-flex items-center px-2.5 py-0.5 rounded bg-red-50 text-alert-red font-black border border-red-200 text-[9px] uppercase tracking-tighter animate-pulse">
+          Reprovado
+        </span>
+      );
+    }
+
+    const days = getDaysOverdue(item.data_vencimento);
+    if (days >= 0) {
+      return (
+        <span className="inline-flex items-center px-2.5 py-0.5 rounded bg-red-50 text-alert-red font-black border border-red-200 text-[9px] uppercase tracking-tighter animate-pulse">
+          Atrasado
+        </span>
+      );
+    } else {
+      return (
+        <span className="inline-flex items-center px-2.5 py-0.5 rounded bg-neutral-100 text-neutral-600 font-bold border border-neutral-200 text-[9px] uppercase tracking-tighter">
+          A Vencer
+        </span>
+      );
+    }
+  };
 
   return (
     <div className="space-y-6 animate-fade-in" onClick={() => setActiveMenuId(null)}>
@@ -415,12 +457,25 @@ export default function Lancamentos({
                     />
                   )}
                 </th>
-                <th className="py-5 px-4">Fluxo</th>
-                <th className="py-5 px-4">Entidade</th>
-                <th className="py-5 px-4">Vencimento</th>
-                <th className="py-5 px-4">Pagamento</th>
-                <th className="py-5 px-4 text-right">Valor</th>
-                <th className="py-5 px-4 text-center">Aprovação</th>
+                {isOperationalView ? (
+                  <>
+                    <th className="py-5 px-4">{typeOverride === 'saida' ? 'Local / Fornecedor' : 'Local / Cliente'}</th>
+                    <th className="py-5 px-4">C. Atrasada</th>
+                    <th className="py-5 px-4">Dt. Referência</th>
+                    <th className="py-5 px-4 text-right">Total</th>
+                    <th className="py-5 px-4 text-right">Pendente</th>
+                    <th className="py-5 px-4 text-center">Status</th>
+                  </>
+                ) : (
+                  <>
+                    <th className="py-5 px-4">Fluxo</th>
+                    <th className="py-5 px-4">Entidade</th>
+                    <th className="py-5 px-4">Vencimento</th>
+                    <th className="py-5 px-4">Pagamento</th>
+                    <th className="py-5 px-4 text-right">Valor</th>
+                    <th className="py-5 px-4 text-center">Aprovação</th>
+                  </>
+                )}
                 <th className="py-5 px-4 text-right">Ações</th>
               </tr>
             </thead>
@@ -453,67 +508,86 @@ export default function Lancamentos({
                           />
                         )}
                       </td>
-                      <td className="py-3 px-4">
-                        <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${item.tipo === 'entrada' ? 'bg-emerald-50 text-bank-truth-green' : 'bg-red-50 text-alert-red'}`}>
-                          {item.tipo === 'entrada' ? <ArrowUpRight className="w-4 h-4" /> : <ArrowDownLeft className="w-4 h-4" />}
-                        </div>
-                      </td>
-                      <td className="py-3 px-4">
-                        <div className="flex flex-col">
-                          <span className="text-neutral-900 font-black uppercase tracking-tighter truncate max-w-[200px]">{entidades.find(e => e.id === item.entidade_id)?.nome_razao_social || 'N/A'}</span>
-                          <span className="text-[9px] text-neutral-400 uppercase tracking-widest font-bold">{item.observacoes || 'Sem descrição'}</span>
-                        </div>
-                      </td>
-                      <td className="py-3 px-4 whitespace-nowrap text-neutral-500 font-mono">{item.data_vencimento.split('-').reverse().join('/')}</td>
-                      <td className="py-3 px-4 whitespace-nowrap">
-                        {item.status_pagamento === 'pago' ? (
-                          <div className="flex flex-col">
-                            <span className="text-bank-truth-green font-black text-[9px] uppercase">Liquidado</span>
-                            <span className="text-[9px] text-neutral-400 font-mono">{item.data_pagamento?.split('-').reverse().join('/')}</span>
-                          </div>
-                        ) : item.status_pagamento === 'quitação_pendente' ? (
-                          <div className="flex flex-col">
-                            <span className="text-amber-600 font-black text-[9px] uppercase">{isMaster ? 'Confirme Baixa' : 'Pendente Gestor'}</span>
-                            <span className="text-[9px] text-neutral-400 font-mono">{item.data_pagamento?.split('-').reverse().join('/')}</span>
-                          </div>
-                        ) : (
-                          <span className="text-neutral-300 font-bold uppercase text-[9px] tracking-widest">Aguardando</span>
-                        )}
-                      </td>
+                      {isOperationalView ? (
+                        <>
+                          <td className="py-3 px-4">
+                            <div className="flex flex-col">
+                              <span className="text-neutral-900 font-black uppercase tracking-tighter truncate max-w-[200px]">
+                                {entidades.find(e => e.id === item.entidade_id)?.nome_razao_social || 'N/A'}
+                              </span>
+                              <span className="text-[9px] text-neutral-400 uppercase tracking-widest font-bold">
+                                {item.observacoes || 'Sem descrição'}
+                              </span>
+                            </div>
+                          </td>
+                          <td className="py-3 px-4 whitespace-nowrap font-mono text-xs">
+                            {item.status_pagamento === 'pago' ? (
+                              <span className="text-neutral-300 font-normal">-</span>
+                            ) : (() => {
+                              const days = getDaysOverdue(item.data_vencimento);
+                              if (days > 0) return <span className="text-alert-red font-black">{days} dia(s)</span>;
+                              if (days === 0) return <span className="text-alert-red font-black">Hoje</span>;
+                              return <span className="text-neutral-300 font-normal">-</span>;
+                            })()}
+                          </td>
+                          <td className="py-3 px-4 whitespace-nowrap text-neutral-500 font-mono">
+                            {(item.data_competencia || item.data_vencimento).split('-').reverse().join('/')}
+                          </td>
+                          <td className="py-3 px-4 text-right font-black font-mono text-xs text-neutral-900">
+                            {valueFormatter(item.valor_previsto)}
+                          </td>
+                          <td className={`py-3 px-4 text-right font-black font-mono text-xs ${item.tipo === 'entrada' ? 'text-bank-truth-green' : 'text-neutral-950'}`}>
+                            {valueFormatter(getValorLiquido(item))}
+                          </td>
+                          <td className="py-3 px-4 text-center whitespace-nowrap">
+                            {renderStatusBadge(item)}
+                          </td>
+                        </>
+                      ) : (
+                        <>
+                          <td className="py-3 px-4">
+                            <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${item.tipo === 'entrada' ? 'bg-emerald-50 text-bank-truth-green' : 'bg-red-50 text-alert-red'}`}>
+                              {item.tipo === 'entrada' ? <ArrowUpRight className="w-4 h-4" /> : <ArrowDownLeft className="w-4 h-4" />}
+                            </div>
+                          </td>
+                          <td className="py-3 px-4">
+                            <div className="flex flex-col">
+                              <span className="text-neutral-900 font-black uppercase tracking-tighter truncate max-w-[200px]">{entidades.find(e => e.id === item.entidade_id)?.nome_razao_social || 'N/A'}</span>
+                              <span className="text-[9px] text-neutral-400 uppercase tracking-widest font-bold">{item.observacoes || 'Sem descrição'}</span>
+                            </div>
+                          </td>
+                          <td className="py-3 px-4 whitespace-nowrap text-neutral-500 font-mono">{item.data_vencimento.split('-').reverse().join('/')}</td>
+                          <td className="py-3 px-4 whitespace-nowrap">
+                            {item.status_pagamento === 'pago' ? (
+                              <div className="flex flex-col">
+                                <span className="text-bank-truth-green font-black text-[9px] uppercase">Liquidado</span>
+                                <span className="text-[9px] text-neutral-400 font-mono">{item.data_pagamento?.split('-').reverse().join('/')}</span>
+                              </div>
+                            ) : item.status_pagamento === 'quitação_pendente' ? (
+                              <div className="flex flex-col">
+                                <span className="text-amber-600 font-black text-[9px] uppercase">{isMaster ? 'Confirme Baixa' : 'Pendente Gestor'}</span>
+                                <span className="text-[9px] text-neutral-400 font-mono">{item.data_pagamento?.split('-').reverse().join('/')}</span>
+                              </div>
+                            ) : (
+                              <span className="text-neutral-300 font-bold uppercase text-[9px] tracking-widest">Aguardando</span>
+                            )}
+                          </td>
 
-                      <td className={`py-3 px-4 text-right font-black font-mono text-xs ${item.tipo === 'entrada' ? 'text-bank-truth-green' : 'text-neutral-950'}`}>
-                        <span className="flex flex-col items-end">
-                          {valueFormatter(getValorLiquido(item))}
-                          {hasAjuste(item) && (
-                            <span className="text-[8px] font-bold text-secondary uppercase tracking-wider mt-0.5">
-                              Prev: {valueFormatter(item.valor_previsto)}
+                          <td className={`py-3 px-4 text-right font-black font-mono text-xs ${item.tipo === 'entrada' ? 'text-bank-truth-green' : 'text-neutral-950'}`}>
+                            <span className="flex flex-col items-end">
+                              {valueFormatter(getValorLiquido(item))}
+                              {hasAjuste(item) && (
+                                <span className="text-[8px] font-bold text-secondary uppercase tracking-wider mt-0.5">
+                                  Prev: {valueFormatter(item.valor_previsto)}
+                                </span>
+                              )}
                             </span>
-                          )}
-                        </span>
-                      </td>
-                      <td className="py-3 px-4 text-center whitespace-nowrap">
-                        {item.status_pagamento === 'bpi' ? (
-                          <span className="inline-flex items-center px-2.5 py-0.5 rounded bg-red-50 text-alert-red font-black border border-red-100 text-[9px] uppercase tracking-tighter">
-                            BPI
-                          </span>
-                        ) : item.status_pagamento === 'quitação_pendente' ? (
-                          <span className="inline-flex items-center px-2.5 py-0.5 rounded bg-amber-50 text-amber-600 font-black border border-amber-200 text-[9px] uppercase tracking-tighter animate-pulse">
-                            {isMaster ? 'Confirme Baixa' : 'Pendente Gestor'}
-                          </span>
-                        ) : item.status_aprovacao === 'reprovado' ? (
-                          <span className="inline-flex items-center px-2.5 py-0.5 rounded bg-red-50 text-alert-red font-black border border-red-200 text-[9px] uppercase tracking-tighter animate-pulse">
-                            Reprovado
-                          </span>
-                        ) : item.status_aprovacao === 'confirmado_master' ? (
-                          <span className="inline-flex items-center px-2.5 py-0.5 rounded bg-neutral-900 text-white font-black text-[9px] uppercase tracking-tighter">
-                            Confirmado
-                          </span>
-                        ) : (
-                          <span className="inline-flex items-center px-2.5 py-0.5 rounded bg-neutral-100 text-neutral-600 font-bold border border-neutral-200 text-[9px] uppercase tracking-tighter">
-                            Pendente
-                          </span>
-                        )}
-                      </td>
+                          </td>
+                          <td className="py-3 px-4 text-center whitespace-nowrap">
+                            {renderStatusBadge(item)}
+                          </td>
+                        </>
+                      )}
                       <td className="py-3 px-4 text-right" onClick={(e) => e.stopPropagation()}>
                         <div className="flex items-center justify-end gap-2">
                           <div className="flex items-center gap-1.5 mr-2">

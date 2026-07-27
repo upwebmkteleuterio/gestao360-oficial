@@ -31,7 +31,6 @@ export default function Sidebar({ isOpen, onClose, isCollapsed }: SidebarProps) 
     setActiveTab,
   } = useUIStore();
 
-  const [isFinanceExpanded, setIsFinanceExpanded] = useState(true);
   const { user, role } = useAuth();
 
   const location = useLocation();
@@ -39,19 +38,10 @@ export default function Sidebar({ isOpen, onClose, isCollapsed }: SidebarProps) 
 
   const navItems = [
     { id: 'dashboard' as TabType, label: 'Painel Geral', icon: LayoutDashboard, path: '/dashboard', roles: ['master', 'gerente', 'colaborador'] },
-    {
-      label: 'Financeiro',
-      icon: Coins,
-      isGroup: true,
-      roles: ['master', 'gerente', 'colaborador'],
-      subItems: [
-        { id: 'pagar' as TabType, label: 'Contas a Pagar', icon: ArrowDownLeft, path: '/pagar' },
-        { id: 'receber' as TabType, label: 'Contas a Receber', icon: ArrowUpRight, path: '/receber' },
-        { id: 'lancamentos' as TabType, label: 'Extrato', icon: Receipt, path: '/lancamentos' },
-      ]
-    },
+    { id: 'pagar' as TabType, label: 'Contas a Pagar', icon: ArrowDownLeft, path: '/pagar', roles: ['master', 'gerente', 'colaborador'] },
+    { id: 'receber' as TabType, label: 'Contas a Receber', icon: ArrowUpRight, path: '/receber', roles: ['master', 'gerente', 'colaborador'] },
+    { id: 'lancamentos' as TabType, label: 'Financeiro / Extrato', icon: Coins, path: '/lancamentos', roles: ['master', 'gerente', 'colaborador'] },
     { id: 'conciliacao' as TabType, label: 'Conciliação Bancária', icon: FileSpreadsheet, path: '/conciliacao', roles: ['master', 'gerente'] },
-
     { id: 'recorrencias' as TabType, label: 'Gestão de Recorrências', icon: Repeat, path: '/recorrencias', roles: ['master', 'gerente'] },
     { id: 'crm' as TabType, label: 'CRM & Entidades', icon: UserSquare2, path: '/crm', roles: ['master', 'gerente', 'colaborador'] },
     { id: 'cadastros' as TabType, label: 'Estrutura & Cadastros', icon: ShieldCheck, path: '/cadastros', roles: ['master', 'gerente'] },
@@ -103,98 +93,18 @@ export default function Sidebar({ isOpen, onClose, isCollapsed }: SidebarProps) 
 
         {/* Navigation list */}
         <nav className={`flex-1 p-4 space-y-1.5 scrollbar-none ${isCollapsed ? 'overflow-visible' : 'overflow-y-auto'}`}>
-          {navItems.filter(item => item.roles.includes(role)).map((item, idx) => {
-            if (item.isGroup) {
-              const isAnySubActive = item.subItems?.some(sub => location.pathname.startsWith(sub.path));
-              const GroupIcon = item.icon;
-
-              return (
-                <div key={idx} className="space-y-1 relative group/nav">
-                  <button
-                    onClick={() => !isCollapsed && setIsFinanceExpanded(!isFinanceExpanded)}
-                    className={`w-full flex items-center gap-3 px-3.5 py-2.5 rounded-lg text-xs font-bold transition-all text-left ${
-                      isAnySubActive ? 'text-primary' : 'text-on-surface-variant hover:bg-surface-container'
-                    } ${isCollapsed ? 'justify-center' : 'justify-between'}`}
-                  >
-                    <div className="flex items-center gap-3">
-                      <GroupIcon className={`shrink-0 ${isCollapsed ? 'w-5 h-5' : 'w-4 h-4'}`} />
-                      {!isCollapsed && <span className="animate-fade-in">{item.label}</span>}
-                    </div>
-                    {!isCollapsed && (
-                      <ChevronDown className={`w-3.5 h-3.5 transition-transform duration-300 ${isFinanceExpanded ? 'rotate-180' : ''}`} />
-                    )}
-                  </button>
-
-                  {/* Popover Card for Collapsed Sidebar */}
-                  {isCollapsed && (
-                    <div className="absolute left-full top-0 ml-2 w-48 bg-white border border-surface-border rounded-xl shadow-2xl overflow-hidden hidden group-hover/nav:block animate-fade-in z-[100]">
-                      <div className="px-4 py-2 bg-neutral-50 border-b border-surface-border">
-                        <span className="text-[10px] font-black uppercase text-secondary tracking-widest">{item.label}</span>
-                      </div>
-                      <div className="p-1.5 space-y-0.5">
-                        {item.subItems?.map(sub => (
-                          <button
-                            key={sub.id}
-                            onClick={() => {
-                              navigate(sub.path);
-                              setActiveTab(sub.id as any);
-                              onClose();
-                            }}
-                            className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg text-[11px] font-bold transition-all text-left ${
-                              location.pathname.startsWith(sub.path)
-                                ? 'bg-primary/10 text-primary'
-                                : 'text-on-surface-variant hover:bg-surface-container hover:text-on-surface'
-                            }`}
-                          >
-                            <sub.icon className="w-3.5 h-3.5" />
-                            {sub.label}
-                          </button>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-
-                  {isFinanceExpanded && !isCollapsed && (
-                    <div className="ml-4 pl-4 border-l border-surface-border space-y-1 animate-fade-in">
-                      {item.subItems?.map(sub => {
-                        const isSubActive = location.pathname.startsWith(sub.path);
-                        const SubIcon = sub.icon;
-                        return (
-                          <button
-                            key={sub.id}
-                            onClick={() => {
-                              navigate(sub.path);
-                              setActiveTab(sub.id as any);
-                              onClose();
-                            }}
-                            className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg text-[11px] font-bold transition-all text-left ${
-                              isSubActive
-                                ? 'bg-primary/10 text-primary font-extrabold'
-                                : 'text-on-surface-variant hover:bg-surface-container hover:text-on-surface'
-                            }`}
-                          >
-                            <SubIcon className="w-3.5 h-3.5 shrink-0" />
-                            <span className="whitespace-nowrap overflow-hidden">{sub.label}</span>
-                          </button>
-                        );
-                      })}
-                    </div>
-                  )}
-                </div>
-              );
-            }
-
-            const isActive = location.pathname.startsWith((item as any).path);
-            const Icon = (item as any).icon;
+          {navItems.filter(item => item.roles.includes(role)).map((item) => {
+            const isActive = location.pathname.startsWith(item.path);
+            const Icon = item.icon;
             return (
               <button
-                key={(item as any).id}
+                key={item.id}
                 onClick={() => {
-                  navigate((item as any).path);
-                  setActiveTab((item as any).id);
+                  navigate(item.path);
+                  setActiveTab(item.id);
                   onClose();
                 }}
-                title={isCollapsed ? (item as any).label : undefined}
+                title={isCollapsed ? item.label : undefined}
                 className={`w-full flex items-center gap-3 px-3.5 py-2.5 rounded-lg text-xs font-bold transition-all text-left group ${
                   isActive
                     ? 'bg-primary-container text-on-primary-container font-extrabold shadow-xs'
@@ -202,7 +112,7 @@ export default function Sidebar({ isOpen, onClose, isCollapsed }: SidebarProps) 
                 } ${isCollapsed ? 'justify-center' : ''}`}
               >
                 <Icon className={`shrink-0 transition-all ${isCollapsed ? 'w-5 h-5' : 'w-4 h-4'}`} />
-                {!isCollapsed && <span className="animate-fade-in whitespace-nowrap overflow-hidden">{(item as any).label}</span>}
+                {!isCollapsed && <span className="animate-fade-in whitespace-nowrap overflow-hidden">{item.label}</span>}
               </button>
             );
           })}

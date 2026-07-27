@@ -359,9 +359,19 @@ export const lancamentosService = {
   },
 
   approveInBatch: async (ids: string[], targetStatus: 'digital' | 'confirmado_master'): Promise<void> => {
+    const updatePayload: any = {
+      status_aprovacao: targetStatus,
+      data_aprovacao: targetStatus === 'confirmado_master' ? new Date().toISOString() : null
+    };
+
+    if (targetStatus === 'confirmado_master') {
+      updatePayload.status_pagamento = 'pago';
+      updatePayload.data_pagamento = new Date().toISOString().split('T')[0];
+    }
+
     const { error } = await supabase
       .from('lancamentos_financeiros')
-      .update({ status_aprovacao: targetStatus, data_aprovacao: targetStatus === 'confirmado_master' ? new Date().toISOString() : null })
+      .update(updatePayload)
       .in('id', ids);
     if (error) throw error;
   },

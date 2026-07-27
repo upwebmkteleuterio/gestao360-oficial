@@ -20,7 +20,7 @@ import {
   User,
   X
 } from 'lucide-react';
-import { useLancamentos, useContas, useCentrosCusto, useAuditoriaLogs, useEntidades } from '../hooks/useData';
+import { useLancamentos, useContas, useCentrosCusto, useAuditoriaLogs, useEntidades, useContasSaldos } from '../hooks/useData';
 import { useAuth } from '../hooks/useAuth';
 import { useUIStore } from '../store/uiStore';
 
@@ -144,25 +144,18 @@ export default function Dashboard() {
     };
   }, [filteredLancamentos]);
 
+  const { data: contasSaldos = [] } = useContasSaldos();
+
   const accountsBalances = useMemo(() => {
     return contas.map(account => {
-      // Auditado (Apenas Pago)
-      const auditadoLaunches = lancamentos.filter(l => l.conta_bancaria_id === account.id && l.status_pagamento === 'pago');
-      const auditadoChange = auditadoLaunches
-        .reduce((acc, item) => item.tipo === 'entrada' ? acc + (item.valor_recebido || 0) : acc - (item.valor_recebido || 0), 0);
-      
-      // Operacional (Pago + Quitação Pendente)
-      const operacionalLaunches = lancamentos.filter(l => l.conta_bancaria_id === account.id && ['pago', 'quitação_pendente'].includes(l.status_pagamento));
-      const operacionalChange = operacionalLaunches
-        .reduce((acc, item) => item.tipo === 'entrada' ? acc + (item.valor_recebido || 0) : acc - (item.valor_recebido || 0), 0);
-
+      const saldoObj = contasSaldos.find(s => s.conta_id === account.id);
       return {
         ...account,
-        auditado: (account.saldo_inicial || 0) + auditadoChange,
-        operacional: (account.saldo_inicial || 0) + operacionalChange
+        auditado: saldoObj ? Number(saldoObj.saldo_confirmado) : (account.saldo_inicial || 0),
+        operacional: saldoObj ? Number(saldoObj.saldo_operacional) : (account.saldo_inicial || 0)
       };
     });
-  }, [contas, lancamentos]);
+  }, [contas, contasSaldos]);
 
   const costCenterBreakdown = useMemo(() => {
     return centrosCusto.map(cc => {
@@ -244,7 +237,7 @@ export default function Dashboard() {
                     <div className="pt-4 border-t border-surface-border/50">
                       <h4 className="text-lg font-bold font-mono text-secondary">{valueFormatter(stats?.total_consolidado || 0)}</h4>
                       <div className="text-[10px] font-semibold text-bank-truth-green flex items-center gap-1 uppercase tracking-widest mt-1">
-                        <CheckCircle2 className="w-3.5 h-3.5" /> Saldo Auditado (Master)
+                        <CheckCircle2 className="w-3.5 h-3.5" /> Saldo Confirmado (Master)
                       </div>
                     </div>
                   )}
@@ -349,7 +342,7 @@ export default function Dashboard() {
                     {isMaster && (
                        <p className="text-[11px] font-bold font-mono text-bank-truth-green">
                          {valueFormatter(accountsBalances.reduce((sum, acc) => sum + (acc.auditado || 0), 0))}
-                         <span className="text-[8px] font-medium ml-1 lowercase">(auditado)</span>
+                         <span className="text-[8px] font-medium ml-1 lowercase">(confirmado)</span>
                        </p>
                     )}
                   </div>
@@ -386,7 +379,7 @@ export default function Dashboard() {
                       {isMaster && (
                         <p className="text-[11px] font-bold font-mono text-bank-truth-green">
                           {valueFormatter(acc.auditado || 0)}
-                          <span className="text-[8px] font-medium ml-1 lowercase">(auditado)</span>
+                          <span className="text-[8px] font-medium ml-1 lowercase">(confirmado)</span>
                         </p>
                       )}
                     </div>
