@@ -100,6 +100,13 @@ export default function Lancamentos({
   const [approvalStatus, setApprovalStatus] = useState('all');
   const [statusPagamento, setStatusPagamento] = useState<string>(statusPagamentoOverride || 'pago');
   const [typeFilter, setTypeFilter] = useState<'all' | 'entrada' | 'saida'>(typeOverride || 'all');
+
+  // Sincronizar o estado interno com as propriedades da rota ao navegar
+  useEffect(() => {
+    setStatusPagamento(statusPagamentoOverride || 'pago');
+    setTypeFilter(typeOverride || 'all');
+    setSelectedIds([]); // Limpa seleções ao trocar de tela
+  }, [statusPagamentoOverride, typeOverride]);
   const [authorIdFilter, setAuthorIdIdFilter] = useState('all');
   const [categoryIdFilter, setCategoryIdFilter] = useState('all');
   const [contaIdFilter, setContaIdFilter] = useState('all');
