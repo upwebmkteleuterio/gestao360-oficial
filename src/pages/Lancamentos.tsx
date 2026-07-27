@@ -339,10 +339,16 @@ export default function Lancamentos({
     }
 
     const days = getDaysOverdue(item.data_vencimento);
-    if (days >= 0) {
+    if (days > 0) {
       return (
         <span className="inline-flex items-center px-2.5 py-0.5 rounded bg-red-50 text-alert-red font-black border border-red-200 text-[9px] uppercase tracking-tighter animate-pulse">
           Atrasado
+        </span>
+      );
+    } else if (days === 0) {
+      return (
+        <span className="inline-flex items-center px-2.5 py-0.5 rounded bg-amber-50 text-amber-600 font-black border border-amber-200 text-[9px] uppercase tracking-tighter">
+          Hoje
         </span>
       );
     } else {
@@ -470,21 +476,21 @@ export default function Lancamentos({
                 {isOperationalView ? (
                   <>
                     <th className="py-5 px-4">{typeOverride === 'saida' ? 'Local / Fornecedor' : 'Local / Cliente'}</th>
-                    <th className="py-5 px-4">Dias Atraso</th>
-                    <th className="py-5 px-4">Dt. Emissão</th>
-                    <th className="py-5 px-4 text-right">{typeOverride === 'saida' ? 'Vlr. Débito' : 'Vlr. Crédito'}</th>
-                    <th className="py-5 px-4 text-right">Vlr. Parcela</th>
+                    <th className="py-5 px-4">C. Atrasada</th>
+                    <th className="py-5 px-4">Dt. Referência</th>
+                    <th className="py-5 px-4 text-right">Total</th>
+                    <th className="py-5 px-4 text-right">Pendente</th>
                     <th className="py-5 px-4 text-center">Status</th>
                     <th className="py-5 px-3 text-center">Recibo</th>
                   </>
                 ) : (
                   <>
                     <th className="py-5 px-4">Fluxo</th>
-                    <th className="py-5 px-4">Local / Fornecedor</th>
+                    <th className="py-5 px-4">Entidade</th>
                     <th className="py-5 px-4">Vencimento</th>
-                    <th className="py-5 px-4">Data Pagamento</th>
-                    <th className="py-5 px-4 text-right">Vlr. Parcela</th>
-                    <th className="py-5 px-4 text-center">Status</th>
+                    <th className="py-5 px-4">Pagamento</th>
+                    <th className="py-5 px-4 text-right">Valor</th>
+                    <th className="py-5 px-4 text-center">Aprovação</th>
                     <th className="py-5 px-3 text-center">Recibo</th>
                   </>
                 )}
@@ -524,16 +530,9 @@ export default function Lancamentos({
                         <>
                           <td className="py-3 px-4">
                             <div className="flex flex-col">
-                              <div className="flex items-center gap-2">
-                                <span className="text-neutral-900 font-black uppercase tracking-tighter truncate max-w-[200px]">
-                                  {entidades.find(e => e.id === item.entidade_id)?.nome_razao_social || 'N/A'}
-                                </span>
-                                {item.recorrencia_id && (
-                                  <span className="text-[9px] font-black text-primary bg-primary/5 px-1.5 py-0.5 rounded border border-primary/10 whitespace-nowrap">
-                                    (parc {item.numero_parcela}/{item.quantidade_total_parcelas})
-                                  </span>
-                                )}
-                              </div>
+                              <span className="text-neutral-900 font-black uppercase tracking-tighter truncate max-w-[200px]">
+                                {entidades.find(e => e.id === item.entidade_id)?.nome_razao_social || 'N/A'}
+                              </span>
                               <span className="text-[9px] text-neutral-400 uppercase tracking-widest font-bold">
                                 {item.observacoes || 'Sem descrição'}
                               </span>
@@ -544,7 +543,8 @@ export default function Lancamentos({
                               <span className="text-neutral-300 font-normal">-</span>
                             ) : (() => {
                               const days = getDaysOverdue(item.data_vencimento);
-                              if (days >= 0) return <span className="text-alert-red font-black">{days} dia(s)</span>;
+                              if (days > 0) return <span className="text-alert-red font-black">{days} dia(s)</span>;
+                              if (days === 0) return <span className="text-alert-red font-black">Hoje</span>;
                               return <span className="text-neutral-300 font-normal">-</span>;
                             })()}
                           </td>
@@ -583,14 +583,7 @@ export default function Lancamentos({
                           </td>
                           <td className="py-3 px-4">
                             <div className="flex flex-col">
-                              <div className="flex items-center gap-2">
-                                <span className="text-neutral-900 font-black uppercase tracking-tighter truncate max-w-[200px]">{entidades.find(e => e.id === item.entidade_id)?.nome_razao_social || 'N/A'}</span>
-                                {item.recorrencia_id && (
-                                  <span className="text-[9px] font-black text-primary bg-primary/5 px-1.5 py-0.5 rounded border border-primary/10 whitespace-nowrap">
-                                    (parc {item.numero_parcela}/{item.quantidade_total_parcelas})
-                                  </span>
-                                )}
-                              </div>
+                              <span className="text-neutral-900 font-black uppercase tracking-tighter truncate max-w-[200px]">{entidades.find(e => e.id === item.entidade_id)?.nome_razao_social || 'N/A'}</span>
                               <span className="text-[9px] text-neutral-400 uppercase tracking-widest font-bold">{item.observacoes || 'Sem descrição'}</span>
                             </div>
                           </td>

@@ -348,10 +348,10 @@ export default function LancamentoDetailsSlide() {
                   </h4>
                   
                   <div className="grid grid-cols-2 gap-4">
-                    <DetailItem icon={<DollarSign className="w-3.5 h-3.5" />} label={lancamento.tipo === 'entrada' ? "Valor Crédito" : "Valor Débito"} value={formatCurrency(lancamento.valor_previsto)} highlight />
+                    <DetailItem icon={<DollarSign className="w-3.5 h-3.5" />} label="Valor Previsto" value={formatCurrency(lancamento.valor_previsto)} highlight />
                     <DetailItem icon={<Calendar className="w-3.5 h-3.5" />} label="Vencimento" value={formatDate(lancamento.data_vencimento)} />
                     <DetailItem icon={<Calendar className="w-3.5 h-3.5" />} label="Data Competência" value={formatDate(lancamento.data_competencia)} />
-                    <DetailItem icon={<Calendar className="w-3.5 h-3.5" />} label={lancamento.tipo === 'entrada' ? "Valor Recebido" : "Valor Pago"} value={formatCurrency(lancamento.valor_recebido && lancamento.valor_recebido > 0 ? lancamento.valor_recebido : (lancamento.valor_previsto - (lancamento.desconto_valor || 0) + (lancamento.acrescimo_valor || 0)))} />
+                    <DetailItem icon={<Calendar className="w-3.5 h-3.5" />} label="Recebido em" value={formatDate(lancamento.data_pagamento)} />
                   </div>
 
                   <div className="p-4 bg-neutral-900 text-white rounded-2xl flex items-center justify-between">
