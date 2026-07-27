@@ -23,7 +23,7 @@ import {
   Hash
 } from 'lucide-react';
 import { useUIStore } from '../store/uiStore';
-import { useLancamentos, useEntidades, useCentrosCusto, useCategorias, useContas, useLancamentoAnexos } from '../hooks/useData';
+import { useLancamentos, useEntidades, useCentrosCusto, useCategorias, useContas, useLancamentoAnexos, useCategoriasAjuste } from '../hooks/useData';
 import { useAuth } from '../hooks/useAuth';
 import MoneyInput from './MoneyInput';
 
@@ -216,6 +216,7 @@ export default function NovoLancamentoDrawer() {
   const { createCC } = useCentrosCusto();
   const { createCategory } = useCategorias();
   const { createAccount } = useContas();
+  const { categoriasAjuste, createCategoriaAjuste } = useCategoriasAjuste();
 
   const { anexos: existingAnexos, deleteAnexo } = useLancamentoAnexos(selectedLancamentoIdForModal);
 
@@ -298,8 +299,10 @@ export default function NovoLancamentoDrawer() {
         ja_recebido: editingItem.ja_recebido || false,
         desconto_valor: formatBRL(editingItem.desconto_valor || 0),
         desconto_tipo: editingItem.desconto_tipo || 'valor',
+        motivo_desconto_id: (editingItem as any).motivo_desconto_id || '',
         acrescimo_valor: formatBRL(editingItem.acrescimo_valor || 0),
         acrescimo_tipo: editingItem.acrescimo_tipo || 'valor',
+        motivo_acrescimo_id: (editingItem as any).motivo_acrescimo_id || '',
         valor_recebido: formatBRL(editingItem.valor_recebido || 0),
       });
     }
@@ -421,6 +424,12 @@ export default function NovoLancamentoDrawer() {
     lancamentoFormDraft.valor_recebido
   ]);
 
+  // Saldo Insuficiente validation (Item 1)
+  const selectedConta = contas.find(c => c.id === lancamentoFormDraft.conta_bancaria_id);
+  const isSaidaImediata = lancamentoFormDraft.tipo === 'saida' && lancamentoFormDraft.ja_recebido;
+  const valorOperacaoSaida = isSaidaImediata ? calculations.subtotal : 0;
+  const saldoInsuficiente = isSaidaImediata && selectedConta ? valorOperacaoSaida > (selectedConta as any).saldo_real : false;
+
   const isApproved = editingItem?.status_aprovacao === 'confirmado_master';
   const isMaster = role === 'master';
   const shouldLockFields = isApproved && !isMaster;
@@ -473,6 +482,18 @@ export default function NovoLancamentoDrawer() {
       return;
     }
 
+    if (parseMoney(lancamentoFormDraft.desconto_valor) > 0 && !lancamentoFormDraft.motivo_desconto_id) {
+      showToast('Selecione um motivo para o desconto aplicado.', 'warning');
+      setIsSubmitting(false);
+      return;
+    }
+
+    if (parseMoney(lancamentoFormDraft.acrescimo_valor) > 0 && !lancamentoFormDraft.motivo_acrescimo_id) {
+      showToast('Selecione um motivo para o acréscimo aplicado.', 'warning');
+      setIsSubmitting(false);
+      return;
+    }
+
     const itemDetails = {
 
       tipo: lancamentoFormDraft.tipo,
@@ -492,8 +513,10 @@ export default function NovoLancamentoDrawer() {
       ja_recebido: lancamentoFormDraft.ja_recebido,
       desconto_valor: parseMoney(lancamentoFormDraft.desconto_valor),
       desconto_tipo: lancamentoFormDraft.desconto_tipo,
+      motivo_desconto_id: parseMoney(lancamentoFormDraft.desconto_valor) > 0 ? (lancamentoFormDraft.motivo_desconto_id || null) : null,
       acrescimo_valor: parseMoney(lancamentoFormDraft.acrescimo_valor),
       acrescimo_tipo: lancamentoFormDraft.acrescimo_tipo,
+      motivo_acrescimo_id: parseMoney(lancamentoFormDraft.acrescimo_valor) > 0 ? (lancamentoFormDraft.motivo_acrescimo_id || null) : null,
       valor_recebido: parseMoney(lancamentoFormDraft.valor_recebido)
     };
 
@@ -576,12 +599,15 @@ export default function NovoLancamentoDrawer() {
   const [isQuickCatOpen, setIsQuickCatOpen] = useState(false);
   const [isQuickCCOpen, setIsQuickCCOpen] = useState(false);
   const [isQuickAccountOpen, setIsQuickAccountOpen] = useState(false);
+  const [isQuickReasonOpen, setIsQuickReasonOpen] = useState(false);
 
   // Quick Action Form States
   const [quickCatName, setQuickCatName] = useState('');
   const [quickCCName, setQuickCCName] = useState('');
   const [quickAccountName, setQuickAccountName] = useState('');
   const [quickAccountSaldo, setQuickAccountSaldo] = useState('0,00');
+  const [quickAddReasonType, setQuickAddReasonType] = useState<'desconto' | 'acrescimo'>('desconto');
+  const [quickReasonName, setQuickReasonName] = useState('');
 
   const handleQuickCatSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -622,6 +648,21 @@ export default function NovoLancamentoDrawer() {
       setQuickAccountSaldo('0,00');
       showToast('Conta bancária criada!', 'success');
     } catch (err) { showToast('Erro ao criar conta', 'error'); }
+  };
+
+  const handleQuickReasonSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    try {
+      const result = await createCategoriaAjuste({ nome: quickReasonName, tipo: quickAddReasonType });
+      if (quickAddReasonType === 'desconto') {
+        setLancamentoFormDraft({ motivo_desconto_id: (result as any).id });
+      } else {
+        setLancamentoFormDraft({ motivo_acrescimo_id: (result as any).id });
+      }
+      setIsQuickReasonOpen(false);
+      setQuickReasonName('');
+      showToast('Motivo criado!', 'success');
+    } catch (err) { showToast('Erro ao criar motivo', 'error'); }
   };
 
   return (
@@ -871,6 +912,33 @@ export default function NovoLancamentoDrawer() {
                       onChange={(val) => setLancamentoFormDraft({ desconto_valor: val })}
                       className="w-full h-12 px-4 bg-white border-2 border-neutral-200 rounded-xl font-mono text-sm font-black text-on-surface focus:outline-none focus:border-primary transition-all shadow-xs"
                     />
+
+                    {parseMoney(lancamentoFormDraft.desconto_valor) > 0 && (
+                      <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} className="space-y-1.5 overflow-hidden">
+                        <div className="flex justify-between items-center">
+                          <label className="text-[9px] font-black uppercase text-secondary tracking-widest">Motivo do Desconto <span className="text-alert-red">*</span></label>
+                          <button
+                            type="button"
+                            onClick={() => { setQuickAddReasonType('desconto'); setIsQuickReasonOpen(true); }}
+                            className="text-[8px] font-black uppercase text-primary hover:underline flex items-center gap-1"
+                          >
+                            <Plus className="w-2.5 h-2.5" /> Novo
+                          </button>
+                        </div>
+                        <select
+                          value={lancamentoFormDraft.motivo_desconto_id}
+                          onChange={(e) => setLancamentoFormDraft({ motivo_desconto_id: e.target.value })}
+                          className={`w-full h-10 bg-neutral-50 border-2 rounded-xl px-3 text-[10px] font-bold outline-none appearance-none cursor-pointer transition-all ${
+                            lancamentoFormDraft.motivo_desconto_id ? 'border-neutral-100' : 'border-alert-red/30'
+                          }`}
+                        >
+                          <option value="">Selecione o motivo...</option>
+                          {categoriasAjuste.filter((c: any) => c.tipo === 'desconto' && c.status !== 'inativo').map((r: any) => (
+                            <option key={r.id} value={r.id}>{r.nome}</option>
+                          ))}
+                        </select>
+                      </motion.div>
+                    )}
                   </div>
 
                   <div className="flex flex-col gap-2">
@@ -886,6 +954,33 @@ export default function NovoLancamentoDrawer() {
                       onChange={(val) => setLancamentoFormDraft({ acrescimo_valor: val })}
                       className="w-full h-12 px-4 bg-white border-2 border-neutral-200 rounded-xl font-mono text-sm font-black text-on-surface focus:outline-none focus:border-primary transition-all shadow-xs"
                     />
+
+                    {parseMoney(lancamentoFormDraft.acrescimo_valor) > 0 && (
+                      <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} className="space-y-1.5 overflow-hidden">
+                        <div className="flex justify-between items-center">
+                          <label className="text-[9px] font-black uppercase text-secondary tracking-widest">Motivo do Acréscimo <span className="text-alert-red">*</span></label>
+                          <button
+                            type="button"
+                            onClick={() => { setQuickAddReasonType('acrescimo'); setIsQuickReasonOpen(true); }}
+                            className="text-[8px] font-black uppercase text-primary hover:underline flex items-center gap-1"
+                          >
+                            <Plus className="w-2.5 h-2.5" /> Novo
+                          </button>
+                        </div>
+                        <select
+                          value={lancamentoFormDraft.motivo_acrescimo_id}
+                          onChange={(e) => setLancamentoFormDraft({ motivo_acrescimo_id: e.target.value })}
+                          className={`w-full h-10 bg-neutral-50 border-2 rounded-xl px-3 text-[10px] font-bold outline-none appearance-none cursor-pointer transition-all ${
+                            lancamentoFormDraft.motivo_acrescimo_id ? 'border-neutral-100' : 'border-alert-red/30'
+                          }`}
+                        >
+                          <option value="">Selecione o motivo...</option>
+                          {categoriasAjuste.filter((c: any) => c.tipo === 'acrescimo' && c.status !== 'inativo').map((r: any) => (
+                            <option key={r.id} value={r.id}>{r.nome}</option>
+                          ))}
+                        </select>
+                      </motion.div>
+                    )}
                   </div>
                 </div>
 
@@ -1210,19 +1305,33 @@ export default function NovoLancamentoDrawer() {
                 </div>
               </div>
 
+              {saldoInsuficiente && (
+                <div className="px-6 py-4 bg-red-50 border-t-2 border-alert-red/20 flex items-center gap-3 shrink-0">
+                  <AlertCircle className="w-5 h-5 text-alert-red shrink-0" />
+                  <div>
+                    <span className="text-[10px] font-black uppercase text-alert-red tracking-widest block">Saldo Insuficiente</span>
+                    <span className="text-[9px] font-bold text-alert-red/80">A conta selecionada possui R$ {formatBRL((selectedConta as any)?.saldo_real)} de saldo real. Operação não permitida.</span>
+                  </div>
+                </div>
+              )}
+
               <footer className="p-6 border-t border-surface-border bg-neutral-50 flex justify-end gap-4 shrink-0">
-                <button 
-                  type="button" 
+                <button
+                  type="button"
                   onClick={handleClose}
                   className="px-6 py-3 font-black text-[10px] text-secondary border-2 border-neutral-200 rounded-xl hover:bg-neutral-100 hover:border-neutral-300 transition-all uppercase tracking-widest"
                 >
                   Cancelar
                 </button>
                 
-                <button 
+                <button
                   type="submit"
-                  disabled={isSubmitting || isCreating || isUpdating}
-                  className="px-8 py-3 font-black text-[10px] text-on-primary-container bg-primary-container hover:brightness-95 rounded-xl shadow-md transition-all active:scale-[0.98] flex items-center gap-2 uppercase tracking-widest"
+                  disabled={isSubmitting || isCreating || isUpdating || saldoInsuficiente}
+                  className={`px-8 py-3 font-black text-[10px] rounded-xl shadow-md transition-all active:scale-[0.98] flex items-center gap-2 uppercase tracking-widest ${
+                    saldoInsuficiente
+                      ? 'bg-neutral-300 text-neutral-400 cursor-not-allowed'
+                      : 'text-on-primary-container bg-primary-container hover:brightness-95'
+                  }`}
                 >
                   {isSubmitting ? <Loader2 className="w-4 h-4 animate-spin" /> : <CheckCircle2 className="w-4 h-4" />}
                   {isSubmitting ? 'Salvando...' : 'Salvar Registro'}
@@ -1279,6 +1388,36 @@ export default function NovoLancamentoDrawer() {
               <footer className="px-8 py-6 border-t border-neutral-100 bg-neutral-50 flex justify-end gap-3">
                 <button type="button" onClick={() => setIsQuickAccountOpen(false)} className="px-4 py-2 text-[10px] font-black uppercase text-neutral-500">Cancelar</button>
                 <Button type="submit">Adicionar</Button>
+              </footer>
+            </motion.form>
+          </div>
+        )}
+
+        {isQuickReasonOpen && (
+          <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setIsQuickReasonOpen(false)} className="absolute inset-0 bg-black/40 backdrop-blur-sm" />
+            <motion.form initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.9, opacity: 0 }} onSubmit={handleQuickReasonSubmit} className="bg-white w-full max-w-[360px] rounded-3xl shadow-2xl relative z-10 overflow-hidden">
+              <header className="px-6 py-4 border-b border-neutral-100 flex justify-between items-center">
+                <h4 className="text-[10px] font-black uppercase tracking-widest text-neutral-900">Novo Motivo de {quickAddReasonType === 'desconto' ? 'Desconto' : 'Acréscimo'}</h4>
+                <button type="button" onClick={() => setIsQuickReasonOpen(false)}><X className="w-4 h-4 text-neutral-400" /></button>
+              </header>
+              <div className="p-6">
+                <div className="space-y-1.5">
+                  <label className="text-[9px] font-black uppercase text-secondary tracking-widest">Nome do Motivo</label>
+                  <input
+                    type="text"
+                    required
+                    autoFocus
+                    value={quickReasonName}
+                    onChange={(e) => setQuickReasonName(e.target.value)}
+                    className="w-full h-11 bg-neutral-50 border-2 border-neutral-100 rounded-xl px-4 text-xs font-bold outline-none focus:border-primary"
+                    placeholder="Ex: Pagamento Antecipado"
+                  />
+                </div>
+              </div>
+              <footer className="px-6 py-4 border-t border-neutral-100 bg-neutral-50 flex justify-end gap-2">
+                <button type="button" onClick={() => setIsQuickReasonOpen(false)} className="px-4 py-2 text-[9px] font-black uppercase text-secondary">Cancelar</button>
+                <button type="submit" className="px-6 py-2 bg-neutral-900 text-white text-[9px] font-black uppercase tracking-widest rounded-lg">Salvar</button>
               </footer>
             </motion.form>
           </div>

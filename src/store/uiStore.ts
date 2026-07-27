@@ -71,8 +71,10 @@ interface UIState {
     ja_recebido: boolean;
     desconto_valor: string;
     desconto_tipo: 'valor' | 'porcentagem';
+    motivo_desconto_id: string;
     acrescimo_valor: string;
     acrescimo_tipo: 'valor' | 'porcentagem';
+    motivo_acrescimo_id: string;
     valor_recebido: string;
   };
   
@@ -141,8 +143,10 @@ const initialDrafts = {
     ja_recebido: false,
     desconto_valor: '0,00',
     desconto_tipo: 'valor' as const,
+    motivo_desconto_id: '',
     acrescimo_valor: '0,00',
     acrescimo_tipo: 'valor' as const,
+    motivo_acrescimo_id: '',
     valor_recebido: '0,00',
   },
   entidadeFormDraft: {

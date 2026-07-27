@@ -1,9 +1,10 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import {
   X,
   CheckCircle2,
   AlertTriangle,
+  AlertCircle,
   Loader2,
   DollarSign,
   Calendar,
@@ -53,10 +54,25 @@ export default function BaixaLancamentoModal() {
 
   const { role } = useAuth();
   const { data: lancamentos = [], baixaLancamento } = useLancamentos();
-  const { data: contas = [] } = useContas();
+  const { data: rawContas = [] } = useContas();
   const { data: entidades = [] } = useEntidades();
   const { data: categorias = [] } = useCategorias();
   const { categoriasAjuste, createCategoriaAjuste } = useCategoriasAjuste();
+
+  // Calculate real balance for each account
+  const contas = useMemo(() => {
+    return rawContas.map((conta: any) => {
+      const lancamentosDaConta = lancamentos.filter((l: any) => l.conta_bancaria_id === conta.id && l.status_pagamento === 'pago');
+      const totalEntradas = lancamentosDaConta
+        .filter((l: any) => l.tipo === 'entrada')
+        .reduce((sum: number, l: any) => sum + (Number(l.valor_recebido) || 0), 0);
+      const totalSaidas = lancamentosDaConta
+        .filter((l: any) => l.tipo === 'saida')
+        .reduce((sum: number, l: any) => sum + (Number(l.valor_recebido) || 0), 0);
+      const saldoReal = (conta.saldo_inicial || 0) + totalEntradas - totalSaidas;
+      return { ...conta, saldo_real: saldoReal };
+    });
+  }, [rawContas, lancamentos]);
 
   const [loading, setLoading] = useState(false);
   
@@ -151,10 +167,15 @@ export default function BaixaLancamentoModal() {
   const isObsRequired = isBpi || isAVR || hasFinancialDivergence;
   const isObsFilled = observacao.trim().length > 0;
   
+  // Saldo Insuficiente validation (Item 1)
+  const selectedContaSaldo = contas.find((c: any) => c.id === contaId)?.saldo_real || 0;
+  const isSaida = lancamento?.tipo === 'saida';
+  const saldoInsuficienteBaixa = !isBpi && isSaida && valorDigitado > selectedContaSaldo;
+
   const canSave = (!isObsRequired || isObsFilled) &&
                   (!isDescontoReasonRequired || isDescontoReasonSelected) &&
                   (!isAcrescimoReasonRequired || isAcrescimoReasonSelected) &&
-                  !isOverpaid && valorDigitado > 0;
+                  !isOverpaid && valorDigitado > 0 && !saldoInsuficienteBaixa;
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -501,8 +522,8 @@ export default function BaixaLancamentoModal() {
                     onChange={(e) => setContaId(e.target.value)}
                     className="w-full h-12 bg-neutral-50 border-2 border-neutral-100 rounded-2xl px-4 text-xs font-bold outline-none focus:border-primary appearance-none cursor-pointer disabled:opacity-50"
                   >
-                    {contas.map(c => (
-                      <option key={c.id} value={c.id}>{c.nome_banco}</option>
+                    {contas.map((c: any) => (
+                      <option key={c.id} value={c.id}>{c.nome_banco} (Saldo: R$ {formatBRL(c.saldo_real)})</option>
                     ))}
                   </select>
                 </div>
@@ -510,10 +531,20 @@ export default function BaixaLancamentoModal() {
 
             </form>
 
+            {saldoInsuficienteBaixa && (
+              <div className="px-8 py-4 bg-red-50 border-t-2 border-alert-red/20 flex items-center gap-3 shrink-0">
+                <AlertCircle className="w-5 h-5 text-alert-red shrink-0" />
+                <div>
+                  <span className="text-[10px] font-black uppercase text-alert-red tracking-widest block">Saldo Insuficiente</span>
+                  <span className="text-[9px] font-bold text-alert-red/80">A conta selecionada possui R$ {formatBRL(selectedContaSaldo)} de saldo real. Não é possível quitar este título.</span>
+                </div>
+              </div>
+            )}
+
             <footer className="px-8 py-6 border-t border-neutral-100 bg-neutral-50 flex justify-end gap-3 shrink-0">
-              <button 
-                type="button" 
-                onClick={handleClose} 
+              <button
+                type="button"
+                onClick={handleClose}
                 className="px-6 py-3 text-[10px] font-black uppercase text-secondary hover:text-on-surface transition-colors"
               >
                 Cancelar

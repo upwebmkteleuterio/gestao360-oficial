@@ -54,7 +54,7 @@ export interface ContaBancaria {
   logo_url?: string;
 }
 
-export type StatusAprovacao = 'pendente_digital' | 'digital' | 'confirmado_master';
+export type StatusAprovacao = 'pendente_digital' | 'digital' | 'confirmado_master' | 'reprovado';
 export type StatusPagamento = 'aberto' | 'pago' | 'pago_parcial' | 'bpi' | 'quitação_pendente';
 
 export interface LancamentoFinanceiro {
@@ -79,8 +79,13 @@ export interface LancamentoFinanceiro {
   status_pagamento: StatusPagamento;
   usuario_criador_id: string;
   status_sincronizacao?: boolean;
+  desconto_valor?: number;
+  desconto_tipo?: string;
+  acrescimo_valor?: number;
+  acrescimo_tipo?: string;
   motivo_desconto_id?: string;
   motivo_acrescimo_id?: string;
+  motivo_ajuste?: string;
   created_at: string;
   updated_at: string;
 }

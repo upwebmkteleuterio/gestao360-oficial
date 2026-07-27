@@ -126,13 +126,13 @@ export default function LancamentoDetailsSlide() {
 
   const handleReprovar = async () => {
     if (!lancamento || !isMaster) return;
-    if (!confirm('Deseja realmente reprovar este lançamento? Ele voltará para o status Pendente.')) return;
+    if (!confirm('Deseja realmente reprovar este lançamento? Ele voltará para a fila de Contas a Pagar/Receber com status de Reprovado.')) return;
     setLoadingAction(true);
     try {
       await updateLancamento({
         id: lancamento.id,
         data: {
-          status_aprovacao: 'pendente_digital',
+          status_aprovacao: 'reprovado',
           data_aprovacao: null
         }
       });

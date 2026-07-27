@@ -24,10 +24,14 @@ import {
   FileText,
   User,
   Tag,
-  Coins
+  Coins,
+  XCircle,
+  CreditCard,
+  Layers,
+  Repeat
 } from 'lucide-react';
 import { useSearchParams } from 'react-router-dom';
-import { useLancamentos, useContas, useEntidades, useCategorias, useUsuarios } from '../hooks/useData';
+import { useLancamentos, useContas, useEntidades, useCategorias, useUsuarios, useCentrosCusto, useCategoriasAjuste } from '../hooks/useData';
 import { useAuth } from '../hooks/useAuth';
 import { useUIStore } from '../store/uiStore';
 import { useDragScroll } from '../hooks/useDragScroll';
@@ -40,7 +44,7 @@ interface LancamentosProps {
   typeOverride?: 'entrada' | 'saida';
   titleOverride?: string;
   statusPagamentoOverride?: 'aberto' | 'pago' | 'pago_parcial' | 'bpi';
-  statusAprovacaoOverride?: 'pendente_digital' | 'digital' | 'confirmado_master';
+  statusAprovacaoOverride?: string;
 }
 
 export default function Lancamentos({ 
@@ -96,13 +100,20 @@ export default function Lancamentos({
   const [typeFilter, setTypeFilter] = useState<'all' | 'entrada' | 'saida'>(typeOverride || 'all');
   const [authorIdFilter, setAuthorIdIdFilter] = useState('all');
   const [categoryIdFilter, setCategoryIdFilter] = useState('all');
+  const [contaIdFilter, setContaIdFilter] = useState('all');
+  const [centroCustoIdFilter, setCentroCustoIdFilter] = useState('all');
+  const [condicaoFilter, setCondicaoFilter] = useState('all');
+  const [temDescontoFilter, setTemDescontoFilter] = useState('all');
+  const [temAcrescimoFilter, setTemAcrescimoFilter] = useState('all');
+  const [motivoDescontoFilter, setMotivoDescontoFilter] = useState('all');
+  const [motivoAcrescimoFilter, setMotivoAcrescimoFilter] = useState('all');
   const [isFilterPanelOpen, setIsFilterPanelOpen] = useState(false);
 
   useEffect(() => {
     if (typeOverride) setTypeFilter(typeOverride);
   }, [typeOverride]);
 
-  const hasActiveFilters = searchTerm !== '' || approvalStatus !== 'all' || typeFilter !== 'all' || authorIdFilter !== 'all' || categoryIdFilter !== 'all';
+  const hasActiveFilters = searchTerm !== '' || approvalStatus !== 'all' || typeFilter !== (typeOverride || 'all') || authorIdFilter !== 'all' || categoryIdFilter !== 'all' || contaIdFilter !== 'all' || centroCustoIdFilter !== 'all' || condicaoFilter !== 'all' || temDescontoFilter !== 'all' || temAcrescimoFilter !== 'all' || motivoDescontoFilter !== 'all' || motivoAcrescimoFilter !== 'all';
 
   // Checkbox Selection State for Batch Approve
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
@@ -126,6 +137,13 @@ export default function Lancamentos({
     type: typeFilter === 'all' ? undefined : typeFilter,
     authorId: authorIdFilter,
     categoryId: categoryIdFilter,
+    contaId: contaIdFilter,
+    centroCustoId: centroCustoIdFilter,
+    condicao: condicaoFilter,
+    temDesconto: temDescontoFilter,
+    temAcrescimo: temAcrescimoFilter,
+    motivoDescontoId: motivoDescontoFilter,
+    motivoAcrescimoId: motivoAcrescimoFilter,
     page: currentPage,
     pageSize
   });
@@ -136,6 +154,8 @@ export default function Lancamentos({
   const { data: categorias = [] } = useCategorias();
   const { data: usuarios = [] } = useUsuarios();
   const { data: rawContas = [] } = useContas();
+  const { data: centrosCusto = [] } = useCentrosCusto();
+  const { categoriasAjuste = [] } = useCategoriasAjuste();
 
   const activeContas = useMemo(() => rawContas.filter((c: any) => c.status !== 'excluido'), [rawContas]);
   const [selectedAccountId, setSelectedAccountId] = useState<string | null>(null);
@@ -158,12 +178,35 @@ export default function Lancamentos({
     return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(val);
   };
 
+  const getValorLiquido = (item: LancamentoFinanceiro): number => {
+    if (item.status_pagamento === 'pago' && item.valor_recebido) {
+      return item.valor_recebido;
+    }
+    const desconto = Number((item as any).desconto_valor) || 0;
+    const acrescimo = Number((item as any).acrescimo_valor) || 0;
+    const liquido = item.valor_previsto - desconto + acrescimo;
+    return liquido;
+  };
+
+  const hasAjuste = (item: LancamentoFinanceiro): boolean => {
+    const desconto = Number((item as any).desconto_valor) || 0;
+    const acrescimo = Number((item as any).acrescimo_valor) || 0;
+    return desconto > 0 || acrescimo > 0;
+  };
+
   const clearFiltersShortcut = () => {
     setSearchTerm('');
     setApprovalStatus('all');
     setTypeFilter(typeOverride || 'all');
-    setAuthorIdFilter('all');
+    setAuthorIdIdFilter('all');
     setCategoryIdFilter('all');
+    setContaIdFilter('all');
+    setCentroCustoIdFilter('all');
+    setCondicaoFilter('all');
+    setTemDescontoFilter('all');
+    setTemAcrescimoFilter('all');
+    setMotivoDescontoFilter('all');
+    setMotivoAcrescimoFilter('all');
     setSelectedIds([]);
     setSelectedAccountId(null);
     handlePresetChange('15');
@@ -439,7 +482,14 @@ export default function Lancamentos({
                       </td>
 
                       <td className={`py-3 px-4 text-right font-black font-mono text-xs ${item.tipo === 'entrada' ? 'text-bank-truth-green' : 'text-neutral-950'}`}>
-                        {valueFormatter(item.valor_previsto)}
+                        <span className="flex flex-col items-end">
+                          {valueFormatter(getValorLiquido(item))}
+                          {hasAjuste(item) && (
+                            <span className="text-[8px] font-bold text-secondary uppercase tracking-wider mt-0.5">
+                              Prev: {valueFormatter(item.valor_previsto)}
+                            </span>
+                          )}
+                        </span>
                       </td>
                       <td className="py-3 px-4 text-center whitespace-nowrap">
                         {item.status_pagamento === 'bpi' ? (
@@ -449,6 +499,10 @@ export default function Lancamentos({
                         ) : item.status_pagamento === 'quitação_pendente' ? (
                           <span className="inline-flex items-center px-2.5 py-0.5 rounded bg-amber-50 text-amber-600 font-black border border-amber-200 text-[9px] uppercase tracking-tighter animate-pulse">
                             {isMaster ? 'Confirme Baixa' : 'Pendente Gestor'}
+                          </span>
+                        ) : item.status_aprovacao === 'reprovado' ? (
+                          <span className="inline-flex items-center px-2.5 py-0.5 rounded bg-red-50 text-alert-red font-black border border-red-200 text-[9px] uppercase tracking-tighter animate-pulse">
+                            Reprovado
                           </span>
                         ) : item.status_aprovacao === 'confirmado_master' ? (
                           <span className="inline-flex items-center px-2.5 py-0.5 rounded bg-neutral-900 text-white font-black text-[9px] uppercase tracking-tighter">
@@ -622,6 +676,7 @@ export default function Lancamentos({
                       { id: 'all', label: 'Todos' },
                       { id: 'confirmado_master', label: 'Confirmado' },
                       { id: 'pendente', label: 'Pendente' },
+                      { id: 'reprovado', label: 'Reprovado' },
                       { id: 'bpi', label: 'BPI' }
                     ].map(opt => (
                       <button
@@ -645,7 +700,7 @@ export default function Lancamentos({
                     </label>
                     <select
                       value={authorIdFilter}
-                      onChange={(e) => setAuthorIdFilter(e.target.value)}
+                      onChange={(e) => setAuthorIdIdFilter(e.target.value)}
                       className="w-full h-11 bg-neutral-50 border border-surface-border text-xs font-bold rounded-lg px-3 outline-none focus:border-primary"
                     >
                       <option value="all">Todos os Usuários</option>
@@ -666,6 +721,111 @@ export default function Lancamentos({
                       {categorias.map(c => <option key={c.id} value={c.id}>{c.nome}</option>)}
                     </select>
                   </div>
+
+                  <div className="space-y-2">
+                    <label className="text-[10px] font-black uppercase tracking-[0.2em] text-secondary flex items-center gap-2">
+                      <CreditCard className="w-4 h-4" /> Conta Bancária
+                    </label>
+                    <select
+                      value={contaIdFilter}
+                      onChange={(e) => setContaIdFilter(e.target.value)}
+                      className="w-full h-11 bg-neutral-50 border border-surface-border text-xs font-bold rounded-lg px-3 outline-none focus:border-primary"
+                    >
+                      <option value="all">Todas as Contas</option>
+                      {activeContas.map(c => <option key={c.id} value={c.id}>{c.nome_banco || c.nome}</option>)}
+                    </select>
+                  </div>
+
+                  <div className="space-y-2">
+                    <label className="text-[10px] font-black uppercase tracking-[0.2em] text-secondary flex items-center gap-2">
+                      <Layers className="w-4 h-4" /> Centro de Custo
+                    </label>
+                    <select
+                      value={centroCustoIdFilter}
+                      onChange={(e) => setCentroCustoIdFilter(e.target.value)}
+                      className="w-full h-11 bg-neutral-50 border border-surface-border text-xs font-bold rounded-lg px-3 outline-none focus:border-primary"
+                    >
+                      <option value="all">Todos os Centros</option>
+                      {centrosCusto.filter((cc: any) => cc.status !== 'excluido').map(cc => <option key={cc.id} value={cc.id}>{cc.nome}</option>)}
+                    </select>
+                  </div>
+
+                  <div className="space-y-2">
+                    <label className="text-[10px] font-black uppercase tracking-[0.2em] text-secondary flex items-center gap-2">
+                      <Repeat className="w-4 h-4" /> Condição
+                    </label>
+                    <select
+                      value={condicaoFilter}
+                      onChange={(e) => setCondicaoFilter(e.target.value)}
+                      className="w-full h-11 bg-neutral-50 border border-surface-border text-xs font-bold rounded-lg px-3 outline-none focus:border-primary"
+                    >
+                      <option value="all">Todas as Condições</option>
+                      <option value="a_vista">À Vista</option>
+                      <option value="a_prazo">A Prazo</option>
+                    </select>
+                  </div>
+
+                  <div className="space-y-2">
+                    <label className="text-[10px] font-black uppercase tracking-[0.2em] text-secondary flex items-center gap-2">
+                      <TrendingDown className="w-4 h-4" /> Desconto
+                    </label>
+                    <select
+                      value={temDescontoFilter}
+                      onChange={(e) => setTemDescontoFilter(e.target.value)}
+                      className="w-full h-11 bg-neutral-50 border border-surface-border text-xs font-bold rounded-lg px-3 outline-none focus:border-primary"
+                    >
+                      <option value="all">Todos</option>
+                      <option value="sim">Com Desconto</option>
+                      <option value="nao">Sem Desconto</option>
+                    </select>
+                  </div>
+
+                  {temDescontoFilter !== 'all' && (
+                    <div className="space-y-2 animate-in fade-in slide-in-from-top-1">
+                      <label className="text-[10px] font-black uppercase tracking-[0.2em] text-secondary flex items-center gap-2">
+                        <Tag className="w-4 h-4" /> Motivo do Desconto
+                      </label>
+                      <select
+                        value={motivoDescontoFilter}
+                        onChange={(e) => setMotivoDescontoFilter(e.target.value)}
+                        className="w-full h-11 bg-neutral-50 border border-surface-border text-xs font-bold rounded-lg px-3 outline-none focus:border-primary"
+                      >
+                        <option value="all">Todos os Motivos</option>
+                        {categoriasAjuste.filter((c: any) => c.tipo === 'desconto' && c.status !== 'inativo').map((r: any) => <option key={r.id} value={r.id}>{r.nome}</option>)}
+                      </select>
+                    </div>
+                  )}
+
+                  <div className="space-y-2">
+                    <label className="text-[10px] font-black uppercase tracking-[0.2em] text-secondary flex items-center gap-2">
+                      <TrendingUp className="w-4 h-4" /> Acréscimo
+                    </label>
+                    <select
+                      value={temAcrescimoFilter}
+                      onChange={(e) => setTemAcrescimoFilter(e.target.value)}
+                      className="w-full h-11 bg-neutral-50 border border-surface-border text-xs font-bold rounded-lg px-3 outline-none focus:border-primary"
+                    >
+                      <option value="all">Todos</option>
+                      <option value="sim">Com Acréscimo</option>
+                      <option value="nao">Sem Acréscimo</option>
+                    </select>
+                  </div>
+
+                  {temAcrescimoFilter !== 'all' && (
+                    <div className="space-y-2 animate-in fade-in slide-in-from-top-1">
+                      <label className="text-[10px] font-black uppercase tracking-[0.2em] text-secondary flex items-center gap-2">
+                        <Tag className="w-4 h-4" /> Motivo do Acréscimo
+                      </label>
+                      <select
+                        value={motivoAcrescimoFilter}
+                        onChange={(e) => setMotivoAcrescimoFilter(e.target.value)}
+                        className="w-full h-11 bg-neutral-50 border border-surface-border text-xs font-bold rounded-lg px-3 outline-none focus:border-primary"
+                      >
+                        <option value="all">Todos os Motivos</option>
+                        {categoriasAjuste.filter((c: any) => c.tipo === 'acrescimo' && c.status !== 'inativo').map((r: any) => <option key={r.id} value={r.id}>{r.nome}</option>)}
+                      </select>
+                    </div>
+                  )}
                 </div>
               </div>
 

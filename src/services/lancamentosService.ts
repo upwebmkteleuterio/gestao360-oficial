@@ -10,6 +10,13 @@ export interface LancamentoFilters {
   type?: string;
   authorId?: string;
   categoryId?: string;
+  contaId?: string;
+  centroCustoId?: string;
+  condicao?: string;
+  temDesconto?: string;
+  temAcrescimo?: string;
+  motivoDescontoId?: string;
+  motivoAcrescimoId?: string;
   page?: number;
   pageSize?: number;
 }
@@ -29,6 +36,8 @@ export const lancamentosService = {
       if (filters.approvalStatus && filters.approvalStatus !== 'all') {
         if (filters.approvalStatus === 'pendente') {
           query = query.in('status_aprovacao', ['pendente_digital', 'digital']);
+        } else if (filters.approvalStatus === 'fila_operacional') {
+          query = query.in('status_aprovacao', ['pendente_digital', 'digital', 'reprovado']);
         } else {
           query = query.eq('status_aprovacao', filters.approvalStatus);
         }
@@ -48,6 +57,38 @@ export const lancamentosService = {
 
       if (filters.categoryId && filters.categoryId !== 'all') {
         query = query.eq('categoria_id', filters.categoryId);
+      }
+
+      if (filters.contaId && filters.contaId !== 'all') {
+        query = query.eq('conta_bancaria_id', filters.contaId);
+      }
+
+      if (filters.centroCustoId && filters.centroCustoId !== 'all') {
+        query = query.eq('centro_custo_id', filters.centroCustoId);
+      }
+
+      if (filters.condicao && filters.condicao !== 'all') {
+        query = query.eq('condicao', filters.condicao);
+      }
+
+      if (filters.temDesconto === 'sim') {
+        query = query.gt('desconto_valor', 0);
+      } else if (filters.temDesconto === 'nao') {
+        query = query.or('desconto_valor.eq.0,desconto_valor.is.null');
+      }
+
+      if (filters.temAcrescimo === 'sim') {
+        query = query.gt('acrescimo_valor', 0);
+      } else if (filters.temAcrescimo === 'nao') {
+        query = query.or('acrescimo_valor.eq.0,acrescimo_valor.is.null');
+      }
+
+      if (filters.motivoDescontoId && filters.motivoDescontoId !== 'all') {
+        query = query.eq('motivo_desconto_id', filters.motivoDescontoId);
+      }
+
+      if (filters.motivoAcrescimoId && filters.motivoAcrescimoId !== 'all') {
+        query = query.eq('motivo_acrescimo_id', filters.motivoAcrescimoId);
       }
 
       if (filters.searchTerm) {

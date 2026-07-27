@@ -7,7 +7,7 @@ export default function Pagar() {
       typeOverride="saida"
       titleOverride="Contas a Pagar"
       statusPagamentoOverride="aberto"
-      statusAprovacaoOverride="confirmado_master"
+      statusAprovacaoOverride="fila_operacional"
     />
   );
 }

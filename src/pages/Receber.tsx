@@ -7,7 +7,7 @@ export default function Receber() {
       typeOverride="entrada"
       titleOverride="Contas a Receber"
       statusPagamentoOverride="aberto"
-      statusAprovacaoOverride="confirmado_master"
+      statusAprovacaoOverride="fila_operacional"
     />
   );
 }
