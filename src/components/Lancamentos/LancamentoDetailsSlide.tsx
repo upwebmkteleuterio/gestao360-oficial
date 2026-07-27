@@ -23,7 +23,8 @@ import {
   Check,
   AlertTriangle,
   Loader2,
-  TrendingUp
+  TrendingUp,
+  Printer
 } from 'lucide-react';
 import { useUIStore } from '../../store/uiStore';
 import { useLancamento, useEntidades, useCategorias, useUsuarios, useLancamentoAnexos, useLancamentos } from '../../hooks/useData';
@@ -144,13 +145,94 @@ export default function LancamentoDetailsSlide() {
     }
   };
 
+  const handlePrintReceipt = () => {
+    window.print();
+  };
+
   const hasAnexo = anexos.length > 0;
   const isQuitacaoPendente = lancamento?.status_pagamento === 'quitação_pendente';
   const canApprove = hasAnexo || dispensarComprovante;
 
   return (
     <AnimatePresence>
-      <div className="fixed inset-0 z-[500] flex justify-end">
+      {/* Printable Receipt Layout (Visible only during window.print()) */}
+      {lancamento && (
+        <div className="hidden print:block print:fixed print:inset-0 print:bg-white print:p-8 print:z-[99999] text-black font-sans">
+          <div className="max-w-2xl mx-auto border-2 border-black p-8 rounded-xl space-y-6">
+            <div className="flex justify-between items-start border-b-2 border-black pb-4">
+              <div>
+                <h1 className="text-xl font-black uppercase tracking-wider">Comprovante de Lançamento</h1>
+                <p className="text-xs uppercase font-bold text-gray-600">Gestão 360 - CFO ERP Headquarters</p>
+              </div>
+              <div className="text-right">
+                <span className="text-xs font-mono font-bold block">ID: #{lancamento.id.slice(0, 8)}</span>
+                <span className="text-[10px] text-gray-500 block">Emissão: {new Date().toLocaleDateString('pt-BR')}</span>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-4 text-xs">
+              <div>
+                <span className="font-bold uppercase text-gray-500 block text-[9px]">Entidade / Destinatário:</span>
+                <span className="font-black text-sm uppercase">{getEntidadeName(lancamento.entidade_id)}</span>
+              </div>
+              <div>
+                <span className="font-bold uppercase text-gray-500 block text-[9px]">Tipo de Operação:</span>
+                <span className="font-black text-sm uppercase">{lancamento.tipo === 'entrada' ? 'Receita / Entrada' : 'Despesa / Saída'}</span>
+              </div>
+            </div>
+
+            <div className="bg-gray-100 p-4 rounded-lg flex justify-between items-center">
+              <div>
+                <span className="font-bold uppercase text-gray-500 block text-[9px]">Valor Efetivo / Líquido:</span>
+                <span className="text-2xl font-black font-mono">
+                  {formatCurrency(lancamento.valor_recebido && lancamento.valor_recebido > 0 ? lancamento.valor_recebido : (lancamento.valor_previsto - (lancamento.desconto_valor || 0) + (lancamento.acrescimo_valor || 0)))}
+                </span>
+              </div>
+              <div className="text-right">
+                <span className="font-bold uppercase text-gray-500 block text-[9px]">Valor Previsto Original:</span>
+                <span className="text-sm font-bold font-mono text-gray-700">{formatCurrency(lancamento.valor_previsto)}</span>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-3 gap-4 text-xs border-y border-gray-200 py-4">
+              <div>
+                <span className="font-bold uppercase text-gray-500 block text-[10px]">Vencimento:</span>
+                <span className="font-bold">{formatDate(lancamento.data_vencimento)}</span>
+              </div>
+              <div>
+                <span className="font-bold uppercase text-gray-500 block text-[10px]">Data Pagamento:</span>
+                <span className="font-bold">{formatDate(lancamento.data_pagamento) || '-'}</span>
+              </div>
+              <div>
+                <span className="font-bold uppercase text-gray-500 block text-[10px]">Categoria:</span>
+                <span className="font-bold uppercase">{getCategoriaName(lancamento.categoria_id)}</span>
+              </div>
+            </div>
+
+            {lancamento.observacoes && (
+              <div className="text-xs">
+                <span className="font-bold uppercase text-gray-500 block text-[10px] mb-1">Histórico / Observações:</span>
+                <p className="italic text-gray-700 bg-gray-50 p-3 rounded border border-gray-200">{lancamento.observacoes}</p>
+              </div>
+            )}
+
+            <div className="pt-8 grid grid-cols-2 gap-8 text-center text-xs">
+              <div className="border-t border-black pt-2">
+                <p className="font-bold uppercase text-[10px]">{getUsuarioName(lancamento.usuario_criador_id)}</p>
+                <p className="text-[8px] uppercase text-gray-500">Operador / Emissor</p>
+              </div>
+              <div className="border-t border-black pt-2">
+                <p className="font-bold uppercase text-[10px]">
+                  {lancamento.status_aprovacao === 'confirmado_master' ? 'Aprovado por Master' : 'Pendente de Validação'}
+                </p>
+                <p className="text-[8px] uppercase text-gray-500">Autenticação do Gestor</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      <div className="fixed inset-0 z-[500] flex justify-end print:hidden">
         <motion.div 
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
@@ -369,46 +451,72 @@ export default function LancamentoDetailsSlide() {
                   </div>
                 )}
 
-                <div className="flex gap-3">
-                  {isMaster ? (
-                    <>
-                      {lancamento.status_aprovacao === 'confirmado_master' && !isQuitacaoPendente ? (
-                        <button 
-                          onClick={handleReprovar}
-                          disabled={loadingAction}
-                          className="flex-1 h-12 bg-white border-2 border-alert-red/20 text-alert-red hover:bg-alert-red hover:text-white transition-all rounded-xl text-[10px] font-black uppercase tracking-widest flex items-center justify-center gap-2 shadow-sm"
-                        >
-                          <XCircle className="w-4 h-4" /> Reprovar Lançamento
-                        </button>
-                      ) : (
-                        <>
-                          <button 
+                <div className="flex flex-col gap-3">
+                  <button
+                    type="button"
+                    onClick={handlePrintReceipt}
+                    className="w-full h-11 bg-neutral-100 hover:bg-neutral-200 text-neutral-900 transition-all rounded-xl text-[10px] font-black uppercase tracking-widest flex items-center justify-center gap-2 border border-neutral-200 shadow-xs"
+                  >
+                    <Printer className="w-4 h-4 text-primary" /> Imprimir Recibo / Comprovante
+                  </button>
+
+                  <div className="flex gap-3">
+                    {isMaster ? (
+                      <>
+                        {lancamento.status_aprovacao === 'confirmado_master' && !isQuitacaoPendente ? (
+                          <button
                             onClick={handleReprovar}
                             disabled={loadingAction}
-                            className="flex-1 h-12 bg-white border-2 border-neutral-200 text-secondary hover:border-alert-red hover:text-alert-red transition-all rounded-xl text-[10px] font-black uppercase tracking-widest flex items-center justify-center gap-2 shadow-sm"
+                            className="flex-1 h-12 bg-white border-2 border-alert-red/20 text-alert-red hover:bg-alert-red hover:text-white transition-all rounded-xl text-[10px] font-black uppercase tracking-widest flex items-center justify-center gap-2 shadow-sm"
                           >
-                            <XCircle className="w-4 h-4" /> Reprovar
+                            <XCircle className="w-4 h-4" /> Reprovar Lançamento
                           </button>
-                          <button 
-                            onClick={handleAprovar}
-                            disabled={!canApprove || loadingAction}
-                            className={`flex-[2] h-12 text-white transition-all rounded-xl text-[10px] font-black uppercase tracking-[0.2em] flex items-center justify-center gap-2 shadow-lg shadow-primary/20 ${
-                              canApprove ? 'bg-neutral-900 hover:bg-black' : 'bg-neutral-300 cursor-not-allowed'
-                            }`}
+                        ) : (
+                          <>
+                            <button
+                              onClick={handleReprovar}
+                              disabled={loadingAction}
+                              className="flex-1 h-12 bg-white border-2 border-neutral-200 text-secondary hover:border-alert-red hover:text-alert-red transition-all rounded-xl text-[10px] font-black uppercase tracking-widest flex items-center justify-center gap-2 shadow-sm"
+                            >
+                              <XCircle className="w-4 h-4" /> Reprovar
+                            </button>
+                            <button
+                              onClick={handleAprovar}
+                              disabled={!canApprove || loadingAction}
+                              className={`flex-[2] h-12 text-white transition-all rounded-xl text-[10px] font-black uppercase tracking-[0.2em] flex items-center justify-center gap-2 shadow-lg shadow-primary/20 ${
+                                canApprove ? 'bg-neutral-900 hover:bg-black' : 'bg-neutral-300 cursor-not-allowed'
+                              }`}
+                            >
+                              {loadingAction ? <Loader2 className="w-4 h-4 animate-spin" /> : <ShieldCheck className="w-4 h-4" />}
+                              {isQuitacaoPendente ? 'Confirmar Quitação' : 'Aprovar Agora'}
+                            </button>
+                          </>
+                        )}
+                      </>
+                    ) : (
+                      <>
+                        {lancamento.status_pagamento === 'aberto' ? (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setSelectedLancamentoIdForModal(lancamento.id);
+                              setModalOpen('isComprovanteOpen', false);
+                              setModalOpen('isBaixaLancamentoOpen', true);
+                            }}
+                            className="w-full h-12 bg-bank-truth-green hover:brightness-110 text-white transition-all rounded-xl text-[10px] font-black uppercase tracking-widest flex items-center justify-center gap-2 shadow-sm"
                           >
-                            {loadingAction ? <Loader2 className="w-4 h-4 animate-spin" /> : <ShieldCheck className="w-4 h-4" />}
-                            {isQuitacaoPendente ? 'Confirmar Quitação' : 'Aprovar Agora'}
+                            <CheckCircle2 className="w-4 h-4" /> Quitar / Confirmar Baixa
                           </button>
-                        </>
-                      )}
-                    </>
-                  ) : (
-                    <div className="w-full p-4 bg-neutral-50 rounded-2xl border border-neutral-100 text-center">
-                      <p className="text-[10px] font-black uppercase text-secondary tracking-widest">
-                        Aprovação restrita ao nível Master Admin
-                      </p>
-                    </div>
-                  )}
+                        ) : (
+                          <div className="w-full p-3 bg-neutral-50 rounded-xl border border-neutral-100 text-center">
+                            <p className="text-[10px] font-black uppercase text-secondary tracking-widest">
+                              {lancamento.status_pagamento === 'pago' ? 'Título Liquidado' : 'Aprovação reservada ao nível Master'}
+                            </p>
+                          </div>
+                        )}
+                      </>
+                    )}
+                  </div>
                 </div>
               </footer>
             </>

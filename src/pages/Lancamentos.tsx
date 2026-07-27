@@ -28,7 +28,8 @@ import {
   XCircle,
   CreditCard,
   Layers,
-  Repeat
+  Repeat,
+  Paperclip
 } from 'lucide-react';
 import { useSearchParams } from 'react-router-dom';
 import { useLancamentos, useContas, useEntidades, useCategorias, useUsuarios, useCentrosCusto, useCategoriasAjuste, useContasSaldos } from '../hooks/useData';
@@ -465,6 +466,7 @@ export default function Lancamentos({
                     <th className="py-5 px-4 text-right">Total</th>
                     <th className="py-5 px-4 text-right">Pendente</th>
                     <th className="py-5 px-4 text-center">Status</th>
+                    <th className="py-5 px-3 text-center">Recibo</th>
                   </>
                 ) : (
                   <>
@@ -474,6 +476,7 @@ export default function Lancamentos({
                     <th className="py-5 px-4">Pagamento</th>
                     <th className="py-5 px-4 text-right">Valor</th>
                     <th className="py-5 px-4 text-center">Aprovação</th>
+                    <th className="py-5 px-3 text-center">Recibo</th>
                   </>
                 )}
                 <th className="py-5 px-4 text-right">Ações</th>
@@ -542,6 +545,19 @@ export default function Lancamentos({
                           <td className="py-3 px-4 text-center whitespace-nowrap">
                             {renderStatusBadge(item)}
                           </td>
+                          <td className="py-3 px-3 text-center" onClick={(e) => e.stopPropagation()}>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setSelectedLancamentoIdForModal(item.id);
+                                setModalOpen('isComprovanteOpen', true);
+                              }}
+                              className="p-1.5 rounded-lg hover:bg-neutral-100 text-primary transition-all inline-flex items-center justify-center gap-1"
+                              title="Ver Comprovante e Recibo"
+                            >
+                              <Paperclip className="w-4 h-4" />
+                            </button>
+                          </td>
                         </>
                       ) : (
                         <>
@@ -586,6 +602,19 @@ export default function Lancamentos({
                           <td className="py-3 px-4 text-center whitespace-nowrap">
                             {renderStatusBadge(item)}
                           </td>
+                          <td className="py-3 px-3 text-center" onClick={(e) => e.stopPropagation()}>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setSelectedLancamentoIdForModal(item.id);
+                                setModalOpen('isComprovanteOpen', true);
+                              }}
+                              className="p-1.5 rounded-lg hover:bg-neutral-100 text-primary transition-all inline-flex items-center justify-center gap-1"
+                              title="Ver Comprovante e Recibo"
+                            >
+                              <Paperclip className="w-4 h-4" />
+                            </button>
+                          </td>
                         </>
                       )}
                       <td className="py-3 px-4 text-right" onClick={(e) => e.stopPropagation()}>
@@ -603,7 +632,7 @@ export default function Lancamentos({
                               </button>
                             )}
 
-                            {item.status_aprovacao === 'confirmado_master' && item.status_pagamento === 'aberto' && (
+                            {item.status_pagamento === 'aberto' && (!isMaster || item.status_aprovacao === 'confirmado_master') && (
                               <button
                                 onClick={() => handleOpenBaixa(item.id)}
                                 className="px-3 py-1.5 bg-bank-truth-green text-white text-[9px] font-black uppercase tracking-widest rounded-lg hover:brightness-110 transition-all flex items-center gap-1.5 shadow-sm"
@@ -629,7 +658,7 @@ export default function Lancamentos({
                                   exit={{ opacity: 0, scale: 0.95, y: -10 }}
                                   className="absolute right-0 top-full mt-2 w-48 bg-white border border-neutral-100 rounded-2xl shadow-2xl z-50 p-2 overflow-hidden"
                                 >
-                                  {item.status_pagamento === 'aberto' && item.status_aprovacao === 'confirmado_master' && (
+                                  {item.status_pagamento === 'aberto' && (
                                     <button onClick={() => handleOpenBaixa(item.id)} className="w-full flex items-center gap-3 px-4 py-3 text-bank-truth-green hover:bg-emerald-50 rounded-xl transition-all">
                                       <CheckCircle2 className="w-4 h-4" />
                                       <span className="text-[10px] font-black uppercase tracking-widest">Dar Baixa</span>
