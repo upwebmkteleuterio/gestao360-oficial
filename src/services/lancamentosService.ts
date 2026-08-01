@@ -226,16 +226,17 @@ export const lancamentosService = {
   },
 
   baixaLancamento: async (id: string, data: {
-    valor_pago: number,
-    data_pagamento: string,
-    conta_bancaria_id: string,
-    tipo_baixa?: 'financeira' | 'bpi' | 'avr',
-    valor_desconto?: number,
-    valor_acrescimo?: number,
-    motivo_ajuste?: string,
-    motivo_desconto_id?: string,
-    motivo_acrescimo_id?: string
-  }, isMaster: boolean = false): Promise<LancamentoFinanceiro> => {
+   valor_pago: number,
+   data_pagamento: string,
+   conta_bancaria_id: string,
+   centro_custo_id?: string,
+   tipo_baixa?: 'financeira' | 'bpi' | 'avr',
+   valor_desconto?: number,
+   valor_acrescimo?: number,
+   motivo_ajuste?: string,
+   motivo_desconto_id?: string,
+   motivo_acrescimo_id?: string
+ }, isMaster: boolean = false): Promise<LancamentoFinanceiro> => {
     const { data: current, error: getError } = await supabase
       .from('lancamentos_financeiros')
       .select('*')
@@ -248,79 +249,103 @@ export const lancamentosService = {
     const subtotal = current.valor_previsto - (data.valor_desconto || 0) + (data.valor_acrescimo || 0);
     const isPartial = valorPagoEfetivo < subtotal;
     const isBPI = data.tipo_baixa === 'bpi';
-    const isAVR = data.tipo_baixa === 'avr';
-    const dataPagamentoVal = data.data_pagamento || new Date().toISOString().split('T')[0];
-    const contaBancariaVal = data.conta_bancaria_id || current.conta_bancaria_id;
+   const isAVR = data.tipo_baixa === 'avr';
+   const dataPagamentoVal = data.data_pagamento || new Date().toISOString().split('T')[0];
+   const contaBancariaVal = data.conta_bancaria_id || current.conta_bancaria_id;
 
-    // Define final payment status based on role
-    const finalPaymentStatus = isBPI ? 'bpi' : (isMaster ? 'pago' : 'quitação_pendente');
+   // AVR logic: Update history and handle original value
+   const observacaoOriginal = current.observacoes || '';
+   let observacaoFinal = observacaoOriginal;
+   
+   if (isAVR) {
+     observacaoFinal += `\n[AVR - Ajuste Realizado em ${new Date().toLocaleDateString('pt-BR')}] Valor original alterado de R$ ${current.valor_original || current.valor_previsto} para R$ ${valorPagoEfetivo}`;
+   } else if (isBPI) {
+     observacaoFinal += `\n[BPI - Baixa por Inatividade em ${new Date().toLocaleDateString('pt-BR')}]`;
+   }
 
-    if (isPartial) {
-      const saldoRestante = subtotal - valorPagoEfetivo;
+   // Define final payment status based on role
+   const finalPaymentStatus = isBPI ? 'bpi' : (isMaster ? 'pago' : 'quitação_pendente');
 
-      // ATUALIZAÇÃO CRÍTICA: O resíduo mantém o status de aprovação do pai
-      const { data: updatedOriginal, error: updateError } = await supabase
-        .from('lancamentos_financeiros')
-        .update({
-          valor_previsto: saldoRestante,
-          // Não resetamos mais para 'pendente_digital' se o original já era 'confirmado_master'
-          status_aprovacao: current.status_aprovacao,
-          observacoes: (current.observacoes || '') + `\n[Abatido pagamento parcial de R$ ${valorPagoEfetivo} em ${dataPagamentoVal.split('-').reverse().join('/')}]`
-        })
-        .eq('id', id)
-        .select()
-        .single();
+   if (isPartial) {
+     const saldoRestante = subtotal - valorPagoEfetivo;
 
-      if (updateError) throw updateError;
+     // ATUALIZAÇÃO CRÍTICA: O resíduo mantém o status de aprovação do pai
+     const { data: updatedOriginal, error: updateError } = await supabase
+       .from('lancamentos_financeiros')
+       .update({
+         valor_previsto: saldoRestante,
+         // Não resetamos mais para 'pendente_digital' se o original já era 'confirmado_master'
+         status_aprovacao: current.status_aprovacao,
+         observacoes: observacaoOriginal + `\n[Abatido pagamento parcial de R$ ${valorPagoEfetivo} em ${dataPagamentoVal.split('-').reverse().join('/')}]`
+       })
+       .eq('id', id)
+       .select()
+       .single();
 
-      const { id: _, created_at: __, updated_at: ___, ...rest } = current;
-      const { error: insertError } = await supabase
-        .from('lancamentos_financeiros')
-        .insert([{
-          ...rest,
-          valor_previsto: valorPagoEfetivo,
-          valor_recebido: valorPagoEfetivo,
-          status_pagamento: isMaster ? 'pago' : 'quitação_pendente',
-          data_pagamento: dataPagamentoVal,
+     if (updateError) throw updateError;
 
-          conta_bancaria_id: contaBancariaVal,
-          tipo_baixa: data.tipo_baixa || 'financeira',
-          desconto_valor: data.valor_desconto || 0,
-          acrescimo_valor: data.valor_acrescimo || 0,
-          motivo_ajuste: data.motivo_ajuste || null,
-          motivo_desconto_id: data.motivo_desconto_id || null,
-          motivo_acrescimo_id: data.motivo_acrescimo_id || null,
-          vinculo_residuo_id: id,
-          observacoes: (current.observacoes || '') + `\n[Pagamento parcial quitado. Referente à cobrança original de R$ ${current.valor_previsto}]`
-        }]);
+     const { id: _, created_at: __, updated_at: ___, ...rest } = current;
+     const { error: insertError } = await supabase
+       .from('lancamentos_financeiros')
+       .insert([{
+         ...rest,
+         valor_previsto: valorPagoEfetivo,
+         valor_recebido: valorPagoEfetivo,
+         status_pagamento: isMaster ? 'pago' : 'quitação_pendente',
+         data_pagamento: dataPagamentoVal,
 
-      if (insertError) throw insertError;
-      return updatedOriginal as LancamentoFinanceiro;
-    } else {
-      const { data: updated, error: updateError } = await supabase
-        .from('lancamentos_financeiros')
-        .update({
-          valor_recebido: isBPI ? 0 : valorPagoEfetivo,
-          status_pagamento: isMaster ? 'pago' : 'quitação_pendente',
-          data_pagamento: dataPagamentoVal,
+         conta_bancaria_id: contaBancariaVal,
+         centro_custo_id: data.centro_custo_id || current.centro_custo_id,
+         tipo_baixa: data.tipo_baixa || 'financeira',
+         desconto_valor: data.valor_desconto || 0,
+         acrescimo_valor: data.valor_acrescimo || 0,
+         motivo_ajuste: data.motivo_ajuste || null,
+         motivo_desconto_id: data.motivo_desconto_id || null,
+         motivo_acrescimo_id: data.motivo_acrescimo_id || null,
+         vinculo_residuo_id: id,
+         observacoes: observacaoOriginal + `\n[Pagamento parcial quitado. Referente à cobrança original de R$ ${current.valor_previsto}]`,
+         bpi_em: isBPI ? new Date().toISOString() : null
+       }]);
 
-          conta_bancaria_id: contaBancariaVal,
-          tipo_baixa: data.tipo_baixa || 'financeira',
-          desconto_valor: data.valor_desconto || 0,
-          acrescimo_valor: data.valor_acrescimo || 0,
-          motivo_ajuste: data.motivo_ajuste || null,
-          motivo_desconto_id: data.motivo_desconto_id || null,
-          motivo_acrescimo_id: data.motivo_acrescimo_id || null,
-          valor_previsto: isAVR ? valorPagoEfetivo : (isBPI ? current.valor_previsto : subtotal)
-        })
-        .eq('id', id)
-        .select()
-        .single();
+     if (insertError) throw insertError;
+     return updatedOriginal as LancamentoFinanceiro;
+   } else {
+     const updatePayload: any = {
+       valor_recebido: isBPI ? 0 : valorPagoEfetivo,
+       status_pagamento: isMaster ? 'pago' : 'quitação_pendente',
+       data_pagamento: dataPagamentoVal,
 
-      if (updateError) throw updateError;
-      return updated as LancamentoFinanceiro;
-    }
-  },
+       conta_bancaria_id: contaBancariaVal,
+       centro_custo_id: data.centro_custo_id || current.centro_custo_id,
+       tipo_baixa: data.tipo_baixa || 'financeira',
+       desconto_valor: data.valor_desconto || 0,
+       acrescimo_valor: data.valor_acrescimo || 0,
+       motivo_ajuste: data.motivo_ajuste || null,
+       motivo_desconto_id: data.motivo_desconto_id || null,
+       motivo_acrescimo_id: data.motivo_acrescimo_id || null,
+       valor_previsto: isAVR ? valorPagoEfetivo : (isBPI ? current.valor_previsto : subtotal),
+       observacoes: observacaoFinal
+     };
+
+     if (isAVR) {
+       updatePayload.valor_original = valorPagoEfetivo;
+     }
+     
+     if (isBPI) {
+       updatePayload.bpi_em = new Date().toISOString();
+     }
+
+     const { data: updated, error: updateError } = await supabase
+       .from('lancamentos_financeiros')
+       .update(updatePayload)
+       .eq('id', id)
+       .select()
+       .single();
+
+     if (updateError) throw updateError;
+     return updated as LancamentoFinanceiro;
+   }
+ },
 
   estornarLancamento: async (id: string): Promise<void> => {
     const { data: current, error: getError } = await supabase

@@ -79,8 +79,14 @@ export interface LancamentoFinanceiro {
   status_pagamento: StatusPagamento;
   usuario_criador_id: string;
   status_sincronizacao?: boolean;
-  desconto_valor?: number;
-  desconto_tipo?: string;
+ valor_original?: number;
+ juros_previstos?: number;
+ multa_prevista?: number;
+ desconto_previsto?: number;
+ documento_numero?: string;
+ bpi_em?: string;
+ desconto_valor?: number;
+ desconto_tipo?: string;
   acrescimo_valor?: number;
   acrescimo_tipo?: string;
   motivo_desconto_id?: string;

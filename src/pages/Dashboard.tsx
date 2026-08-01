@@ -108,54 +108,64 @@ export default function Dashboard() {
   };
 
   const totals = useMemo(() => {
-    const paidSum = filteredLancamentos.filter(l => l.status_pagamento === 'pago').length;
-    const unpaidSum = filteredLancamentos.filter(l => l.status_pagamento === 'aberto').length;
-    const bpiSum = filteredLancamentos.filter(l => l.status_pagamento === 'bpi').length;
-    const totalStatusCount = paidSum + unpaidSum + bpiSum || 1;
+   const paidSum = filteredLancamentos.filter(l => l.status_pagamento === 'pago').length;
+   const unpaidSum = filteredLancamentos.filter(l => l.status_pagamento === 'aberto').length;
+   const bpiSum = filteredLancamentos.filter(l => l.status_pagamento === 'bpi').length;
+   const totalStatusCount = paidSum + unpaidSum + bpiSum || 1;
 
-    // Real juros and discounts metrics
-    const jurosPagos = filteredLancamentos
-      .filter(l => l.tipo === 'saida' && l.status_pagamento === 'pago')
-      .reduce((acc, l) => acc + (Number(l.acrescimo_valor) || 0), 0);
+   // Real juros and discounts metrics
+   const jurosPagos = filteredLancamentos
+     .filter(l => l.tipo === 'saida' && l.status_pagamento === 'pago')
+     .reduce((acc, l) => acc + (Number(l.acrescimo_valor) || 0), 0);
 
-    const descontosObtidos = filteredLancamentos
-      .filter(l => l.tipo === 'saida' && l.status_pagamento === 'pago')
-      .reduce((acc, l) => acc + (Number(l.desconto_valor) || 0), 0);
+   const descontosObtidos = filteredLancamentos
+     .filter(l => l.tipo === 'saida' && l.status_pagamento === 'pago')
+     .reduce((acc, l) => acc + (Number(l.desconto_valor) || 0), 0);
 
-    const jurosRecebidos = filteredLancamentos
-      .filter(l => l.tipo === 'entrada' && l.status_pagamento === 'pago')
-      .reduce((acc, l) => acc + (Number(l.acrescimo_valor) || 0), 0);
+   const jurosRecebidos = filteredLancamentos
+     .filter(l => l.tipo === 'entrada' && l.status_pagamento === 'pago')
+     .reduce((acc, l) => acc + (Number(l.acrescimo_valor) || 0), 0);
 
-    const descontosConcedidos = filteredLancamentos
-      .filter(l => l.tipo === 'entrada' && l.status_pagamento === 'pago')
-      .reduce((acc, l) => acc + (Number(l.desconto_valor) || 0), 0);
+   const descontosConcedidos = filteredLancamentos
+     .filter(l => l.tipo === 'entrada' && l.status_pagamento === 'pago')
+     .reduce((acc, l) => acc + (Number(l.desconto_valor) || 0), 0);
 
-    return {
-      paidPercent: Math.round((paidSum / totalStatusCount) * 100),
-      unpaidPercent: Math.round((unpaidSum / totalStatusCount) * 100),
-      bpiPercent: Math.round((bpiSum / totalStatusCount) * 100),
-      paidCount: paidSum,
-      unpaidCount: unpaidSum,
-      bpiCount: bpiSum,
-      jurosPagos,
-      descontosObtidos,
-      jurosRecebidos,
-      descontosConcedidos
-    };
-  }, [filteredLancamentos]);
+   return {
+     paidPercent: Math.round((paidSum / totalStatusCount) * 100),
+     unpaidPercent: Math.round((unpaidSum / totalStatusCount) * 100),
+     bpiPercent: Math.round((bpiSum / totalStatusCount) * 100),
+     paidCount: paidSum,
+     unpaidCount: unpaidSum,
+     bpiCount: bpiSum,
+     jurosPagos,
+     descontosObtidos,
+     jurosRecebidos,
+     descontosConcedidos
+   };
+ }, [filteredLancamentos]);
 
-  const { data: contasSaldos = [] } = useContasSaldos();
+ const { data: contasSaldos = [] } = useContasSaldos();
 
-  const accountsBalances = useMemo(() => {
-    return contas.map(account => {
-      const saldoObj = contasSaldos.find(s => s.conta_id === account.id);
-      return {
-        ...account,
-        auditado: saldoObj ? Number(saldoObj.saldo_confirmado) : (account.saldo_inicial || 0),
-        operacional: saldoObj ? Number(saldoObj.saldo_operacional) : (account.saldo_inicial || 0)
-      };
-    });
-  }, [contas, contasSaldos]);
+ const accountsBalances = useMemo(() => {
+   const bpiBankId = '51b29a3a-80ca-4e6d-9765-2519ca4e42bd';
+   return contas.map(account => {
+     const saldoObj = contasSaldos.find(s => s.conta_id === account.id);
+     return {
+       ...account,
+       auditado: saldoObj ? Number(saldoObj.saldo_confirmado) : (account.saldo_inicial || 0),
+       operacional: saldoObj ? Number(saldoObj.saldo_operacional) : (account.saldo_inicial || 0),
+       isBpi: account.id === bpiBankId
+     };
+   });
+ }, [contas, contasSaldos]);
+
+ const globalBalances = useMemo(() => {
+   const nonBpi = accountsBalances.filter(a => !a.isBpi);
+   return {
+     operacional: nonBpi.reduce((sum, acc) => sum + (acc.operacional || 0), 0),
+     auditado: nonBpi.reduce((sum, acc) => sum + (acc.auditado || 0), 0)
+   };
+ }, [accountsBalances]);
 
   const costCenterBreakdown = useMemo(() => {
     return centrosCusto.map(cc => {
@@ -334,17 +344,17 @@ export default function Dashboard() {
                   
                   <div className="space-y-1">
                     <p className={`text-sm font-bold font-mono transition-colors ${
-                      selectedAccountId === null ? 'text-primary' : 'text-on-surface'
-                    }`}>
-                      {valueFormatter(accountsBalances.reduce((sum, acc) => sum + (acc.operacional || 0), 0))}
-                      <span className="text-[9px] font-medium text-secondary ml-1 lowercase">(operacional)</span>
-                    </p>
-                    {isMaster && (
-                       <p className="text-[11px] font-bold font-mono text-bank-truth-green">
-                         {valueFormatter(accountsBalances.reduce((sum, acc) => sum + (acc.auditado || 0), 0))}
-                         <span className="text-[8px] font-medium ml-1 lowercase">(confirmado)</span>
-                       </p>
-                    )}
+                       selectedAccountId === null ? 'text-primary' : 'text-on-surface'
+                     }`}>
+                       {valueFormatter(globalBalances.operacional)}
+                       <span className="text-[9px] font-medium text-secondary ml-1 lowercase">(operacional)</span>
+                     </p>
+                     {isMaster && (
+                        <p className="text-[11px] font-bold font-mono text-bank-truth-green">
+                          {valueFormatter(globalBalances.auditado)}
+                          <span className="text-[8px] font-medium ml-1 lowercase">(confirmado)</span>
+                        </p>
+                     )}
                   </div>
                 </div>
 

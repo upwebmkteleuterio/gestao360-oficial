@@ -79,6 +79,7 @@ export default function BaixaLancamentoModal() {
   // Fields
   const [dataPagamento, setDataPagamento] = useState(new Date().toISOString().split('T')[0]);
   const [contaId, setContaId] = useState('');
+  const [centroCustoId, setCentroCustoId] = useState('');
   
   const [tipoBaixa, setTipoBaixa] = useState<'financeira' | 'bpi' | 'avr'>('financeira');
   
@@ -104,6 +105,7 @@ export default function BaixaLancamentoModal() {
     if (lancamento) {
       setValorPago(formatBRL(lancamento.valor_previsto));
       setContaId(lancamento.conta_bancaria_id || (contas[0]?.id || ''));
+      setCentroCustoId(lancamento.centro_custo_id || '');
       // Reset details
       setDescontoValor('');
       setDescontoTipo('valor');
@@ -177,6 +179,18 @@ export default function BaixaLancamentoModal() {
                   (!isAcrescimoReasonRequired || isAcrescimoReasonSelected) &&
                   !isOverpaid && valorDigitado > 0 && !saldoInsuficienteBaixa;
 
+  const handleTipoBaixaChange = (tipo: 'financeira' | 'bpi' | 'avr') => {
+    setTipoBaixa(tipo);
+    if (tipo === 'bpi') {
+      // Auto-select BPI bank and cost center
+      const bpiBankId = '51b29a3a-80ca-4e6d-9765-2519ca4e42bd';
+      const bpiCCId = 'a64bdc3b-243b-47bd-adf4-e2e9bb54081c';
+      setContaId(bpiBankId);
+      setCentroCustoId(bpiCCId);
+      setValorPago('0,00');
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!canSave) return;
@@ -189,6 +203,7 @@ export default function BaixaLancamentoModal() {
           valor_pago: valorDigitado,
           data_pagamento: dataPagamento,
           conta_bancaria_id: contaId,
+          centro_custo_id: centroCustoId,
           tipo_baixa: tipoBaixa,
           valor_desconto: calculatedDesconto,
           valor_acrescimo: calculatedAcrescimo,
@@ -287,7 +302,7 @@ export default function BaixaLancamentoModal() {
                     <button
                       key={opt.id}
                       type="button"
-                      onClick={() => setTipoBaixa(opt.id as any)}
+                      onClick={() => handleTipoBaixaChange(opt.id as any)}
                       className={`p-3 rounded-2xl border-2 text-left transition-all ${
                         tipoBaixa === opt.id 
                           ? 'border-neutral-900 bg-neutral-900 text-white' 

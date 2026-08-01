@@ -301,50 +301,56 @@ export default function Lancamentos({
   };
 
   const renderStatusBadge = (item: LancamentoFinanceiro) => {
-    if (item.status_pagamento === 'bpi') {
-      return (
-        <span className="inline-flex items-center px-2.5 py-0.5 rounded bg-red-50 text-alert-red font-black border border-red-100 text-[9px] uppercase tracking-tighter">
-          BPI
-        </span>
-      );
-    }
-    if (item.status_pagamento === 'pago') {
-      return (
-        <span className="inline-flex items-center px-2.5 py-0.5 rounded bg-emerald-50 text-bank-truth-green font-black border border-emerald-200 text-[9px] uppercase tracking-tighter">
-          Pago
-        </span>
-      );
-    }
-    if (item.status_pagamento === 'quitação_pendente') {
-      return (
-        <span className="inline-flex items-center px-2.5 py-0.5 rounded bg-amber-50 text-amber-600 font-black border border-amber-200 text-[9px] uppercase tracking-tighter animate-pulse">
-          {isMaster ? 'Confirme Baixa' : 'Pendente Gestor'}
-        </span>
-      );
-    }
-    if (item.status_aprovacao === 'reprovado') {
-      return (
-        <span className="inline-flex items-center px-2.5 py-0.5 rounded bg-red-50 text-alert-red font-black border border-red-200 text-[9px] uppercase tracking-tighter animate-pulse">
-          Reprovado
-        </span>
-      );
-    }
+   if (item.status_pagamento === 'bpi') {
+     return (
+       <span className="inline-flex items-center px-2.5 py-0.5 rounded bg-neutral-900 text-white font-black border border-neutral-950 text-[9px] uppercase tracking-tighter">
+         BPI
+       </span>
+     );
+   }
+   if (item.status_pagamento === 'pago') {
+     return (
+       <span className="inline-flex items-center px-2.5 py-0.5 rounded bg-emerald-50 text-bank-truth-green font-black border border-emerald-200 text-[9px] uppercase tracking-tighter">
+         Pago
+       </span>
+     );
+   }
+   if (item.status_pagamento === 'quitação_pendente' || item.status_pagamento === 'pago_parcial') {
+     return (
+       <span className="inline-flex items-center px-2.5 py-0.5 rounded bg-orange-50 text-orange-600 font-black border border-orange-200 text-[9px] uppercase tracking-tighter animate-pulse">
+         {item.status_pagamento === 'pago_parcial' ? 'Parcial' : (isMaster ? 'Confirme Baixa' : 'Pendente Gestor')}
+       </span>
+     );
+   }
+   if (item.status_aprovacao === 'reprovado') {
+     return (
+       <span className="inline-flex items-center px-2.5 py-0.5 rounded bg-red-50 text-alert-red font-black border border-red-200 text-[9px] uppercase tracking-tighter animate-pulse">
+         Reprovado
+       </span>
+     );
+   }
 
-    const days = getDaysOverdue(item.data_vencimento);
-    if (days >= 0) {
-      return (
-        <span className="inline-flex items-center px-2.5 py-0.5 rounded bg-red-50 text-alert-red font-black border border-red-200 text-[9px] uppercase tracking-tighter animate-pulse">
-          Atrasado
-        </span>
-      );
-    } else {
-      return (
-        <span className="inline-flex items-center px-2.5 py-0.5 rounded bg-neutral-100 text-neutral-600 font-bold border border-neutral-200 text-[9px] uppercase tracking-tighter">
-          A Vencer
-        </span>
-      );
-    }
-  };
+   const days = getDaysOverdue(item.data_vencimento);
+   if (days > 0) {
+     return (
+       <span className="inline-flex items-center px-2.5 py-0.5 rounded bg-red-50 text-alert-red font-black border border-red-200 text-[9px] uppercase tracking-tighter animate-pulse">
+         Vencido
+       </span>
+     );
+   } else if (days === 0) {
+     return (
+       <span className="inline-flex items-center px-2.5 py-0.5 rounded bg-orange-100 text-orange-700 font-black border-2 border-orange-400 text-[9px] uppercase tracking-tighter animate-bounce">
+         Vence Hoje
+       </span>
+     );
+   } else {
+     return (
+       <span className="inline-flex items-center px-2.5 py-0.5 rounded bg-blue-50 text-blue-600 font-bold border border-blue-200 text-[9px] uppercase tracking-tighter">
+         A Vencer
+       </span>
+     );
+   }
+ };
 
   return (
     <div className="space-y-6 animate-fade-in" onClick={() => setActiveMenuId(null)}>

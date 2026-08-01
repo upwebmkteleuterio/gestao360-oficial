@@ -308,12 +308,12 @@ export default function LancamentoDetailsSlide() {
                     <span className="text-[9px] font-black text-secondary uppercase tracking-widest block mb-2">Status Pagamento</span>
                     <div className="flex items-center gap-2">
                       {lancamento.status_pagamento === 'bpi' ? (
-                        <div className="flex items-center gap-1.5 text-alert-red font-black text-[10px] uppercase">
+                        <div className="flex items-center gap-1.5 text-neutral-900 font-black text-[10px] uppercase">
                           <AlertTriangle className="w-4 h-4" /> BPI
                         </div>
-                      ) : lancamento.status_pagamento === 'quitação_pendente' ? (
-                        <div className="flex items-center gap-1.5 text-amber-600 font-black text-[10px] uppercase">
-                          <Clock className="w-4 h-4" /> {isMaster ? 'Confirme Baixa' : 'Pendente Gestor'}
+                      ) : lancamento.status_pagamento === 'quitação_pendente' || lancamento.status_pagamento === 'pago_parcial' ? (
+                        <div className="flex items-center gap-1.5 text-orange-600 font-black text-[10px] uppercase">
+                          <Clock className="w-4 h-4" /> {lancamento.status_pagamento === 'pago_parcial' ? 'Parcial' : (isMaster ? 'Confirme Baixa' : 'Pendente Gestor')}
                         </div>
                       ) : lancamento.status_pagamento === 'pago' ? (
                         <div className="flex items-center gap-1.5 text-bank-truth-green font-black text-[10px] uppercase">
