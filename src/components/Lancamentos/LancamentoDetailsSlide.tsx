@@ -141,13 +141,10 @@ export default function LancamentoDetailsSlide() {
                 <span className="text-2xl font-black font-mono">
                   {formatCurrency(lancamento.valor_recebido && lancamento.valor_recebido > 0 ? lancamento.valor_recebido : (lancamento.valor_previsto - (lancamento.desconto_valor || 0) + (lancamento.acrescimo_valor || 0)))}
                 </span>
-                {lancamento.status_pagamento === 'aberto' && (
-                  <span className="text-[9px] font-black uppercase text-secondary block mt-1">Saldo {lancamento.tipo === 'entrada' ? 'A Receber' : 'A Pagar'}: {formatCurrency(lancamento.valor_previsto)}</span>
-                )}
               </div>
               <div className="text-right">
-                <span className="font-bold uppercase text-gray-500 block text-[9px]">Valor Original (Total):</span>
-                <span className="text-sm font-bold font-mono text-gray-700">{formatCurrency(lancamento.valor_original || lancamento.valor_previsto)}</span>
+                <span className="font-bold uppercase text-gray-500 block text-[9px]">Valor Previsto Original:</span>
+                <span className="text-sm font-bold font-mono text-gray-700">{formatCurrency(lancamento.valor_previsto)}</span>
               </div>
             </div>
 
@@ -302,9 +299,7 @@ export default function LancamentoDetailsSlide() {
                   </h4>
                   
                   <div className="grid grid-cols-2 gap-4">
-                    <DetailItem icon={<DollarSign className="w-3.5 h-3.5" />} label="Valor Original (Total)" value={formatCurrency(lancamento.valor_original || lancamento.valor_previsto)} highlight />
-                    <DetailItem icon={<Clock className="w-3.5 h-3.5" />} label={lancamento.tipo === 'entrada' ? 'A Receber' : 'A Pagar'} value={formatCurrency(lancamento.valor_previsto)} highlight />
-                    
+                    <DetailItem icon={<DollarSign className="w-3.5 h-3.5" />} label="Valor Previsto" value={formatCurrency(lancamento.valor_previsto)} highlight />
                     {lancamento.status_pagamento === 'pago' && lancamento.valor_recebido !== undefined && (
                       <DetailItem
                         icon={<CheckCircle2 className="w-3.5 h-3.5 text-bank-truth-green" />}

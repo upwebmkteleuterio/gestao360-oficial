@@ -39,8 +39,6 @@ import { UserPerfil, AuditoriaLog } from '../types';
 import { useDragScroll } from '../hooks/useDragScroll';
 import { supabase } from '@/integrations/supabase/client';
 
-import { toast } from 'sonner';
-
 export default function Configuracoes() {
   const dragScrollTabs = useDragScroll();
   const { data: usuarios = [], inviteUser, updateUser, isInviting } = useUsuarios();
@@ -65,6 +63,16 @@ export default function Configuracoes() {
   const [showPassword, setShowPassword] = useState(false);
   const [newUserPerfil, setNewUserPerfil] = useState<UserPerfil>('colaborador');
 
+  const [toasts, setToasts] = useState<Array<{ id: number; message: string; type: 'success' | 'error' | 'warning' | 'info' }>>([]);
+
+  const showToast = (message: string, type: 'success' | 'error' | 'warning' | 'info' = 'success') => {
+    const id = Date.now();
+    setToasts(prev => [...prev, { id, message, type }]);
+    setTimeout(() => {
+      setToasts(prev => prev.filter(t => t.id !== id));
+    }, 4500);
+  };
+
   const [auditSearchUser, setAuditSearchUser] = useState('all');
   const [auditSearchAction, setAuditSearchAction] = useState('all');
   const [auditStartDate, setAuditStartDate] = useState('2023-10-01');
@@ -88,7 +96,7 @@ export default function Configuracoes() {
       }
       if (event.data?.type === 'OAUTH_AUTH_SUCCESS') {
         setIsGoogleConnected(true);
-        toast.success('Conta do Google conectada com sucesso!');
+        showToast('Conta do Google conectada com sucesso!', 'success');
       }
     };
     window.addEventListener('message', handleMessage);
@@ -102,7 +110,7 @@ export default function Configuracoes() {
       const { url } = await response.json();
       window.open(url, 'oauth_popup', 'width=600,height=700');
     } catch (error) {
-      toast.error('Erro ao conectar Google.');
+      showToast('Erro ao conectar Google.', 'error');
     }
   };
 
@@ -185,30 +193,30 @@ export default function Configuracoes() {
       setNewUserPassword('');
       setShowPassword(false);
       setModalOpen('isNovoUsuarioOpen', false);
-      toast.success('Usuário cadastrado com sucesso!');
+      showToast('Usuário cadastrado com sucesso!', 'success');
       
       // Recarregar a lista se necessário (opcional, pode depender do polling)
       window.location.reload();
     } catch (err: any) {
-      toast.error('Erro: ' + err.message);
+      showToast('Erro: ' + err.message, 'error');
     }
   };
 
   const handleToggleUserActive = async (id: string, currentStatus: boolean) => {
     try {
       await updateUser({ id, data: { status: !currentStatus } });
-      toast.success('Status atualizado!');
+      showToast('Status atualizado!', 'success');
     } catch (err: any) {
-      toast.error('Erro ao atualizar status.');
+      showToast('Erro ao atualizar status.', 'error');
     }
   };
 
   const handleRoleChange = async (id: string, newRole: UserPerfil) => {
     try {
       await updateUser({ id, data: { perfil: newRole } });
-      toast.success('Perfil atualizado!');
+      showToast('Perfil atualizado!', 'success');
     } catch (err: any) {
-      toast.error('Erro ao atualizar perfil.');
+      showToast('Erro ao atualizar perfil.', 'error');
     }
   };
 
@@ -219,7 +227,7 @@ export default function Configuracoes() {
       setIsImportingProgress(false);
       setModalOpen('isLegacyImportOpen', false);
       setSelectedCSVFile(null);
-      toast.success('Dados legados importados!');
+      showToast('Dados legados importados!', 'success');
     }, 3000);
   };
 
@@ -353,6 +361,18 @@ export default function Configuracoes() {
           </div>
         )}
       </AnimatePresence>
+
+      {/* Toast Portal */}
+      <div className="fixed bottom-6 right-6 z-[100] flex flex-col gap-3 pointer-events-none select-none max-w-sm w-full">
+        <AnimatePresence>
+          {toasts.map((toast) => (
+            <motion.div key={toast.id} initial={{ opacity: 0, x: 100 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: 100 }} className="pointer-events-auto p-5 rounded-2xl border-2 shadow-2xl flex items-start gap-4 bg-white border-neutral-100">
+              <div className="shrink-0 mt-1">{toast.type === 'success' ? <CheckCircle2 className="w-6 h-6 text-emerald-500" /> : <XCircle className="w-6 h-6 text-alert-red" />}</div>
+              <div><p className="text-[9px] font-black uppercase tracking-widest text-neutral-400 mb-1">{toast.type}</p><p className="text-xs font-black text-neutral-900">{toast.message}</p></div>
+            </motion.div>
+          ))}
+        </AnimatePresence>
+      </div>
     </div>
   );
 }

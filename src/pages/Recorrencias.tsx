@@ -1,4 +1,3 @@
-import { toast } from 'sonner';
 import React, { useState } from 'react';
 import { 
   Repeat, 
@@ -29,9 +28,9 @@ export default function Recorrencias() {
     if (confirm('Deseja realmente interromper esta recorrência? Todas as parcelas futuras em aberto serão removidas.')) {
       try {
         await stopRecorrencia(id);
-        toast('Recorrência interrompida com sucesso!');
+        alert('Recorrência interrompida com sucesso!');
       } catch (err: any) {
-        toast('Erro ao interromper: ' + err.message);
+        alert('Erro ao interromper: ' + err.message);
       }
     }
   };

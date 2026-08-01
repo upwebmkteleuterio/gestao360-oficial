@@ -1,4 +1,3 @@
-import { toast } from 'sonner';
 import React, { useState, useMemo, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import {
@@ -89,8 +88,8 @@ export default function Conciliacao() {
     if (confirm('Deseja remover todas as transações importadas desta conta que ainda não foram conciliadas? Esta ação é útil para corrigir erros de importação.')) {
       try {
         await cleanupTransacoes(selectedContaId);
-        toast('Transações pendentes removidas com sucesso.');
-      } catch (err) { toast('Erro ao limpar dados.'); }
+        alert('Transações pendentes removidas com sucesso.');
+      } catch (err) { alert('Erro ao limpar dados.'); }
     }
   };
 
@@ -148,9 +147,9 @@ export default function Conciliacao() {
       
       await importCSV({ contaBancariaId: selectedImportContaId, rows: rowsToImport, importMode });
       setModalOpen('isImportarCSVOpen', false);
-      toast('Importação concluída com sucesso!');
+      alert('Importação concluída com sucesso!');
     } catch (err: any) {
-      toast('Erro na importação: ' + err.message);
+      alert('Erro na importação: ' + err.message);
     }
   };
 
@@ -176,7 +175,7 @@ export default function Conciliacao() {
         setSelectedTransacaoForConciliationId(null);
         setSelectedLancamentoForConciliationId(null);
       }
-    } catch (err: any) { toast('Erro: ' + err.message); }
+    } catch (err: any) { alert('Erro: ' + err.message); }
   };
 
   const handleClassifyDiffSubmit = async (e: React.FormEvent) => {
@@ -195,12 +194,12 @@ export default function Conciliacao() {
       setDiffJustification('');
       setSelectedTransacaoForConciliationId(null);
       setSelectedLancamentoForConciliationId(null);
-    } catch (err: any) { toast('Erro: ' + err.message); }
+    } catch (err: any) { alert('Erro: ' + err.message); }
   };
 
   const handleUnlink = async (conId: string) => {
     if (confirm('Deseja realmente desfazer esta conciliação? O lançamento voltará para o status "Aberto".')) {
-      try { await unlinkConciliacao({ conciliacaoId: conId }); } catch (err: any) { toast('Erro: ' + err.message); }
+      try { await unlinkConciliacao({ conciliacaoId: conId }); } catch (err: any) { alert('Erro: ' + err.message); }
     }
   };
 
