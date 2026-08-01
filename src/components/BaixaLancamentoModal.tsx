@@ -21,7 +21,7 @@ import {
   MessageSquare
 } from 'lucide-react';
 import { useUIStore } from '../store/uiStore';
-import { useLancamentos, useContas, useEntidades, useCategorias, useCategoriasAjuste } from '../hooks/useData';
+import { useLancamentos, useContas, useEntidades, useCategorias, useCategoriasAjuste, useCentrosCusto, useContasSaldos } from '../hooks/useData';
 import { useAuth } from '../hooks/useAuth';
 import MoneyInput from './MoneyInput';
 import Button from './Button';
@@ -114,6 +114,7 @@ export default function BaixaLancamentoModal() {
       setAcrescimoTipo('valor');
       setMotivoAcrescimoId('');
       setObservacao('');
+      setTaxaBancaria('');
       setTipoBaixa('financeira');
     }
   }, [lancamento, contas]);
@@ -132,17 +133,19 @@ export default function BaixaLancamentoModal() {
   
   // Calculate discount value
   const numericDesconto = parseMoney(descontoValor);
-  const calculatedDesconto = descontoTipo === 'porcentagem' 
-    ? (totalOriginal * numericDesconto) / 100 
+  const calculatedDesconto = descontoTipo === 'porcentagem'
+    ? (totalOriginal * numericDesconto) / 100
     : numericDesconto;
 
   // Calculate increase value
   const numericAcrescimo = parseMoney(acrescimoValor);
-  const calculatedAcrescimo = acrescimoTipo === 'porcentagem' 
-    ? (totalOriginal * numericAcrescimo) / 100 
+  const numericTaxa = parseMoney(taxaBancaria);
+
+  const calculatedAcrescimo = acrescimoTipo === 'porcentagem'
+    ? (totalOriginal * numericAcrescimo) / 100
     : numericAcrescimo;
 
-  const subtotalCalculado = Math.max(0, totalOriginal - calculatedDesconto + calculatedAcrescimo);
+  const subtotalCalculado = Math.max(0, totalOriginal - calculatedDesconto + calculatedAcrescimo + numericTaxa);
   const valorDigitado = parseMoney(valorPago);
 
   // Checks and balances
@@ -165,7 +168,7 @@ export default function BaixaLancamentoModal() {
   const isAcrescimoReasonSelected = !!motivoAcrescimoId;
 
   // Logic for mandatory observation: BPI, AVR or manual divergence
-  const hasFinancialDivergence = calculatedDesconto > 0 || calculatedAcrescimo > 0 || isPartial;
+  const hasFinancialDivergence = calculatedDesconto > 0 || calculatedAcrescimo > 0 || numericTaxa > 0 || isPartial;
   const isObsRequired = isBpi || isAVR || hasFinancialDivergence;
   const isObsFilled = observacao.trim().length > 0;
   
