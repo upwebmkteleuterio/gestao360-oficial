@@ -469,7 +469,7 @@ export default function Lancamentos({
                     <th className="py-5 px-4">C. Atrasada</th>
                     <th className="py-5 px-4">Dt. Referência</th>
                     <th className="py-5 px-4 text-right">Total</th>
-                    <th className="py-5 px-4 text-right">Pendente</th>
+                    <th className="py-5 px-4 text-right">A pagar</th>
                     <th className="py-5 px-4 text-center">Status</th>
                     <th className="py-5 px-3 text-center">Recibo</th>
                   </>
@@ -553,7 +553,7 @@ export default function Lancamentos({
                             {(item.data_competencia || item.data_vencimento).split('-').reverse().join('/')}
                           </td>
                           <td className="py-3 px-4 text-right font-black font-mono text-xs text-neutral-900">
-                            {valueFormatter(item.valor_previsto)}
+                            {valueFormatter(item.valor_original || item.valor_previsto)}
                           </td>
                           <td className={`py-3 px-4 text-right font-black font-mono text-xs ${item.tipo === 'entrada' ? 'text-bank-truth-green' : 'text-neutral-950'}`}>
                             {valueFormatter(getValorLiquido(item))}

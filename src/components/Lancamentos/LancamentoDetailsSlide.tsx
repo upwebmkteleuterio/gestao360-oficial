@@ -299,7 +299,17 @@ export default function LancamentoDetailsSlide() {
                   </h4>
                   
                   <div className="grid grid-cols-2 gap-4">
-                    <DetailItem icon={<DollarSign className="w-3.5 h-3.5" />} label="Valor Previsto" value={formatCurrency(lancamento.valor_previsto)} highlight />
+                    <DetailItem icon={<DollarSign className="w-3.5 h-3.5" />} label="Total Original" value={formatCurrency(lancamento.valor_original || lancamento.valor_previsto)} highlight />
+                    
+                    {lancamento.status_pagamento !== 'pago' && lancamento.valor_original && (
+                      <DetailItem
+                        icon={<Clock className="w-3.5 h-3.5 text-orange-600" />}
+                        label="Saldo A Pagar"
+                        value={formatCurrency(lancamento.valor_previsto)}
+                        highlight
+                      />
+                    )}
+
                     {lancamento.status_pagamento === 'pago' && lancamento.valor_recebido !== undefined && (
                       <DetailItem
                         icon={<CheckCircle2 className="w-3.5 h-3.5 text-bank-truth-green" />}

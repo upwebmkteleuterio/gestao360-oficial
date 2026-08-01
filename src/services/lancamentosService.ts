@@ -275,6 +275,7 @@ export const lancamentosService = {
        .from('lancamentos_financeiros')
        .update({
          valor_previsto: saldoRestante,
+         valor_original: current.valor_original || current.valor_previsto, // Preserva o valor original da dívida total
          // Não resetamos mais para 'pendente_digital' se o original já era 'confirmado_master'
          status_aprovacao: current.status_aprovacao,
          observacoes: observacaoOriginal + `\n[Abatido pagamento parcial de R$ ${valorPagoEfetivo} em ${dataPagamentoVal.split('-').reverse().join('/')}]`
