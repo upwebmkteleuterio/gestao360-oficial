@@ -474,7 +474,7 @@ export default function LancamentoDetailsSlide() {
                         }}
                         className="w-full h-12 bg-bank-truth-green hover:brightness-110 text-white transition-all rounded-xl text-[10px] font-black uppercase tracking-widest flex items-center justify-center gap-2 shadow-sm"
                       >
-                        <CheckCircle2 className="w-4 h-4" /> Quitar / Confirmar Baixa
+                        <CheckCircle2 className="w-4 h-4" /> Dar baixa
                       </button>
                     ) : (
                       <div className="w-full p-3 bg-neutral-50 rounded-xl border border-neutral-100 text-center">
