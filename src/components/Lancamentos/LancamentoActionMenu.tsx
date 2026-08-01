@@ -2,14 +2,16 @@
 
 import React from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { 
-  MoreVertical, 
-  CheckCircle2, 
-  History, 
-  Edit, 
-  Trash2 
+import {
+  MoreVertical,
+  CheckCircle2,
+  History,
+  Edit,
+  Trash2,
+  Download
 } from 'lucide-react';
 import { LancamentoFinanceiro } from '../../types';
+import { useLancamentoAnexos } from '../../hooks/useData';
 
 interface LancamentoActionMenuProps {
   item: LancamentoFinanceiro;
@@ -32,6 +34,9 @@ export default function LancamentoActionMenu({
   onEdit,
   onDelete
 }: LancamentoActionMenuProps) {
+  const { anexos = [] } = useLancamentoAnexos(item.id);
+  const hasAnexo = anexos.length > 0;
+
   return (
     <div className="relative">
       <button
@@ -56,13 +61,26 @@ export default function LancamentoActionMenu({
             onClick={(e) => e.stopPropagation()}
           >
             {item.status_pagamento === 'aberto' && (
-              <button 
-                onClick={() => onBaixa(item.id)} 
+              <button
+                onClick={() => onBaixa(item.id)}
                 className="w-full flex items-center gap-3 px-4 py-3 text-bank-truth-green hover:bg-emerald-50 rounded-xl transition-all"
               >
                 <CheckCircle2 className="w-4 h-4" />
                 <span className="text-[10px] font-black uppercase tracking-widest">Dar Baixa</span>
               </button>
+            )}
+
+            {hasAnexo && (
+              <a
+                href={anexos[0].url}
+                download
+                target="_blank"
+                rel="noreferrer"
+                className="w-full flex items-center gap-3 px-4 py-3 text-primary hover:bg-primary/5 rounded-xl transition-all"
+              >
+                <Download className="w-4 h-4" />
+                <span className="text-[10px] font-black uppercase tracking-widest">Baixar Arquivo</span>
+              </a>
             )}
             
             {isMaster && item.status_pagamento === 'pago' && (

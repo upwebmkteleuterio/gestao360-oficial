@@ -440,6 +440,9 @@ export default function BaixaLancamentoModal() {
                     onClick={() => {
                       const onePercent = totalOriginal * 0.01;
                       setTaxaBancaria(formatBRL(onePercent));
+                      // Update valorPago to match new subtotal with tax
+                      const newSubtotal = Math.max(0, totalOriginal - calculatedDesconto + calculatedAcrescimo + onePercent);
+                      setValorPago(formatBRL(newSubtotal));
                     }}
                     className="text-[9px] font-black uppercase text-primary hover:underline"
                   >

@@ -24,7 +24,8 @@ import {
   AlertTriangle,
   Loader2,
   TrendingUp,
-  Printer
+  Printer,
+  Download
 } from 'lucide-react';
 import { useUIStore } from '../../store/uiStore';
 import { useLancamento, useEntidades, useCategorias, useUsuarios, useLancamentoAnexos, useLancamentos } from '../../hooks/useData';
@@ -456,13 +457,26 @@ export default function LancamentoDetailsSlide() {
                 )}
 
                 <div className="flex flex-col gap-3">
-                  <button
-                    type="button"
-                    onClick={handlePrintReceipt}
-                    className="w-full h-11 bg-neutral-100 hover:bg-neutral-200 text-neutral-900 transition-all rounded-xl text-[10px] font-black uppercase tracking-widest flex items-center justify-center gap-2 border border-neutral-200 shadow-xs"
-                  >
-                    <Printer className="w-4 h-4 text-primary" /> Imprimir Recibo / Comprovante
-                  </button>
+                  <div className="flex gap-3">
+                    <button
+                      type="button"
+                      onClick={handlePrintReceipt}
+                      className="flex-1 h-11 bg-neutral-100 hover:bg-neutral-200 text-neutral-900 transition-all rounded-xl text-[10px] font-black uppercase tracking-widest flex items-center justify-center gap-2 border border-neutral-200 shadow-xs"
+                    >
+                      <Printer className="w-4 h-4 text-primary" /> Imprimir / PDF
+                    </button>
+                    {hasAnexo && (
+                      <a
+                        href={anexos[0].url}
+                        download
+                        target="_blank"
+                        rel="noreferrer"
+                        className="flex-1 h-11 bg-primary/10 hover:bg-primary/20 text-primary transition-all rounded-xl text-[10px] font-black uppercase tracking-widest flex items-center justify-center gap-2 border border-primary/20 shadow-xs"
+                      >
+                        <Download className="w-4 h-4" /> Baixar Arquivo
+                      </a>
+                    )}
+                  </div>
 
                   <div className="flex gap-3">
                     {isMaster ? (

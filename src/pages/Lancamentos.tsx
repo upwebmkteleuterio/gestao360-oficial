@@ -766,6 +766,7 @@ export default function Lancamentos({
                       { id: 'pago', label: 'Liquidados' },
                       { id: 'aberto', label: 'Em Aberto' },
                       { id: 'quitação_pendente', label: 'Pend. Gestor' },
+                      { id: 'bpi', label: 'BPI (Inatividade)' },
                     ].map(opt => (
                       <button
                         key={opt.id}
