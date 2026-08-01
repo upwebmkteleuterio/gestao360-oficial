@@ -27,6 +27,8 @@ import { useLancamentos, useEntidades, useCentrosCusto, useCategorias, useContas
 import { useAuth } from '../hooks/useAuth';
 import MoneyInput from './MoneyInput';
 
+import { toast } from 'sonner';
+
 import { supabase } from '@/integrations/supabase/client';
 import Button from './Button';
 
@@ -258,15 +260,6 @@ export default function NovoLancamentoDrawer() {
   // Toasts state
 
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [toasts, setToasts] = useState<Array<{ id: number; message: string; type: 'success' | 'error' | 'warning' | 'info' }>>([]);
-
-  const showToast = (message: string, type: 'success' | 'error' | 'warning' | 'info' = 'success') => {
-    const id = Date.now();
-    setToasts(prev => [...prev, { id, message, type }]);
-    setTimeout(() => {
-      setToasts(prev => prev.filter(t => t.id !== id));
-    }, 4500);
-  };
 
   const editingItem = useMemo(() => {
     if (!selectedLancamentoIdForModal) return null;
@@ -447,49 +440,49 @@ export default function NovoLancamentoDrawer() {
     
     const val = parseMoney(lancamentoFormDraft.valor_previsto);
     if (isNaN(val) || val <= 0) {
-      showToast('Por favor, informe um valor monetário válido.', 'warning');
+      toast.warning('Por favor, informe um valor monetário válido.');
       setIsSubmitting(false);
       return;
     }
 
     if (!lancamentoFormDraft.entidade_id) {
-      showToast('Por favor, preencha o destinatário.', 'warning');
+      toast.warning('Por favor, preencha o destinatário.');
       setIsSubmitting(false);
       return;
     }
 
     if (!lancamentoFormDraft.condicao) {
-      showToast('Selecione a condição de pagamento.', 'warning');
+      toast.warning('Selecione a condição de pagamento.');
       setIsSubmitting(false);
       return;
     }
 
     if (!lancamentoFormDraft.conta_bancaria_id) {
-      showToast('Por favor, selecione uma conta bancária.', 'warning');
+      toast.warning('Por favor, selecione uma conta bancária.');
       setIsSubmitting(false);
       return;
     }
 
     if (!lancamentoFormDraft.categoria_id) {
-      showToast('Por favor, selecione uma categoria.', 'warning');
+      toast.warning('Por favor, selecione uma categoria.');
       setIsSubmitting(false);
       return;
     }
 
     if (!lancamentoFormDraft.centro_custo_id) {
-      showToast('Por favor, selecione um centro de custo.', 'warning');
+      toast.warning('Por favor, selecione um centro de custo.');
       setIsSubmitting(false);
       return;
     }
 
     if (parseMoney(lancamentoFormDraft.desconto_valor) > 0 && !lancamentoFormDraft.motivo_desconto_id) {
-      showToast('Selecione um motivo para o desconto aplicado.', 'warning');
+      toast.warning('Selecione um motivo para o desconto aplicado.');
       setIsSubmitting(false);
       return;
     }
 
     if (parseMoney(lancamentoFormDraft.acrescimo_valor) > 0 && !lancamentoFormDraft.motivo_acrescimo_id) {
-      showToast('Selecione um motivo para o acréscimo aplicado.', 'warning');
+      toast.warning('Selecione um motivo para o acréscimo aplicado.');
       setIsSubmitting(false);
       return;
     }
@@ -530,7 +523,7 @@ export default function NovoLancamentoDrawer() {
           data: itemDetails,
           mode: selectedRecorrenciaAction || undefined
         });
-        showToast('Lançamento atualizado com sucesso!', 'success');
+        toast.success('Lançamento atualizado com sucesso!');
       } else {
         let recurrencePayload = undefined;
         const isRecurrent = lancamentoFormDraft.condicao === 'a_prazo' || lancamentoFormDraft.recorrencia_repeat;
@@ -584,12 +577,12 @@ export default function NovoLancamentoDrawer() {
         }
       }
 
-      showToast(editingItem ? 'Lançamento atualizado!' : 'Lançamento cadastrado com sucesso!', 'success');
+      toast.success(editingItem ? 'Lançamento atualizado!' : 'Lançamento cadastrado com sucesso!');
       resetAllDrafts();
       setAttachments([]);
       handleClose();
     } catch (err: any) {
-      showToast('Ocorreu um problema: ' + err.message, 'error');
+      toast.error('Ocorreu um problema: ' + err.message);
     } finally {
       setIsSubmitting(false);
     }
@@ -616,8 +609,8 @@ export default function NovoLancamentoDrawer() {
       if (newCat) setLancamentoFormDraft({ categoria_id: (newCat as any).id });
       setIsQuickCatOpen(false);
       setQuickCatName('');
-      showToast('Categoria criada!', 'success');
-    } catch (err) { showToast('Erro ao criar categoria', 'error'); }
+      toast.success('Categoria criada!');
+    } catch (err) { toast.error('Erro ao criar categoria'); }
   };
 
   const handleQuickCCSubmit = async (e: React.FormEvent) => {
@@ -627,8 +620,8 @@ export default function NovoLancamentoDrawer() {
       if (newCC) setLancamentoFormDraft({ centro_custo_id: (newCC as any).id });
       setIsQuickCCOpen(false);
       setQuickCCName('');
-      showToast('Centro de custo criado!', 'success');
-    } catch (err) { showToast('Erro ao criar centro', 'error'); }
+      toast.success('Centro de custo criado!');
+    } catch (err) { toast.error('Erro ao criar centro'); }
   };
 
   const handleQuickAccountSubmit = async (e: React.FormEvent) => {
@@ -646,8 +639,8 @@ export default function NovoLancamentoDrawer() {
       setIsQuickAccountOpen(false);
       setQuickAccountName('');
       setQuickAccountSaldo('0,00');
-      showToast('Conta bancária criada!', 'success');
-    } catch (err) { showToast('Erro ao criar conta', 'error'); }
+      toast.success('Conta bancária criada!');
+    } catch (err) { toast.error('Erro ao criar conta'); }
   };
 
   const handleQuickReasonSubmit = async (e: React.FormEvent) => {
@@ -661,8 +654,8 @@ export default function NovoLancamentoDrawer() {
       }
       setIsQuickReasonOpen(false);
       setQuickReasonName('');
-      showToast('Motivo criado!', 'success');
-    } catch (err) { showToast('Erro ao criar motivo', 'error'); }
+      toast.success('Motivo criado!');
+    } catch (err) { toast.error('Erro ao criar motivo'); }
   };
 
   return (
@@ -1423,35 +1416,6 @@ export default function NovoLancamentoDrawer() {
           </div>
         )}
       </AnimatePresence>
-
-      {/* Toast Portal */}
-      <div className="fixed bottom-6 right-6 z-[100] flex flex-col gap-3 pointer-events-none select-none max-w-sm w-full">
-        <AnimatePresence>
-          {toasts.map((toast) => (
-            <motion.div
-              key={toast.id}
-              initial={{ opacity: 0, x: 100 }}
-              animate={{ opacity: 1, x: 0 }}
-              exit={{ opacity: 0, x: 100 }}
-              className={`pointer-events-auto p-4 rounded-2xl border-2 shadow-xl flex items-start gap-4 bg-white transition-all ${
-                toast.type === 'success' ? 'border-emerald-100 bg-emerald-50/20 text-emerald-900' : 
-                toast.type === 'error' ? 'border-alert-red/10 bg-red-50/20 text-alert-red' :
-                'border-amber-100 bg-amber-50/20 text-amber-900'
-              }`}
-            >
-              <div className="shrink-0 mt-1">
-                {toast.type === 'success' && <CheckCircle2 className="w-6 h-6 text-emerald-600" />}
-                {toast.type === 'error' && <XCircle className="w-6 h-6 text-alert-red" />}
-                {toast.type === 'warning' && <AlertTriangle className="w-6 h-6 text-pending-amber" />}
-              </div>
-              <div className="flex-1">
-                <p className="text-[10px] font-black uppercase tracking-widest mb-0.5 opacity-50">{toast.type}</p>
-                <p className="text-xs font-bold leading-tight">{toast.message}</p>
-              </div>
-            </motion.div>
-          ))}
-        </AnimatePresence>
-      </div>
     </>
   );
 }

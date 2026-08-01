@@ -1,3 +1,4 @@
+import { toast } from 'sonner';
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { 
@@ -172,7 +173,7 @@ export default function CadastroRapidoModal() {
       setModalOpen('isCadastroRapidoOpen', false);
     } catch (err) {
       console.error(err);
-      alert('Erro ao criar entidade. Verifique se os campos estão corretos.');
+      toast('Erro ao criar entidade. Verifique se os campos estão corretos.');
     } finally {
       setIsSubmitting(false);
     }

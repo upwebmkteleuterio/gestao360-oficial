@@ -11,7 +11,8 @@ import { recorrenciasService } from '../services/recorrenciasService';
 import { conciliacoesService } from '../services/conciliacoesService';
 import { usuariosService } from '../services/usuariosService';
 import { auditoriaService } from '../services/auditoriaService';
-import { notificationsService } from '../services/notificationsService';
+import { notificationsService, Notification } from '../services/notificationsService';
+import { toast } from 'sonner';
 import { TipoDiferenca } from '../types';
 
 export function useNotifications() {
@@ -95,9 +96,9 @@ export function useFinancialSummary(filters?: { accountId?: string, costCenterId
 export function useEntidades() {
   const queryClient = useQueryClient();
   const query = useQuery({ queryKey: ['entidades'], queryFn: entidadesService.getAll });
-  const createMutation = useMutation({ mutationFn: entidadesService.create, onSuccess: () => queryClient.invalidateQueries({ queryKey: ['entidades'] }) });
-  const updateMutation = useMutation({ mutationFn: ({ id, data }: { id: string, data: any }) => entidadesService.update(id, data), onSuccess: () => queryClient.invalidateQueries({ queryKey: ['entidades'] }) });
-  const deleteMutation = useMutation({ mutationFn: entidadesService.delete, onSuccess: () => queryClient.invalidateQueries({ queryKey: ['entidades'] }) });
+  const createMutation = useMutation({ mutationFn: entidadesService.create, onSuccess: () => { toast.success('Entidade criada com sucesso'); queryClient.invalidateQueries({ queryKey: ['entidades'] }); }, onError: (err) => toast.error('Erro ao criar entidade: ' + err.message) });
+  const updateMutation = useMutation({ mutationFn: ({ id, data }: { id: string, data: any }) => entidadesService.update(id, data), onSuccess: () => { toast.success('Entidade atualizada com sucesso'); queryClient.invalidateQueries({ queryKey: ['entidades'] }); }, onError: (err) => toast.error('Erro ao atualizar entidade: ' + err.message) });
+  const deleteMutation = useMutation({ mutationFn: entidadesService.delete, onSuccess: () => { toast.success('Entidade excluída com sucesso'); queryClient.invalidateQueries({ queryKey: ['entidades'] }); }, onError: (err) => toast.error('Erro ao excluir entidade: ' + err.message) });
 
   return {
     ...query,
@@ -126,9 +127,9 @@ export function useEntidadeDocuments(entidadeId: string | null) {
 export function useCentrosCusto() {
   const queryClient = useQueryClient();
   const query = useQuery({ queryKey: ['centrosCusto'], queryFn: centrosCustoService.getAll });
-  const createMutation = useMutation({ mutationFn: centrosCustoService.create, onSuccess: () => queryClient.invalidateQueries({ queryKey: ['centrosCusto'] }) });
-  const updateMutation = useMutation({ mutationFn: ({ id, data }: { id: string, data: any }) => centrosCustoService.update(id, data), onSuccess: () => queryClient.invalidateQueries({ queryKey: ['centrosCusto'] }) });
-  const deleteMutation = useMutation({ mutationFn: ({ id }: { id: string }) => centrosCustoService.delete(id), onSuccess: () => queryClient.invalidateQueries({ queryKey: ['centrosCusto'] }) });
+  const createMutation = useMutation({ mutationFn: centrosCustoService.create, onSuccess: () => { toast.success('Centro de custo criado'); queryClient.invalidateQueries({ queryKey: ['centrosCusto'] }); }, onError: (err) => toast.error('Erro ao criar centro: ' + err.message) });
+  const updateMutation = useMutation({ mutationFn: ({ id, data }: { id: string, data: any }) => centrosCustoService.update(id, data), onSuccess: () => { toast.success('Centro de custo atualizado'); queryClient.invalidateQueries({ queryKey: ['centrosCusto'] }); }, onError: (err) => toast.error('Erro ao atualizar centro: ' + err.message) });
+  const deleteMutation = useMutation({ mutationFn: ({ id }: { id: string }) => centrosCustoService.delete(id), onSuccess: () => { toast.success('Centro de custo excluído'); queryClient.invalidateQueries({ queryKey: ['centrosCusto'] }); }, onError: (err) => toast.error('Erro ao excluir centro: ' + err.message) });
 
   return { ...query, createCC: createMutation.mutateAsync, updateCC: updateMutation.mutateAsync, deleteCC: deleteMutation.mutateAsync, isCreating: createMutation.isPending };
 }
@@ -136,9 +137,9 @@ export function useCentrosCusto() {
 export function useCategorias() {
   const queryClient = useQueryClient();
   const query = useQuery({ queryKey: ['categorias'], queryFn: categoriasService.getAll });
-  const createMutation = useMutation({ mutationFn: categoriasService.create, onSuccess: () => queryClient.invalidateQueries({ queryKey: ['categorias'] }) });
-  const updateMutation = useMutation({ mutationFn: ({ id, data }: { id: string, data: any }) => categoriasService.update(id, data), onSuccess: () => queryClient.invalidateQueries({ queryKey: ['categorias'] }) });
-  const deleteMutation = useMutation({ mutationFn: (id: string) => categoriasService.delete(id), onSuccess: () => queryClient.invalidateQueries({ queryKey: ['categorias'] }) });
+  const createMutation = useMutation({ mutationFn: categoriasService.create, onSuccess: () => { toast.success('Categoria criada'); queryClient.invalidateQueries({ queryKey: ['categorias'] }); }, onError: (err) => toast.error('Erro ao criar categoria: ' + err.message) });
+  const updateMutation = useMutation({ mutationFn: ({ id, data }: { id: string, data: any }) => categoriasService.update(id, data), onSuccess: () => { toast.success('Categoria atualizada'); queryClient.invalidateQueries({ queryKey: ['categorias'] }); }, onError: (err) => toast.error('Erro ao atualizar categoria: ' + err.message) });
+  const deleteMutation = useMutation({ mutationFn: (id: string) => categoriasService.delete(id), onSuccess: () => { toast.success('Categoria excluída'); queryClient.invalidateQueries({ queryKey: ['categorias'] }); }, onError: (err) => toast.error('Erro ao excluir categoria: ' + err.message) });
 
   return { ...query, createCategory: createMutation.mutateAsync, updateCategory: updateMutation.mutateAsync, deleteCategory: deleteMutation.mutateAsync, isCreating: createMutation.isPending };
 }
@@ -167,9 +168,9 @@ export function useContasSaldos() {
 export function useContas() {
   const queryClient = useQueryClient();
   const query = useQuery({ queryKey: ['contas'], queryFn: contasService.getAll });
-  const createMutation = useMutation({ mutationFn: (item: any) => contasService.create(item), onSuccess: () => queryClient.invalidateQueries({ queryKey: ['contas'] }) });
-  const updateMutation = useMutation({ mutationFn: ({ id, data }: { id: string, data: any }) => contasService.update(id, data), onSuccess: () => queryClient.invalidateQueries({ queryKey: ['contas'] }) });
-  const deleteMutation = useMutation({ mutationFn: (id: string) => contasService.delete(id), onSuccess: () => queryClient.invalidateQueries({ queryKey: ['contas'] }) });
+  const createMutation = useMutation({ mutationFn: (item: any) => contasService.create(item), onSuccess: () => { toast.success('Conta criada'); queryClient.invalidateQueries({ queryKey: ['contas'] }); }, onError: (err) => toast.error('Erro ao criar conta: ' + err.message) });
+  const updateMutation = useMutation({ mutationFn: ({ id, data }: { id: string, data: any }) => contasService.update(id, data), onSuccess: () => { toast.success('Conta atualizada'); queryClient.invalidateQueries({ queryKey: ['contas'] }); }, onError: (err) => toast.error('Erro ao atualizar conta: ' + err.message) });
+  const deleteMutation = useMutation({ mutationFn: (id: string) => contasService.delete(id), onSuccess: () => { toast.success('Conta excluída'); queryClient.invalidateQueries({ queryKey: ['contas'] }); }, onError: (err) => toast.error('Erro ao excluir conta: ' + err.message) });
 
   return { ...query, createAccount: createMutation.mutateAsync, updateAccount: updateMutation.mutateAsync, deleteAccount: deleteMutation.mutateAsync, isCreating: createMutation.isPending };
 }
@@ -180,17 +181,76 @@ export function useLancamentos(filters?: any) {
   const isMaster = role === 'master';
 
   const query = useQuery({ queryKey: ['lancamentos', filters], queryFn: () => lancamentosService.getAll(filters) });
-  const createMutation = useMutation({ mutationFn: ({ item, recorrencia }: { item: any, recorrencia?: any }) => lancamentosService.create(item, recorrencia), onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['lancamentos'] }); queryClient.invalidateQueries({ queryKey: ['contasSaldos'] }); } });
-  const updateMutation = useMutation({ mutationFn: ({ id, data, mode }: { id: string, data: any, mode?: 'single' | 'all' }) => lancamentosService.update(id, data, mode), onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['lancamentos'] }); queryClient.invalidateQueries({ queryKey: ['auditoriaLogs'] }); queryClient.invalidateQueries({ queryKey: ['contasSaldos'] }); } });
-  const deleteMutation = useMutation({ mutationFn: ({ id, mode }: { id: string, mode?: 'single' | 'all' }) => lancamentosService.delete(id, mode), onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['lancamentos'] }); queryClient.invalidateQueries({ queryKey: ['auditoriaLogs'] }); queryClient.invalidateQueries({ queryKey: ['contasSaldos'] }); } });
-  const batchApproveMutation = useMutation({ mutationFn: ({ ids, targetStatus }: { ids: string[], targetStatus: 'digital' | 'confirmado_master' }) => lancamentosService.approveInBatch(ids, targetStatus), onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['lancamentos'] }); queryClient.invalidateQueries({ queryKey: ['auditoriaLogs'] }); queryClient.invalidateQueries({ queryKey: ['contasSaldos'] }); } });
-  const baixaMutation = useMutation({ mutationFn: ({ id, data }: { id: string, data: any }) => lancamentosService.baixaLancamento(id, data, isMaster), onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['lancamentos'] }); queryClient.invalidateQueries({ queryKey: ['auditoriaLogs'] }); queryClient.invalidateQueries({ queryKey: ['contasSaldos'] }); } });
-  const estornoMutation = useMutation({ mutationFn: (id: string) => lancamentosService.estornarLancamento(id), onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['lancamentos'] }); queryClient.invalidateQueries({ queryKey: ['auditoriaLogs'] }); queryClient.invalidateQueries({ queryKey: ['contasSaldos'] }); } });
+  
+  const createMutation = useMutation({
+    mutationFn: ({ item, recorrencia }: { item: any, recorrencia?: any }) => lancamentosService.create(item, recorrencia),
+    onSuccess: () => {
+      toast.success('Lançamento criado com sucesso');
+      queryClient.invalidateQueries({ queryKey: ['lancamentos'] });
+      queryClient.invalidateQueries({ queryKey: ['contasSaldos'] });
+    },
+    onError: (error) => toast.error('Erro ao criar lançamento: ' + error.message)
+  });
+
+  const updateMutation = useMutation({
+    mutationFn: ({ id, data, mode }: { id: string, data: any, mode?: 'single' | 'all' }) => lancamentosService.update(id, data, mode),
+    onSuccess: () => {
+      toast.success('Lançamento atualizado com sucesso');
+      queryClient.invalidateQueries({ queryKey: ['lancamentos'] });
+      queryClient.invalidateQueries({ queryKey: ['auditoriaLogs'] });
+      queryClient.invalidateQueries({ queryKey: ['contasSaldos'] });
+    },
+    onError: (error) => toast.error('Erro ao atualizar lançamento: ' + error.message)
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: ({ id, mode }: { id: string, mode?: 'single' | 'all' }) => lancamentosService.delete(id, mode),
+    onSuccess: () => {
+      toast.success('Lançamento excluído com sucesso');
+      queryClient.invalidateQueries({ queryKey: ['lancamentos'] });
+      queryClient.invalidateQueries({ queryKey: ['auditoriaLogs'] });
+      queryClient.invalidateQueries({ queryKey: ['contasSaldos'] });
+    },
+    onError: (error) => toast.error('Erro ao excluir lançamento: ' + error.message)
+  });
+
+  const batchApproveMutation = useMutation({
+    mutationFn: ({ ids, targetStatus }: { ids: string[], targetStatus: 'digital' | 'confirmado_master' }) => lancamentosService.approveInBatch(ids, targetStatus),
+    onSuccess: () => {
+      toast.success('Lançamentos aprovados com sucesso');
+      queryClient.invalidateQueries({ queryKey: ['lancamentos'] });
+      queryClient.invalidateQueries({ queryKey: ['auditoriaLogs'] });
+      queryClient.invalidateQueries({ queryKey: ['contasSaldos'] });
+    },
+    onError: (error) => toast.error('Erro ao aprovar lançamentos: ' + error.message)
+  });
+
+  const baixaMutation = useMutation({
+    mutationFn: ({ id, data }: { id: string, data: any }) => lancamentosService.baixaLancamento(id, data, isMaster),
+    onSuccess: () => {
+      toast.success('Baixa realizada com sucesso');
+      queryClient.invalidateQueries({ queryKey: ['lancamentos'] });
+      queryClient.invalidateQueries({ queryKey: ['auditoriaLogs'] });
+      queryClient.invalidateQueries({ queryKey: ['contasSaldos'] });
+    },
+    onError: (error) => toast.error('Erro ao realizar baixa: ' + error.message)
+  });
+
+  const estornoMutation = useMutation({
+    mutationFn: (id: string) => lancamentosService.estornarLancamento(id),
+    onSuccess: () => {
+      toast.success('Estorno realizado com sucesso');
+      queryClient.invalidateQueries({ queryKey: ['lancamentos'] });
+      queryClient.invalidateQueries({ queryKey: ['auditoriaLogs'] });
+      queryClient.invalidateQueries({ queryKey: ['contasSaldos'] });
+    },
+    onError: (error) => toast.error('Erro ao realizar estorno: ' + error.message)
+  });
 
   return {
     ...query,
-    data: query.data?.data || [], 
-    totalCount: query.data?.count || 0, 
+    data: query.data?.data || [],
+    totalCount: query.data?.count || 0,
     createLancamento: createMutation.mutateAsync,
     updateLancamento: updateMutation.mutateAsync,
     deleteLancamento: deleteMutation.mutateAsync,
@@ -286,8 +346,8 @@ export function useConciliacao() {
 export function useUsuarios() {
   const queryClient = useQueryClient();
   const query = useQuery({ queryKey: ['usuarios'], queryFn: usuariosService.getAll });
-  const createMutation = useMutation({ mutationFn: usuariosService.create, onSuccess: () => queryClient.invalidateQueries({ queryKey: ['usuarios'] }) });
-  const updateMutation = useMutation({ mutationFn: ({ id, data }: { id: string, data: any }) => usuariosService.update(id, data), onSuccess: () => queryClient.invalidateQueries({ queryKey: ['usuarios'] }) });
+  const createMutation = useMutation({ mutationFn: usuariosService.create, onSuccess: () => { toast.success('Usuário convidado'); queryClient.invalidateQueries({ queryKey: ['usuarios'] }); }, onError: (err) => toast.error('Erro ao convidar usuário: ' + err.message) });
+  const updateMutation = useMutation({ mutationFn: ({ id, data }: { id: string, data: any }) => usuariosService.update(id, data), onSuccess: () => { toast.success('Usuário atualizado'); queryClient.invalidateQueries({ queryKey: ['usuarios'] }); }, onError: (err) => toast.error('Erro ao atualizar usuário: ' + err.message) });
 
   return { ...query, inviteUser: createMutation.mutateAsync, updateUser: updateMutation.mutateAsync, isInviting: createMutation.isPending };
 }

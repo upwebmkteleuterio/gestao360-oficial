@@ -1,3 +1,4 @@
+import { toast } from 'sonner';
 import React, { useState, useMemo } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { 
@@ -121,7 +122,7 @@ export default function CRM() {
       });
       setSelectedEntity(null);
     } catch (err) {
-      alert('Erro ao atualizar');
+      toast('Erro ao atualizar');
     }
   };
 

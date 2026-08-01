@@ -1,3 +1,4 @@
+import { toast } from 'sonner';
 import React, { useState, useEffect, useMemo } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import {
@@ -231,7 +232,7 @@ export default function BaixaLancamentoModal() {
 
       handleClose();
     } catch (err: any) {
-      alert('Erro ao processar baixa: ' + err.message);
+      // Error handled by toast in useData hook
     } finally {
       setLoading(false);
       setIsAVRConfirmationOpen(false);
@@ -247,7 +248,7 @@ export default function BaixaLancamentoModal() {
       setIsQuickAddOpen(false);
       setQuickAddName('');
     } catch (err: any) {
-      alert('Erro ao criar categoria: ' + err.message);
+      toast('Erro ao criar categoria: ' + err.message);
     }
   };
 

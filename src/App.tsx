@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { BrowserRouter, Routes, Route, Navigate, useNavigate } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { Plus, Menu, LogOut, Bell, Check, Clock } from 'lucide-react';
+import { Toaster } from 'sonner';
 
 import NotificationButton from './components/NotificationButton';
 
@@ -257,6 +257,7 @@ export default function App() {
       <AuthProvider>
         <BrowserRouter>
           <AppContent />
+          <Toaster position="bottom-right" richColors closeButton />
         </BrowserRouter>
       </AuthProvider>
     </QueryClientProvider>

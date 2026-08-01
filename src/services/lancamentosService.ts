@@ -128,7 +128,8 @@ export const lancamentosService = {
     const lancamentoData = {
       ...item,
       user_id: user.id,
-      usuario_criador_id: user.id
+      usuario_criador_id: user.id,
+      valor_original: item.valor_previsto
     };
 
     if (!recorrencia) {
@@ -275,7 +276,7 @@ export const lancamentosService = {
        .from('lancamentos_financeiros')
        .update({
          valor_previsto: saldoRestante,
-         // Não resetamos mais para 'pendente_digital' se o original já era 'confirmado_master'
+         valor_original: current.valor_original || current.valor_previsto,
          status_aprovacao: current.status_aprovacao,
          observacoes: observacaoOriginal + `\n[Abatido pagamento parcial de R$ ${valorPagoEfetivo} em ${dataPagamentoVal.split('-').reverse().join('/')}]`
        })
@@ -292,6 +293,7 @@ export const lancamentosService = {
          ...rest,
          valor_previsto: valorPagoEfetivo,
          valor_recebido: valorPagoEfetivo,
+         valor_original: current.valor_original || current.valor_previsto,
          status_pagamento: isMaster ? 'pago' : 'quitação_pendente',
          data_pagamento: dataPagamentoVal,
 
@@ -314,6 +316,7 @@ export const lancamentosService = {
      const updatePayload: any = {
        status_pagamento: finalPaymentStatus,
        data_pagamento: dataPagamentoVal,
+       valor_original: current.valor_original || current.valor_previsto,
 
        conta_bancaria_id: contaBancariaVal,
        centro_custo_id: data.centro_custo_id || current.centro_custo_id,

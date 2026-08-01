@@ -1,3 +1,4 @@
+import { toast } from 'sonner';
 import React, { useState, useMemo } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import {
@@ -150,7 +151,7 @@ export default function Cadastros() {
       setBankName('');
       setBankInitial('');
       setBankLogoUrl('');
-    } catch (err) { alert('Erro ao salvar conta'); }
+    } catch (err) { toast('Erro ao salvar conta'); }
   };
 
   const handleCCSubmit = async (e: React.FormEvent) => {
@@ -165,7 +166,7 @@ export default function Cadastros() {
       setEditingCC(null);
       setCCName('');
       setCCDesc('');
-    } catch (err) { alert('Erro ao salvar centro de custo'); }
+    } catch (err) { toast('Erro ao salvar centro de custo'); }
   };
 
   const handleCatSubmit = async (e: React.FormEvent) => {
@@ -179,7 +180,7 @@ export default function Cadastros() {
       setIsNewCatOpen(false);
       setEditingCat(null);
       setCatName('');
-    } catch (err) { alert('Erro ao salvar categoria'); }
+    } catch (err) { toast('Erro ao salvar categoria'); }
   };
 
   const handleAjusteSubmit = async (e: React.FormEvent) => {
@@ -193,7 +194,7 @@ export default function Cadastros() {
       setIsNewAjusteOpen(false);
       setEditingAjuste(null);
       setAjusteName('');
-    } catch (err) { alert('Erro ao salvar categoria de ajuste'); }
+    } catch (err) { toast('Erro ao salvar categoria de ajuste'); }
   };
 
   const confirmDelete = async () => {
@@ -213,9 +214,9 @@ export default function Cadastros() {
 
     } catch (err: any) {
       if (err?.code === '23503') {
-        alert('Este registro não pode ser inativado pois existem movimentos críticos vinculados. Recomendamos revisão contábil.');
+        toast('Este registro não pode ser inativado pois existem movimentos críticos vinculados. Recomendamos revisão contábil.');
       } else {
-        alert('Erro ao excluir registro.');
+        toast('Erro ao excluir registro.');
       }
     }
   };
@@ -499,7 +500,7 @@ export default function Cadastros() {
 
                           setBankLogoUrl(publicUrl);
                         } catch (err) {
-                          alert('Erro ao subir logo');
+                          toast('Erro ao subir logo');
                         } finally {
                           setIsUploadingLogo(false);
                         }
