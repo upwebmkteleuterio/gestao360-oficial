@@ -60,16 +60,6 @@ export default function LancamentoActionMenu({
             className="absolute right-0 top-full mt-2 w-48 bg-white border border-neutral-100 rounded-2xl shadow-[0_20px_50px_rgba(0,0,0,0.15)] z-[100] p-2 overflow-hidden"
             onClick={(e) => e.stopPropagation()}
           >
-            {item.status_pagamento === 'aberto' && (
-              <button
-                onClick={() => onBaixa(item.id)}
-                className="w-full flex items-center gap-3 px-4 py-3 text-bank-truth-green hover:bg-emerald-50 rounded-xl transition-all"
-              >
-                <CheckCircle2 className="w-4 h-4" />
-                <span className="text-[10px] font-black uppercase tracking-widest">Dar Baixa</span>
-              </button>
-            )}
-
             {hasAnexo && (
               <a
                 href={anexos[0].url}

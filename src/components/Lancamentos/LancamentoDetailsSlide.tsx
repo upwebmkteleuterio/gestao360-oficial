@@ -63,7 +63,6 @@ export default function LancamentoDetailsSlide() {
   const { anexos = [] } = useLancamentoAnexos(selectedLancamentoIdForModal);
 
   const [dispensarComprovante, setDispensarComprovante] = useState(false);
-  const [loadingAction, setLoadingAction] = useState(false);
 
   const handleClose = () => {
     // Remover o ID da URL ao fechar
@@ -98,55 +97,6 @@ export default function LancamentoDetailsSlide() {
     try {
       return format(new Date(dateStr), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR });
     } catch { return dateStr; }
-  };
-
-  const handleAprovar = async () => {
-    if (!lancamento || !isMaster) return;
-    setLoadingAction(true);
-    try {
-      const updateData: any = {
-        status_aprovacao: 'confirmado_master',
-        data_aprovacao: new Date().toISOString(),
-        status_pagamento: 'pago',
-        data_pagamento: lancamento.data_pagamento || new Date().toISOString().split('T')[0],
-        valor_recebido: lancamento.valor_recebido && lancamento.valor_recebido > 0
-          ? lancamento.valor_recebido
-          : (lancamento.valor_previsto - (lancamento.desconto_valor || 0) + (lancamento.acrescimo_valor || 0))
-      };
-
-      await updateLancamento({
-        id: lancamento.id,
-        data: updateData
-      });
-      handleClose();
-    } catch (err: any) {
-      alert('Erro ao aprovar: ' + err.message);
-    } finally {
-      setLoadingAction(false);
-    }
-  };
-
-  const handleReprovar = async () => {
-    if (!lancamento || !isMaster) return;
-    if (!confirm('Deseja realmente reprovar este lançamento? Ele voltará para a fila de Contas a Pagar/Receber com status de Reprovado.')) return;
-    setLoadingAction(true);
-    try {
-      await updateLancamento({
-        id: lancamento.id,
-        data: {
-          status_aprovacao: 'reprovado',
-          data_aprovacao: null,
-          status_pagamento: 'aberto',
-          valor_recebido: 0,
-          data_pagamento: null
-        }
-      });
-      handleClose();
-    } catch (err: any) {
-      alert('Erro ao reprovar: ' + err.message);
-    } finally {
-      setLoadingAction(false);
-    }
   };
 
   const handlePrintReceipt = () => {
@@ -514,60 +464,24 @@ export default function LancamentoDetailsSlide() {
                   </div>
 
                   <div className="flex gap-3">
-                    {isMaster ? (
-                      <>
-                        {lancamento.status_aprovacao === 'confirmado_master' && !isQuitacaoPendente ? (
-                          <button
-                            onClick={handleReprovar}
-                            disabled={loadingAction}
-                            className="flex-1 h-12 bg-white border-2 border-alert-red/20 text-alert-red hover:bg-alert-red hover:text-white transition-all rounded-xl text-[10px] font-black uppercase tracking-widest flex items-center justify-center gap-2 shadow-sm"
-                          >
-                            <XCircle className="w-4 h-4" /> Reprovar Lançamento
-                          </button>
-                        ) : (
-                          <>
-                            <button
-                              onClick={handleReprovar}
-                              disabled={loadingAction}
-                              className="flex-1 h-12 bg-white border-2 border-neutral-200 text-secondary hover:border-alert-red hover:text-alert-red transition-all rounded-xl text-[10px] font-black uppercase tracking-widest flex items-center justify-center gap-2 shadow-sm"
-                            >
-                              <XCircle className="w-4 h-4" /> Reprovar
-                            </button>
-                            <button
-                              onClick={handleAprovar}
-                              disabled={!canApprove || loadingAction}
-                              className={`flex-[2] h-12 text-white transition-all rounded-xl text-[10px] font-black uppercase tracking-[0.2em] flex items-center justify-center gap-2 shadow-lg shadow-primary/20 ${
-                                canApprove ? 'bg-neutral-900 hover:bg-black' : 'bg-neutral-300 cursor-not-allowed'
-                              }`}
-                            >
-                              {loadingAction ? <Loader2 className="w-4 h-4 animate-spin" /> : <ShieldCheck className="w-4 h-4" />}
-                              {isQuitacaoPendente ? 'Confirmar Quitação' : 'Aprovar Agora'}
-                            </button>
-                          </>
-                        )}
-                      </>
+                    {lancamento.status_pagamento === 'aberto' ? (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setSelectedLancamentoIdForModal(lancamento.id);
+                          setModalOpen('isComprovanteOpen', false);
+                          setModalOpen('isBaixaLancamentoOpen', true);
+                        }}
+                        className="w-full h-12 bg-bank-truth-green hover:brightness-110 text-white transition-all rounded-xl text-[10px] font-black uppercase tracking-widest flex items-center justify-center gap-2 shadow-sm"
+                      >
+                        <CheckCircle2 className="w-4 h-4" /> Quitar / Confirmar Baixa
+                      </button>
                     ) : (
-                      <>
-                        {lancamento.status_pagamento === 'aberto' ? (
-                          <button
-                            type="button"
-                            onClick={() => {
-                              setSelectedLancamentoIdForModal(lancamento.id);
-                              setModalOpen('isComprovanteOpen', false);
-                              setModalOpen('isBaixaLancamentoOpen', true);
-                            }}
-                            className="w-full h-12 bg-bank-truth-green hover:brightness-110 text-white transition-all rounded-xl text-[10px] font-black uppercase tracking-widest flex items-center justify-center gap-2 shadow-sm"
-                          >
-                            <CheckCircle2 className="w-4 h-4" /> Quitar / Confirmar Baixa
-                          </button>
-                        ) : (
-                          <div className="w-full p-3 bg-neutral-50 rounded-xl border border-neutral-100 text-center">
-                            <p className="text-[10px] font-black uppercase text-secondary tracking-widest">
-                              {lancamento.status_pagamento === 'pago' ? 'Título Liquidado' : 'Aprovação reservada ao nível Master'}
-                            </p>
-                          </div>
-                        )}
-                      </>
+                      <div className="w-full p-3 bg-neutral-50 rounded-xl border border-neutral-100 text-center">
+                        <p className="text-[10px] font-black uppercase text-secondary tracking-widest">
+                          {lancamento.status_pagamento === 'pago' ? 'Título Liquidado' : (isMaster ? 'Aprovação pendente via lote' : 'Aprovação reservada ao nível Master')}
+                        </p>
+                      </div>
                     )}
                   </div>
                 </div>

@@ -648,19 +648,7 @@ export default function Lancamentos({
                       <td className="py-3 px-4 text-right" onClick={(e) => e.stopPropagation()}>
                         <div className="flex items-center justify-end gap-2">
                           <div className="flex items-center gap-1.5 mr-2">
-                            {isMaster && isAprovacaoPendente && (
-                              <button
-                                onClick={() => {
-                                  setSelectedLancamentoIdForModal(item.id);
-                                  setModalOpen('isComprovanteOpen', true);
-                                }}
-                                className="px-3 py-1.5 bg-neutral-900 text-white text-[9px] font-black uppercase tracking-widest rounded-lg hover:bg-black transition-all flex items-center gap-1.5 shadow-sm"
-                              >
-                                <ShieldCheck className="w-3 h-3" /> Aprovar
-                              </button>
-                            )}
-
-                            {item.status_pagamento === 'aberto' && (!isMaster || item.status_aprovacao === 'confirmado_master') && (
+                            {item.status_pagamento === 'aberto' && (
                               <button
                                 onClick={() => handleOpenBaixa(item.id)}
                                 className="px-3 py-1.5 bg-bank-truth-green text-white text-[9px] font-black uppercase tracking-widest rounded-lg hover:brightness-110 transition-all flex items-center gap-1.5 shadow-sm"
@@ -670,7 +658,7 @@ export default function Lancamentos({
                             )}
                           </div>
 
-                          <LancamentoActionMenu 
+                          <LancamentoActionMenu
                             item={item}
                             isMaster={isMaster}
                             isActive={activeMenuId === item.id}
