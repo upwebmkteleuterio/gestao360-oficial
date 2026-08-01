@@ -311,7 +311,7 @@ export const lancamentosService = {
      return updatedOriginal as LancamentoFinanceiro;
    } else {
      const updatePayload: any = {
-       status_pagamento: isMaster ? 'pago' : 'quitação_pendente',
+       status_pagamento: finalPaymentStatus,
        data_pagamento: dataPagamentoVal,
 
        conta_bancaria_id: contaBancariaVal,
