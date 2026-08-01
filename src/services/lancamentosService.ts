@@ -235,7 +235,8 @@ export const lancamentosService = {
    valor_acrescimo?: number,
    motivo_ajuste?: string,
    motivo_desconto_id?: string,
-   motivo_acrescimo_id?: string
+   motivo_acrescimo_id?: string,
+   propagate_avr?: boolean
  }, isMaster: boolean = false): Promise<LancamentoFinanceiro> => {
     const { data: current, error: getError } = await supabase
       .from('lancamentos_financeiros')
@@ -343,6 +344,19 @@ export const lancamentosService = {
        .single();
 
      if (updateError) throw updateError;
+
+     // Propagação do AVR se solicitado e for recorrente
+     if (isAVR && data.propagate_avr && current.recorrencia_id) {
+       await supabase
+         .from('lancamentos_financeiros')
+         .update({
+           valor_previsto: valorPagoEfetivo,
+           observacoes: (current.observacoes || '') + `\n[Valor ajustado via AVR propagado em ${new Date().toLocaleDateString('pt-BR')}]`
+         })
+         .eq('recorrencia_id', current.recorrencia_id)
+         .eq('status_pagamento', 'aberto');
+     }
+
      return updated as LancamentoFinanceiro;
    }
  },

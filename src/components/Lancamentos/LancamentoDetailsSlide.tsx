@@ -350,6 +350,41 @@ export default function LancamentoDetailsSlide() {
                   
                   <div className="grid grid-cols-2 gap-4">
                     <DetailItem icon={<DollarSign className="w-3.5 h-3.5" />} label="Valor Previsto" value={formatCurrency(lancamento.valor_previsto)} highlight />
+                    {lancamento.status_pagamento === 'pago' && lancamento.valor_recebido !== undefined && (
+                      <DetailItem
+                        icon={<CheckCircle2 className="w-3.5 h-3.5 text-bank-truth-green" />}
+                        label="Valor Liquidado"
+                        value={formatCurrency(lancamento.valor_recebido)}
+                        highlight
+                      />
+                    )}
+                    
+                    {/* Exibição detalhada para AVR ou Diferenças */}
+                    {lancamento.status_pagamento === 'pago' && lancamento.valor_original && lancamento.valor_original !== lancamento.valor_recebido && (
+                      <>
+                        <div className="col-span-2 p-4 bg-primary/5 rounded-2xl border border-primary/10 space-y-3">
+                          <div className="flex justify-between items-center border-b border-primary/10 pb-2">
+                            <span className="text-[9px] font-black text-secondary uppercase tracking-widest">Memória de Cálculo (AVR)</span>
+                            <span className="px-2 py-0.5 bg-primary text-white text-[8px] font-black uppercase rounded">Ajustado</span>
+                          </div>
+                          <div className="space-y-2">
+                            <div className="flex justify-between items-center text-[10px] font-bold">
+                              <span className="text-secondary">Valor Original:</span>
+                              <span className="text-neutral-900">{formatCurrency(lancamento.valor_original)}</span>
+                            </div>
+                            <div className="flex justify-between items-center text-[10px] font-bold">
+                              <span className="text-secondary">Valor Quitado:</span>
+                              <span className="text-bank-truth-green">{formatCurrency(lancamento.valor_recebido || 0)}</span>
+                            </div>
+                            <div className="flex justify-between items-center text-[10px] font-black pt-2 border-t border-primary/10">
+                              <span className="text-primary uppercase tracking-widest">Saldo Aberto (Diferença):</span>
+                              <span className="text-alert-red">{formatCurrency(lancamento.valor_original - (lancamento.valor_recebido || 0))}</span>
+                            </div>
+                          </div>
+                        </div>
+                      </>
+                    )}
+
                     <DetailItem icon={<Calendar className="w-3.5 h-3.5" />} label="Vencimento" value={formatDate(lancamento.data_vencimento)} />
                     <DetailItem icon={<Calendar className="w-3.5 h-3.5" />} label="Data Competência" value={formatDate(lancamento.data_competencia)} />
                     <DetailItem icon={<Calendar className="w-3.5 h-3.5" />} label="Recebido em" value={formatDate(lancamento.data_pagamento)} />

@@ -18,7 +18,8 @@ import {
   User,
   Tag,
   CreditCard,
-  MessageSquare
+  MessageSquare,
+  Repeat
 } from 'lucide-react';
 import { useUIStore } from '../store/uiStore';
 import { useLancamentos, useContas, useEntidades, useCategorias, useCategoriasAjuste, useCentrosCusto, useContasSaldos } from '../hooks/useData';
@@ -93,6 +94,8 @@ export default function BaixaLancamentoModal() {
   const [valorPago, setValorPago] = useState('');
   const [observacao, setObservacao] = useState('');
   const [taxaBancaria, setTaxaBancaria] = useState('');
+  const [propagateAVR, setPropagateAVR] = useState(false);
+  const [isAVRConfirmationOpen, setIsAVRConfirmationOpen] = useState(false);
 
   // Quick add states
   const [isQuickAddOpen, setIsQuickAddOpen] = useState(false);
@@ -116,6 +119,8 @@ export default function BaixaLancamentoModal() {
       setObservacao('');
       setTaxaBancaria('');
       setTipoBaixa('financeira');
+      setPropagateAVR(false);
+      setIsAVRConfirmationOpen(false);
     }
   }, [lancamento, contas]);
 
@@ -199,6 +204,12 @@ export default function BaixaLancamentoModal() {
     e.preventDefault();
     if (!canSave) return;
 
+    // Se for AVR e recorrente, precisamos de confirmação antes de prosseguir
+    if (tipoBaixa === 'avr' && lancamento.recorrencia_id && !isAVRConfirmationOpen) {
+      setIsAVRConfirmationOpen(true);
+      return;
+    }
+
     setLoading(true);
     try {
       await baixaLancamento({
@@ -213,7 +224,8 @@ export default function BaixaLancamentoModal() {
           valor_acrescimo: calculatedAcrescimo + numericTaxa,
           motivo_desconto_id: motivoDescontoId || undefined,
           motivo_acrescimo_id: motivoAcrescimoId || undefined,
-          motivo_ajuste: observacao
+          motivo_ajuste: observacao,
+          propagate_avr: propagateAVR
         }
       });
 
@@ -222,6 +234,7 @@ export default function BaixaLancamentoModal() {
       alert('Erro ao processar baixa: ' + err.message);
     } finally {
       setLoading(false);
+      setIsAVRConfirmationOpen(false);
     }
   };
 
@@ -656,7 +669,68 @@ export default function BaixaLancamentoModal() {
           </div>
         )}
       </AnimatePresence>
-    </AnimatePresence>
-
-  );
-}
+  
+        {/* AVR Propagation Modal */}
+        <AnimatePresence>
+          {isAVRConfirmationOpen && (
+            <div className="fixed inset-0 z-[400] flex items-center justify-center p-4">
+              <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setIsAVRConfirmationOpen(false)} className="absolute inset-0 bg-black/40 backdrop-blur-sm" />
+              <motion.div
+                initial={{ scale: 0.9, opacity: 0 }}
+                animate={{ scale: 1, opacity: 1 }}
+                exit={{ scale: 0.9, opacity: 0 }}
+                className="bg-white w-full max-w-[420px] rounded-[32px] shadow-2xl relative z-10 overflow-hidden border border-neutral-100"
+              >
+                <div className="p-8 text-center space-y-4">
+                  <div className="w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center mx-auto text-primary">
+                    <Repeat className="w-8 h-8" />
+                  </div>
+                  <div>
+                    <h3 className="text-sm font-black uppercase tracking-widest text-neutral-900">Propagar Ajuste (AVR)?</h3>
+                    <p className="text-[10px] font-bold text-secondary uppercase leading-relaxed mt-2">
+                      Este lançamento faz parte de uma recorrência. Deseja aplicar este novo valor de <span className="text-primary font-black">R$ {formatBRL(valorDigitado)}</span> em todas as parcelas futuras que ainda estão em aberto?
+                    </p>
+                  </div>
+  
+                  <div className="grid grid-cols-1 gap-3 pt-4">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setPropagateAVR(false);
+                        // Trigger submit manually by calling handleSubmit again but bypassing the dialog check
+                        setLoading(true);
+                        handleSubmit({ preventDefault: () => {} } as any);
+                      }}
+                      className="w-full py-4 bg-neutral-50 hover:bg-neutral-100 text-neutral-900 rounded-2xl text-[10px] font-black uppercase tracking-widest border-2 border-neutral-100 transition-all flex items-center justify-center gap-2"
+                    >
+                      <CheckCircle2 className="w-4 h-4 text-secondary" /> Ajustar apenas esta
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setPropagateAVR(true);
+                        setLoading(true);
+                        handleSubmit({ preventDefault: () => {} } as any);
+                      }}
+                      className="w-full py-4 bg-neutral-900 hover:bg-black text-white rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all flex items-center justify-center gap-2 shadow-lg"
+                    >
+                      <Plus className="w-4 h-4" /> Ajustar todas em aberto
+                    </button>
+                  </div>
+  
+                  <button
+                    type="button"
+                    onClick={() => setIsAVRConfirmationOpen(false)}
+                    className="text-[9px] font-black uppercase text-secondary hover:text-neutral-900 transition-colors pt-2"
+                  >
+                    Voltar e Revisar
+                  </button>
+                </div>
+              </motion.div>
+            </div>
+          )}
+        </AnimatePresence>
+      </AnimatePresence>
+  
+    );
+  }
