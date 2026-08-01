@@ -537,7 +537,7 @@ export default function Lancamentos({
                             </div>
                           </td>
                           <td className="py-3 px-4 whitespace-nowrap font-mono text-xs">
-                            {item.status_pagamento === 'pago' ? (
+                            {item.status_pagamento === 'pago' || item.status_pagamento === 'bpi' ? (
                               <span className="text-neutral-300 font-normal">-</span>
                             ) : (
                               days > 0 ? (
@@ -606,6 +606,11 @@ export default function Lancamentos({
                               <div className="flex flex-col">
                                 <span className="text-amber-600 font-black text-[9px] uppercase">{isMaster ? 'Confirme Baixa' : 'Pendente Gestor'}</span>
                                 <span className="text-[9px] text-neutral-400 font-mono">{item.data_pagamento?.split('-').reverse().join('/')}</span>
+                              </div>
+                            ) : item.status_pagamento === 'bpi' ? (
+                              <div className="flex flex-col">
+                                <span className="text-neutral-900 font-black text-[9px] uppercase">Baixa Inatividade</span>
+                                <span className="text-[9px] text-neutral-400 font-mono">{item.bpi_em?.split('-').reverse().join('/')}</span>
                               </div>
                             ) : (
                               <span className="text-neutral-300 font-bold uppercase text-[9px] tracking-widest">Aguardando</span>
