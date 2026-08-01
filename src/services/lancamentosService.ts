@@ -245,12 +245,12 @@ export const lancamentosService = {
 
     if (getError) throw getError;
 
-    const valorPagoEfetivo = data.valor_pago > 0 ? data.valor_pago : current.valor_previsto;
+    const isBPI = data.tipo_baixa === 'bpi';
+    const isAVR = data.tipo_baixa === 'avr';
+    const valorPagoEfetivo = isBPI ? 0 : (data.valor_pago > 0 ? data.valor_pago : current.valor_previsto);
     const subtotal = current.valor_previsto - (data.valor_desconto || 0) + (data.valor_acrescimo || 0);
     const isPartial = valorPagoEfetivo < subtotal;
-    const isBPI = data.tipo_baixa === 'bpi';
-   const isAVR = data.tipo_baixa === 'avr';
-   const dataPagamentoVal = data.data_pagamento || new Date().toISOString().split('T')[0];
+    const dataPagamentoVal = data.data_pagamento || new Date().toISOString().split('T')[0];
    const contaBancariaVal = data.conta_bancaria_id || current.conta_bancaria_id;
 
    // AVR logic: Update history and handle original value
@@ -266,7 +266,7 @@ export const lancamentosService = {
    // Define final payment status based on role
    const finalPaymentStatus = isBPI ? 'bpi' : (isMaster ? 'pago' : 'quitação_pendente');
 
-   if (isPartial) {
+   if (isPartial && !isBPI) {
      const saldoRestante = subtotal - valorPagoEfetivo;
 
      // ATUALIZAÇÃO CRÍTICA: O resíduo mantém o status de aprovação do pai
@@ -311,7 +311,6 @@ export const lancamentosService = {
      return updatedOriginal as LancamentoFinanceiro;
    } else {
      const updatePayload: any = {
-       valor_recebido: isBPI ? 0 : valorPagoEfetivo,
        status_pagamento: isMaster ? 'pago' : 'quitação_pendente',
        data_pagamento: dataPagamentoVal,
 
@@ -324,7 +323,8 @@ export const lancamentosService = {
        motivo_desconto_id: data.motivo_desconto_id || null,
        motivo_acrescimo_id: data.motivo_acrescimo_id || null,
        valor_previsto: isAVR ? valorPagoEfetivo : (isBPI ? current.valor_previsto : subtotal),
-       observacoes: observacaoFinal
+       observacoes: observacaoFinal,
+       valor_recebido: isBPI ? 0 : valorPagoEfetivo
      };
 
      if (isAVR) {

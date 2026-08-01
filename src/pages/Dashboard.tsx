@@ -47,7 +47,11 @@ export default function Dashboard() {
   const { data: auditoriaLogs = [], refetch: refetchAudit, isFetching: fetchingAudit } = useAuditoriaLogs();
   const { data: entidades = [] } = useEntidades();
 
-  const contas = useMemo(() => rawContas.filter((c: any) => c.status !== 'excluido'), [rawContas]);
+  const contas = useMemo(() => {
+    return rawContas
+      .filter((c: any) => c.status !== 'excluido')
+      .sort((a: any, b: any) => (a.nome || '').localeCompare(b.nome || ''));
+  }, [rawContas]);
   const centrosCusto = useMemo(() => rawCentrosCusto.filter((c: any) => c.status !== 'excluido'), [rawCentrosCusto]);
 
   // Detail modal state for audit
@@ -147,17 +151,18 @@ export default function Dashboard() {
  const { data: contasSaldos = [] } = useContasSaldos();
 
  const accountsBalances = useMemo(() => {
-   const bpiBankId = '51b29a3a-80ca-4e6d-9765-2519ca4e42bd';
+   // Buscar IDs reais do BPI
+   const bpiBank = rawContas.find(c => c.nome === 'BANCO BPI');
    return contas.map(account => {
      const saldoObj = contasSaldos.find(s => s.conta_id === account.id);
      return {
        ...account,
        auditado: saldoObj ? Number(saldoObj.saldo_confirmado) : (account.saldo_inicial || 0),
        operacional: saldoObj ? Number(saldoObj.saldo_operacional) : (account.saldo_inicial || 0),
-       isBpi: account.id === bpiBankId
+       isBpi: account.nome === 'BANCO BPI'
      };
    });
- }, [contas, contasSaldos]);
+ }, [contas, contasSaldos, rawContas]);
 
  const globalBalances = useMemo(() => {
    const nonBpi = accountsBalances.filter(a => !a.isBpi);

@@ -55,24 +55,23 @@ export default function BaixaLancamentoModal() {
   const { role } = useAuth();
   const { data: lancamentos = [], baixaLancamento } = useLancamentos();
   const { data: rawContas = [] } = useContas();
+  const { data: rawCCs = [] } = useCentrosCusto();
+  const { data: contasSaldos = [] } = useContasSaldos();
   const { data: entidades = [] } = useEntidades();
   const { data: categorias = [] } = useCategorias();
   const { categoriasAjuste, createCategoriaAjuste } = useCategoriasAjuste();
 
-  // Calculate real balance for each account
+  // Calculate real balance for each account using the RPC data
   const contas = useMemo(() => {
-    return rawContas.map((conta: any) => {
-      const lancamentosDaConta = lancamentos.filter((l: any) => l.conta_bancaria_id === conta.id && l.status_pagamento === 'pago');
-      const totalEntradas = lancamentosDaConta
-        .filter((l: any) => l.tipo === 'entrada')
-        .reduce((sum: number, l: any) => sum + (Number(l.valor_recebido) || 0), 0);
-      const totalSaidas = lancamentosDaConta
-        .filter((l: any) => l.tipo === 'saida')
-        .reduce((sum: number, l: any) => sum + (Number(l.valor_recebido) || 0), 0);
-      const saldoReal = (conta.saldo_inicial || 0) + totalEntradas - totalSaidas;
-      return { ...conta, saldo_real: saldoReal };
-    });
-  }, [rawContas, lancamentos]);
+    return rawContas
+      .filter((c: any) => c.status !== 'excluido')
+      .sort((a: any, b: any) => (a.nome || '').localeCompare(b.nome || ''))
+      .map((conta: any) => {
+        const saldoObj = contasSaldos.find(s => s.conta_id === conta.id);
+        const saldoReal = saldoObj ? Number(saldoObj.saldo_operacional) : (conta.saldo_inicial || 0);
+        return { ...conta, saldo_real: saldoReal };
+      });
+  }, [rawContas, contasSaldos]);
 
   const [loading, setLoading] = useState(false);
   
@@ -93,6 +92,7 @@ export default function BaixaLancamentoModal() {
   
   const [valorPago, setValorPago] = useState('');
   const [observacao, setObservacao] = useState('');
+  const [taxaBancaria, setTaxaBancaria] = useState('');
 
   // Quick add states
   const [isQuickAddOpen, setIsQuickAddOpen] = useState(false);
@@ -177,14 +177,18 @@ export default function BaixaLancamentoModal() {
   const canSave = (!isObsRequired || isObsFilled) &&
                   (!isDescontoReasonRequired || isDescontoReasonSelected) &&
                   (!isAcrescimoReasonRequired || isAcrescimoReasonSelected) &&
-                  !isOverpaid && valorDigitado > 0 && !saldoInsuficienteBaixa;
+                  !isOverpaid && (isBpi || valorDigitado > 0) && !saldoInsuficienteBaixa;
 
   const handleTipoBaixaChange = (tipo: 'financeira' | 'bpi' | 'avr') => {
     setTipoBaixa(tipo);
     if (tipo === 'bpi') {
-      // Auto-select BPI bank and cost center
-      const bpiBankId = '51b29a3a-80ca-4e6d-9765-2519ca4e42bd';
-      const bpiCCId = 'a64bdc3b-243b-47bd-adf4-e2e9bb54081c';
+      // Auto-select BPI bank and cost center dynamically
+      const bpiBank = rawContas.find(c => c.nome === 'BANCO BPI');
+      const bpiCC = rawCCs.find(cc => cc.nome === 'BPI');
+      
+      const bpiBankId = bpiBank?.id || '51b29a3a-80ca-4e6d-9765-2519ca4e42bd';
+      const bpiCCId = bpiCC?.id || 'a64bdc3b-243b-47bd-adf4-e2e9bb54081c';
+      
       setContaId(bpiBankId);
       setCentroCustoId(bpiCCId);
       setValorPago('0,00');
@@ -203,10 +207,10 @@ export default function BaixaLancamentoModal() {
           valor_pago: valorDigitado,
           data_pagamento: dataPagamento,
           conta_bancaria_id: contaId,
-          centro_custo_id: centroCustoId,
+          centro_custo_id: centroCustoId || undefined,
           tipo_baixa: tipoBaixa,
           valor_desconto: calculatedDesconto,
-          valor_acrescimo: calculatedAcrescimo,
+          valor_acrescimo: calculatedAcrescimo + numericTaxa,
           motivo_desconto_id: motivoDescontoId || undefined,
           motivo_acrescimo_id: motivoAcrescimoId || undefined,
           motivo_ajuste: observacao
@@ -423,6 +427,36 @@ export default function BaixaLancamentoModal() {
                     </div>
                   )}
                 </div>
+              </div>
+
+              {/* Taxa Administrativa / Certificado (1%) */}
+              <div className="p-5 bg-neutral-50 rounded-3xl border border-neutral-100 space-y-3">
+                <div className="flex justify-between items-center">
+                  <label className="text-[10px] font-black uppercase text-secondary tracking-widest flex items-center gap-2">
+                    <Percent className="w-4 h-4" /> Taxas / Tarifas Bancárias
+                  </label>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const onePercent = totalOriginal * 0.01;
+                      setTaxaBancaria(formatBRL(onePercent));
+                    }}
+                    className="text-[9px] font-black uppercase text-primary hover:underline"
+                  >
+                    Calcular 1% Sugerido
+                  </button>
+                </div>
+                <div className="relative">
+                  <span className="absolute left-4 top-1/2 -translate-y-1/2 text-xs font-black text-secondary">R$</span>
+                  <MoneyInput
+                    disabled={isBpi}
+                    value={taxaBancaria}
+                    onChange={setTaxaBancaria}
+                    className="w-full h-12 pl-10 pr-4 bg-white border-2 border-neutral-100 rounded-2xl text-sm font-black text-on-surface focus:outline-none focus:border-primary transition-all disabled:opacity-50"
+                    placeholder="0,00"
+                  />
+                </div>
+                <p className="text-[8px] font-bold text-secondary uppercase tracking-tight">Este valor será somado ao subtotal como custo de transação.</p>
               </div>
 
               {/* Subtotal Calculado */}
