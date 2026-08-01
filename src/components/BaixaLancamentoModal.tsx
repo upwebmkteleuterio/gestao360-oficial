@@ -185,16 +185,13 @@ export default function BaixaLancamentoModal() {
   const handleTipoBaixaChange = (tipo: 'financeira' | 'bpi' | 'avr') => {
     setTipoBaixa(tipo);
     if (tipo === 'bpi') {
-      // Auto-select BPI bank and cost center dynamically
-      const bpiBank = rawContas.find(c => c.nome === 'BANCO BPI');
-      const bpiCC = rawCCs.find(cc => cc.nome === 'BPI');
-      
-      const bpiBankId = bpiBank?.id || '51b29a3a-80ca-4e6d-9765-2519ca4e42bd';
-      const bpiCCId = bpiCC?.id || 'a64bdc3b-243b-47bd-adf4-e2e9bb54081c';
-      
-      setContaId(bpiBankId);
-      setCentroCustoId(bpiCCId);
+      // BPI now preserves original bank but zeros the amount
       setValorPago('0,00');
+      // CCD is still useful to categorize as BPI internally
+      const bpiCC = rawCCs.find(cc => cc.nome === 'BPI');
+      if (bpiCC) setCentroCustoId(bpiCC.id);
+    } else {
+      setValorPago(formatBRL(lancamento.valor_previsto));
     }
   };
 

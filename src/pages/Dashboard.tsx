@@ -151,24 +151,21 @@ export default function Dashboard() {
  const { data: contasSaldos = [] } = useContasSaldos();
 
  const accountsBalances = useMemo(() => {
-   // Buscar IDs reais do BPI
-   const bpiBank = rawContas.find(c => c.nome === 'BANCO BPI');
    return contas.map(account => {
      const saldoObj = contasSaldos.find(s => s.conta_id === account.id);
      return {
        ...account,
        auditado: saldoObj ? Number(saldoObj.saldo_confirmado) : (account.saldo_inicial || 0),
        operacional: saldoObj ? Number(saldoObj.saldo_operacional) : (account.saldo_inicial || 0),
-       isBpi: account.nome === 'BANCO BPI'
+       isBpi: false // Banco BPI removido
      };
    });
- }, [contas, contasSaldos, rawContas]);
+ }, [contas, contasSaldos]);
 
  const globalBalances = useMemo(() => {
-   const nonBpi = accountsBalances.filter(a => !a.isBpi);
    return {
-     operacional: nonBpi.reduce((sum, acc) => sum + (acc.operacional || 0), 0),
-     auditado: nonBpi.reduce((sum, acc) => sum + (acc.auditado || 0), 0)
+     operacional: accountsBalances.reduce((sum, acc) => sum + (acc.operacional || 0), 0),
+     auditado: accountsBalances.reduce((sum, acc) => sum + (acc.auditado || 0), 0)
    };
  }, [accountsBalances]);
 

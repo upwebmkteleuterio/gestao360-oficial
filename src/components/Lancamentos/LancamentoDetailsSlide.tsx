@@ -389,14 +389,15 @@ export default function LancamentoDetailsSlide() {
                   
                   <div className="grid grid-cols-1 gap-2">
                     {anexos.length > 0 ? (
-                      anexos.map((anexo: any) => (
-                        <a 
-                          key={anexo.id}
-                          href={anexo.url}
-                          target="_blank"
-                          rel="noreferrer"
-                          className="group flex items-center justify-between p-4 bg-neutral-50 hover:bg-neutral-100 border border-neutral-100 rounded-2xl transition-all"
-                        >
+                    anexos.map((anexo: any) => (
+                      <a
+                        key={anexo.id}
+                        href={anexo.url}
+                        target="_blank"
+                        rel="noreferrer"
+                        download
+                        className="group flex items-center justify-between p-4 bg-neutral-50 hover:bg-neutral-100 border border-neutral-100 rounded-2xl transition-all"
+                      >
                           <div className="flex items-center gap-3">
                             <div className="w-10 h-10 rounded-xl bg-white border border-neutral-200 flex items-center justify-center text-primary">
                               <Eye className="w-5 h-5" />
