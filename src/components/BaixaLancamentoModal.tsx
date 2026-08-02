@@ -19,13 +19,23 @@ import {
   Tag,
   CreditCard,
   MessageSquare,
-  Repeat
+  Repeat,
+  Paperclip,
+  FileText
 } from 'lucide-react';
 import { useUIStore } from '../store/uiStore';
-import { useLancamentos, useContas, useEntidades, useCategorias, useCategoriasAjuste, useCentrosCusto, useContasSaldos } from '../hooks/useData';
+import { useLancamentos, useContas, useEntidades, useCategorias, useCategoriasAjuste, useCentrosCusto, useContasSaldos, useLancamentoAnexos } from '../hooks/useData';
 import { useAuth } from '../hooks/useAuth';
 import MoneyInput from './MoneyInput';
 import Button from './Button';
+import { supabase } from '@/integrations/supabase/client';
+
+interface LocalFile {
+  name: string;
+  size: number;
+  type: string;
+  file: File;
+}
 
 function formatBRL(value: any): string {
   if (value === null || value === undefined) return '0,00';
@@ -97,6 +107,7 @@ export default function BaixaLancamentoModal() {
   const [taxaBancaria, setTaxaBancaria] = useState('');
   const [propagateAVR, setPropagateAVR] = useState(false);
   const [isAVRConfirmationOpen, setIsAVRConfirmationOpen] = useState(false);
+  const [attachments, setAttachments] = useState<LocalFile[]>([]);
 
   // Quick add states
   const [isQuickAddOpen, setIsQuickAddOpen] = useState(false);
@@ -104,6 +115,7 @@ export default function BaixaLancamentoModal() {
   const [quickAddName, setQuickAddName] = useState('');
 
   const lancamento = lancamentos.find(l => l.id === selectedLancamentoIdForModal);
+  const { anexos: existingAnexos, deleteAnexo } = useLancamentoAnexos(selectedLancamentoIdForModal);
 
   useEffect(() => {
     if (lancamento) {
@@ -123,6 +135,7 @@ export default function BaixaLancamentoModal() {
       setTipoBaixa('financeira');
       setPropagateAVR(false);
       setIsAVRConfirmationOpen(false);
+      setAttachments([]);
     }
   }, [lancamento, contas]);
 
@@ -231,6 +244,35 @@ export default function BaixaLancamentoModal() {
           propagate_avr: propagateAVR
         }
       });
+
+      // Handle Attachments
+      if (attachments.length > 0) {
+        const { data: { user } } = await supabase.auth.getUser();
+        for (const attachment of attachments) {
+          const fileExt = attachment.name.split('.').pop();
+          const fileName = `${Math.random()}.${fileExt}`;
+          const filePath = `lancamentos/${lancamento.id}/${fileName}`;
+
+          const { error: uploadError } = await supabase.storage
+            .from('documents')
+            .upload(filePath, attachment.file);
+
+          if (!uploadError) {
+            const { data: { publicUrl } } = supabase.storage
+              .from('documents')
+              .getPublicUrl(filePath);
+
+            await (supabase.from('lancamento_anexos') as any).insert({
+              lancamento_id: lancamento.id,
+              nome: attachment.name,
+              url: publicUrl,
+              tamanho: attachment.size,
+              tipo_arquivo: attachment.type,
+              user_id: user?.id
+            });
+          }
+        }
+      }
 
       handleClose();
     } catch (err: any) {
@@ -624,6 +666,80 @@ export default function BaixaLancamentoModal() {
                       <option key={c.id} value={c.id}>{c.nome_banco} (Saldo: R$ {formatBRL(c.saldo_real)})</option>
                     ))}
                   </select>
+                </div>
+              </div>
+
+              {/* Anexos */}
+              <div className="space-y-4">
+                <h4 className="text-[10px] font-black uppercase tracking-widest text-primary flex items-center gap-2 border-b border-neutral-100 pb-2">
+                  <Paperclip className="w-4 h-4" /> Comprovantes e Anexos
+                </h4>
+                
+                <div className="relative group cursor-pointer h-12 border-2 border-dashed border-neutral-200 rounded-xl hover:border-primary transition-all flex items-center justify-center gap-2 text-secondary hover:text-primary bg-neutral-50/50">
+                  <Paperclip className="w-4 h-4" />
+                  <span className="text-[10px] font-black uppercase">
+                    {(attachments.length + (existingAnexos?.length || 0)) > 0 
+                      ? `${attachments.length + (existingAnexos?.length || 0)} Anexo(s)` 
+                      : 'Anexar Comprovante'}
+                  </span>
+                  <input
+                    type="file"
+                    multiple
+                    onChange={(e) => {
+                      if (e.target.files) {
+                        const fileList = Array.from(e.target.files) as File[];
+                        const newFiles: LocalFile[] = fileList.map(f => ({
+                          name: f.name,
+                          size: f.size,
+                          type: f.type,
+                          file: f
+                        }));
+                        setAttachments(prev => [...prev, ...newFiles]);
+                      }
+                    }}
+                    className="absolute inset-0 opacity-0 cursor-pointer"
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  {/* Existing Remote Attachments */}
+                  {existingAnexos && existingAnexos.map((anexo: any) => (
+                    <div key={anexo.id} className="flex items-center justify-between p-3 bg-primary/5 border border-primary/20 rounded-xl">
+                      <div className="flex items-center gap-2">
+                        <FileText className="w-3.5 h-3.5 text-primary" />
+                        <span className="text-[10px] font-bold truncate max-w-[150px] text-primary">{anexo.nome} (Salvo)</span>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          if (confirm('Excluir este anexo permanentemente?')) {
+                            const path = anexo.url.split('documents/')[1];
+                            deleteAnexo({ id: anexo.id, path });
+                          }
+                        }}
+                        className="text-neutral-400 hover:text-alert-red transition-colors"
+                      >
+                        <X className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+                  ))}
+
+                  {/* Local Files to be Uploaded */}
+                  {attachments.map((f, i: number) => (
+                    <div key={i} className="flex items-center justify-between p-3 bg-neutral-50 border border-neutral-100 rounded-xl">
+                      <div className="flex items-center gap-2">
+                        <FileText className="w-3.5 h-3.5 text-primary" />
+                        <span className="text-[10px] font-bold truncate max-w-[150px]">{f.name}</span>
+                      </div>
+                      <button 
+                        type="button" 
+                        onClick={() => setAttachments(prev => prev.filter((_, idx) => idx !== i))} 
+                        className="text-neutral-400 hover:text-alert-red transition-colors"
+                      >
+                        <X className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+                  ))}
                 </div>
               </div>
 

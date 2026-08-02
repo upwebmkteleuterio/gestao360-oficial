@@ -92,7 +92,7 @@ export default function Sidebar({ isOpen, onClose, isCollapsed }: SidebarProps) 
         </div>
 
         {/* Navigation list */}
-        <nav className={`flex-1 p-4 space-y-1.5 scrollbar-none ${isCollapsed ? 'overflow-visible' : 'overflow-y-auto'}`}>
+        <nav className={`flex-1 p-4 space-y-1.5 scrollbar-thin ${isCollapsed ? 'overflow-visible' : 'overflow-y-auto'}`}>
           {navItems.filter(item => item.roles.includes(role)).map((item) => {
             const isActive = location.pathname.startsWith(item.path);
             const Icon = item.icon;
