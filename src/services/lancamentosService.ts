@@ -230,6 +230,7 @@ export const lancamentosService = {
    data_pagamento: string,
    conta_bancaria_id: string,
    centro_custo_id?: string,
+   categoria_id?: string,
    tipo_baixa?: 'financeira' | 'bpi' | 'avr',
    valor_desconto?: number,
    valor_acrescimo?: number,
@@ -298,6 +299,7 @@ export const lancamentosService = {
 
          conta_bancaria_id: contaBancariaVal,
          centro_custo_id: data.centro_custo_id || current.centro_custo_id,
+         categoria_id: data.categoria_id || current.categoria_id,
          tipo_baixa: data.tipo_baixa || 'financeira',
          desconto_valor: data.valor_desconto || 0,
          acrescimo_valor: data.valor_acrescimo || 0,
@@ -318,6 +320,7 @@ export const lancamentosService = {
 
        conta_bancaria_id: contaBancariaVal,
        centro_custo_id: data.centro_custo_id || current.centro_custo_id,
+       categoria_id: data.categoria_id || current.categoria_id,
        tipo_baixa: data.tipo_baixa || 'financeira',
        desconto_valor: data.valor_desconto || 0,
        acrescimo_valor: data.valor_acrescimo || 0,

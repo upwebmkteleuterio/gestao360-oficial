@@ -79,6 +79,7 @@ export default function BaixaLancamentoModal() {
   // Fields
   const [dataPagamento, setDataPagamento] = useState(new Date().toISOString().split('T')[0]);
   const [contaId, setContaId] = useState('');
+  const [categoriaId, setCategoriaId] = useState('');
   const [centroCustoId, setCentroCustoId] = useState('');
   
   const [tipoBaixa, setTipoBaixa] = useState<'financeira' | 'bpi' | 'avr'>('financeira');
@@ -108,6 +109,7 @@ export default function BaixaLancamentoModal() {
     if (lancamento) {
       setValorPago(formatBRL(lancamento.valor_previsto));
       setContaId(lancamento.conta_bancaria_id || (contas[0]?.id || ''));
+      setCategoriaId(lancamento.categoria_id || '');
       setCentroCustoId(lancamento.centro_custo_id || '');
       // Reset details
       setDescontoValor('');
@@ -219,6 +221,7 @@ export default function BaixaLancamentoModal() {
           data_pagamento: dataPagamento,
           conta_bancaria_id: contaId,
           centro_custo_id: centroCustoId || undefined,
+          categoria_id: categoriaId || undefined,
           tipo_baixa: tipoBaixa,
           valor_desconto: calculatedDesconto,
           valor_acrescimo: calculatedAcrescimo + numericTaxa,
@@ -564,13 +567,43 @@ export default function BaixaLancamentoModal() {
                 )}
               </AnimatePresence>
 
-              {/* Data & Conta */}
-              <div className="grid grid-cols-2 gap-4">
+              {/* Data & Conta & Categoria & CC */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <label className="text-[10px] font-black uppercase text-secondary tracking-widest">Categoria Contábil</label>
+                  <select
+                    disabled={isBpi}
+                    value={categoriaId}
+                    onChange={(e) => setCategoriaId(e.target.value)}
+                    className="w-full h-12 bg-neutral-50 border-2 border-neutral-100 rounded-2xl px-4 text-xs font-bold outline-none focus:border-primary appearance-none cursor-pointer disabled:opacity-50"
+                  >
+                    <option value="">Selecione...</option>
+                    {categorias.filter(c => c.tipo === lancamento.tipo).map(c => (
+                      <option key={c.id} value={c.id}>{c.nome}</option>
+                    ))}
+                  </select>
+                </div>
+
+                <div className="space-y-2">
+                  <label className="text-[10px] font-black uppercase text-secondary tracking-widest">Centro de Custo</label>
+                  <select
+                    disabled={isBpi}
+                    value={centroCustoId}
+                    onChange={(e) => setCentroCustoId(e.target.value)}
+                    className="w-full h-12 bg-neutral-50 border-2 border-neutral-100 rounded-2xl px-4 text-xs font-bold outline-none focus:border-primary appearance-none cursor-pointer disabled:opacity-50"
+                  >
+                    <option value="">Selecione...</option>
+                    {rawCCs.filter((cc: any) => cc.status !== 'excluido').map(cc => (
+                      <option key={cc.id} value={cc.id}>{cc.nome}</option>
+                    ))}
+                  </select>
+                </div>
+
                 <div className="space-y-2">
                   <label className="text-[10px] font-black uppercase text-secondary tracking-widest flex items-center gap-2">
                     <Calendar className="w-4 h-4" /> Data do Pagamento
                   </label>
-                  <input 
+                  <input
                     type="date"
                     disabled={isBpi}
                     value={dataPagamento}
@@ -581,7 +614,7 @@ export default function BaixaLancamentoModal() {
 
                 <div className="space-y-2">
                   <label className="text-[10px] font-black uppercase text-secondary tracking-widest">Conta / Caixa</label>
-                  <select 
+                  <select
                     disabled={isBpi}
                     value={contaId}
                     onChange={(e) => setContaId(e.target.value)}
