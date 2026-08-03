@@ -163,13 +163,13 @@ export default function Lancamentos({
     if (!table || !mirror) return;
 
     const handleTableScroll = () => {
-      if (mirror.scrollLeft !== table.scrollLeft) {
+      if (Math.abs(mirror.scrollLeft - table.scrollLeft) > 1) {
         mirror.scrollLeft = table.scrollLeft;
       }
     };
 
     const handleMirrorScroll = () => {
-      if (table.scrollLeft !== mirror.scrollLeft) {
+      if (Math.abs(table.scrollLeft - mirror.scrollLeft) > 1) {
         table.scrollLeft = mirror.scrollLeft;
       }
     };
@@ -180,9 +180,8 @@ export default function Lancamentos({
     // Initial width
     setTableWidth(table.scrollWidth);
 
-    // Watch for size changes
     const observer = new ResizeObserver(() => {
-      setTableWidth(table.scrollWidth);
+      if (table) setTableWidth(table.scrollWidth);
     });
     observer.observe(table);
 
@@ -490,11 +489,11 @@ export default function Lancamentos({
         </div>
       </div>
 
-      <div className="bg-white border-2 border-neutral-100 rounded-[32px] overflow-hidden shadow-sm relative">
-        <div 
+      <div className="bg-white border-2 border-neutral-100 rounded-[32px] shadow-sm relative">
+        <div
           ref={tableScroll.ref}
           {...tableScroll.props}
-          className="overflow-x-auto scrollbar-none select-none"
+          className="overflow-x-auto scrollbar-none select-none rounded-t-[32px]"
         >
           <table className="w-full text-left border-collapse min-w-[1200px]">
             <thead>
@@ -727,16 +726,17 @@ export default function Lancamentos({
           </table>
         </div>
 
-        {/* Floating Horizontal Scrollbar Mirror */}
-        <div 
+        {/* Floating Horizontal Scrollbar Mirror - Stays fixed at viewport bottom */}
+        <div
           ref={mirrorScrollRef}
-          className="sticky bottom-0 z-30 overflow-x-auto scrollbar-thin bg-white/80 backdrop-blur-md border-t border-neutral-100 flex h-4"
+          className="sticky bottom-0 z-[60] overflow-x-auto scrollbar-thin bg-neutral-50/90 backdrop-blur-md border-y border-neutral-200 flex h-5"
+          style={{ marginBottom: '-1px' }}
         >
           <div style={{ width: tableWidth, height: 1 }} className="shrink-0" />
         </div>
 
         {/* Pagination Bar */}
-        <div className="bg-neutral-50/50 px-8 py-4 border-t border-neutral-100 flex items-center justify-between">
+        <div className="bg-neutral-50/50 px-8 py-4 border-t border-neutral-100 flex items-center justify-between rounded-b-[32px]">
           <span className="text-neutral-400 font-bold text-[9px] uppercase tracking-widest">
             Exibindo {filteredLancamentos.length} de {totalCount} registros
           </span>
