@@ -17,6 +17,7 @@ import NovoLancamentoDrawer from './components/NovoLancamentoDrawer';
 import LancamentoDetailsSlide from './components/Lancamentos/LancamentoDetailsSlide';
 import CadastroRapidoModal from './components/CadastroRapidoModal';
 import BaixaLancamentoModal from './components/BaixaLancamentoModal';
+import AprovacaoModal from './components/AprovacaoModal';
 import AITestSuite from './components/AITestSuite';
 
 import NewLaunchButton from './components/NewLaunchButton';
@@ -241,7 +242,9 @@ function AppContent() {
               <LancamentoDetailsSlide />
               <CadastroRapidoModal />
               <BaixaLancamentoModal />
+              <AprovacaoModal />
               {/* <AITestSuite /> */}
+
             </div>
 
           </PrivateRoute>

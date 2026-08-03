@@ -37,12 +37,15 @@ interface UIState {
   isNovoUsuarioOpen: boolean;
   isLegacyImportOpen: boolean;
   isBaixaLancamentoOpen: boolean;
+  isAprovacaoModalOpen: boolean;
   isSidebarCollapsed: boolean;
 
   // Selected item contexts for modals
 
   selectedLancamentoIdForModal: string | null;
+  selectedLancamentoIdsForBatch: string[];
   selectedRecorrenciaAction: 'single' | 'all' | null;
+
   selectedTransacaoForConciliationId: string | null;
   selectedLancamentoForConciliationId: string | null;
   currentConciliationDifferenceValue: number;
@@ -106,8 +109,9 @@ interface UIState {
   setModalOpen: (modal: keyof Omit<UIState, 'theme' | 'activeTab' | 'activeConfigSubTab' | 'currentUserId' | 'scrollPositions' | 'selectedLancamentoIdForModal' | 'selectedRecorrenciaAction' | 'selectedTransacaoForConciliationId' | 'selectedLancamentoForConciliationId' | 'currentConciliationDifferenceValue' | 'currentConciliationId' | 'lancamentoFormDraft' | 'entidadeFormDraft' | 'setTheme' | 'setActiveTab' | 'setActiveConfigSubTab' | 'setCurrentUserId' | 'setModalOpen' | 'setSelectedLancamentoIdForModal' | 'setSelectedRecorrenciaAction' | 'setSelectedTransacaoForConciliaId' | 'setSelectedLancamentoForConciliaId' | 'setCurrentConciliationId' | 'setLancamentoFormDraft' | 'setEntidadeFormDraft' | 'setScrollPosition'>, value: boolean) => void;
   
   setSelectedLancamentoIdForModal: (id: string | null) => void;
+  setSelectedLancamentoIdsForBatch: (ids: string[]) => void;
   setSelectedRecorrenciaAction: (action: 'single' | 'all' | null) => void;
-  
+
   setSelectedTransacaoForConciliationId: (id: string | null) => void;
   setSelectedLancamentoForConciliationId: (id: string | null) => void;
   setCurrentConciliationDifferenceValue: (val: number) => void;
@@ -188,11 +192,14 @@ export const useUIStore = create<UIState>()(
       isNovoUsuarioOpen: false,
       isLegacyImportOpen: false,
       isBaixaLancamentoOpen: false,
+      isAprovacaoModalOpen: false,
       isSidebarCollapsed: false,
 
       selectedLancamentoIdForModal: null,
+      selectedLancamentoIdsForBatch: [],
 
       selectedRecorrenciaAction: null,
+
       selectedTransacaoForConciliationId: null,
       selectedLancamentoForConciliationId: null,
       currentConciliationDifferenceValue: 0,
@@ -210,8 +217,9 @@ export const useUIStore = create<UIState>()(
       setModalOpen: (modal, value) => set({ [modal]: value }),
       
       setSelectedLancamentoIdForModal: (id) => set({ selectedLancamentoIdForModal: id }),
+      setSelectedLancamentoIdsForBatch: (ids) => set({ selectedLancamentoIdsForBatch: ids }),
       setSelectedRecorrenciaAction: (action) => set({ selectedRecorrenciaAction: action }),
-      
+
       setSelectedTransacaoForConciliationId: (id) => set({ selectedTransacaoForConciliationId: id }),
       setSelectedLancamentoForConciliationId: (id) => set({ selectedLancamentoForConciliationId: id }),
       setCurrentConciliationDifferenceValue: (currentConciliationDifferenceValue) => set({ currentConciliationDifferenceValue }),

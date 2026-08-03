@@ -56,7 +56,15 @@ export default function Lancamentos({
   statusAprovacaoOverride
 }: LancamentosProps) {
   const { role } = useAuth();
-  const { setModalOpen, setSelectedLancamentoIdForModal, setActiveTab } = useUIStore();
+  const {
+    setModalOpen,
+    setSelectedLancamentoIdForModal,
+    selectedLancamentoIdsForBatch,
+    setSelectedLancamentoIdsForBatch,
+    setActiveTab,
+    isAprovacaoModalOpen
+  } = useUIStore();
+
   const dragScrollTabs = useDragScroll();
   const tableScroll = useDragScroll();
   const mirrorScrollRef = useRef<HTMLDivElement>(null);
@@ -110,10 +118,11 @@ export default function Lancamentos({
   useEffect(() => {
     setStatusPagamento(statusPagamentoOverride || (isColaborador ? 'quitação_pendente' : 'all'));
     setTypeFilter(typeOverride || 'all');
-    setSelectedIds([]);
+    setSelectedLancamentoIdsForBatch([]);
   }, [statusPagamentoOverride, typeOverride, isColaborador]);
 
   const [authorIdFilter, setAuthorIdIdFilter] = useState('all');
+
   const [categoryIdFilter, setCategoryIdFilter] = useState('all');
   const [contaIdFilter, setContaIdFilter] = useState('all');
   const [centroCustoIdFilter, setCentroCustoIdFilter] = useState('all');
@@ -126,7 +135,6 @@ export default function Lancamentos({
 
   const hasActiveFilters = searchTerm !== '' || docSearchTerm !== '' || approvalStatus !== 'all' || typeFilter !== (typeOverride || 'all') || authorIdFilter !== 'all' || categoryIdFilter !== 'all' || contaIdFilter !== 'all' || centroCustoIdFilter !== 'all' || condicaoFilter !== 'all' || temDescontoFilter !== 'all' || temAcrescimoFilter !== 'all' || motivoDescontoFilter !== 'all' || motivoAcrescimoFilter !== 'all';
 
-  const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [activeMenuId, setActiveMenuId] = useState<string | null>(null);
 
   const {
@@ -255,8 +263,9 @@ export default function Lancamentos({
     setTemAcrescimoFilter('all');
     setMotivoDescontoFilter('all');
     setMotivoAcrescimoFilter('all');
-    setSelectedIds([]);
+    setSelectedLancamentoIdsForBatch([]);
     setSelectedAccountId(null);
+
     handlePresetChange('15');
     setCurrentPage(1);
   };
@@ -267,26 +276,26 @@ export default function Lancamentos({
       (l.status_aprovacao !== 'confirmado_master' || l.status_pagamento === 'quitação_pendente') && 
       l.status_pagamento !== 'bpi'
     );
-    if (selectedIds.length === selectable.length) {
-      setSelectedIds([]);
+    if (selectedLancamentoIdsForBatch.length === selectable.length) {
+      setSelectedLancamentoIdsForBatch([]);
     } else {
-      setSelectedIds(selectable.map(l => l.id));
+      setSelectedLancamentoIdsForBatch(selectable.map(l => l.id));
     }
   };
 
   const toggleSelectOne = (id: string) => {
     if (!isMaster) return;
-    setSelectedIds(prev => prev.includes(id) ? prev.filter(i => i !== id) : [...prev, id]);
+    setSelectedLancamentoIdsForBatch(
+      selectedLancamentoIdsForBatch.includes(id)
+        ? selectedLancamentoIdsForBatch.filter(i => i !== id)
+        : [...selectedLancamentoIdsForBatch, id]
+    );
   };
 
-  const handleBatchApprove = async () => {
+  const handleBatchApprove = () => {
     if (!isMaster) return;
-    if (confirm(`Aprovar ${selectedIds.length} títulos selecionados?`)) {
-      try {
-        await batchApprove({ ids: selectedIds, targetStatus: 'confirmado_master' });
-        setSelectedIds([]);
-      } catch (err) { alert('Erro ao aprovar em lote'); }
-    }
+    if (selectedLancamentoIdsForBatch.length === 0) return;
+    setModalOpen('isAprovacaoModalOpen', true);
   };
 
   const handleOpenBaixa = (id: string) => {
@@ -424,12 +433,13 @@ export default function Lancamentos({
           {isMaster && (
             <Button
               onClick={() => handleBatchApprove()}
-              disabled={selectedIds.length === 0 || isBatchApproving}
+              disabled={selectedLancamentoIdsForBatch.length === 0 || isBatchApproving}
             >
               <ShieldCheck className="w-4 h-4" />
-              Aprovar ({selectedIds.length})
+              Aprovar ({selectedLancamentoIdsForBatch.length})
             </Button>
           )}
+
         </div>
       </div>
 
@@ -520,12 +530,13 @@ export default function Lancamentos({
                   {isMaster && (
                     <input
                       type="checkbox"
-                      checked={selectedIds.length > 0 && selectedIds.length === filteredLancamentos.filter(l => (l.status_aprovacao !== 'confirmado_master' || l.status_pagamento === 'quitação_pendente') && l.status_pagamento !== 'bpi').length}
+                      checked={selectedLancamentoIdsForBatch.length > 0 && selectedLancamentoIdsForBatch.length === filteredLancamentos.filter(l => (l.status_aprovacao !== 'confirmado_master' || l.status_pagamento === 'quitação_pendente') && l.status_pagamento !== 'bpi').length}
                       onChange={toggleSelectAll}
                       className="rounded-md border-neutral-300 text-primary focus:ring-primary w-4 h-4 transition-all"
                     />
                   )}
                 </th>
+
                 <th className="py-5 px-4">Documento</th>
                 {isOperationalView ? (
                   <>
@@ -560,7 +571,7 @@ export default function Lancamentos({
                 <tr><td colSpan={10} className="py-24 text-center"><div className="flex flex-col items-center gap-3 opacity-20"><Receipt className="w-12 h-12" /><p className="font-black uppercase text-[10px] tracking-widest">Nenhum lançamento localizado</p></div></td></tr>
               ) : (
                 filteredLancamentos.map((item, idx) => {
-                  const isSelected = selectedIds.includes(item.id);
+                  const isSelected = selectedLancamentoIdsForBatch.includes(item.id);
                   const isAprovacaoPendente = (item.status_aprovacao !== 'confirmado_master' || item.status_pagamento === 'quitação_pendente') && item.status_pagamento !== 'bpi';
                   const days = getDaysOverdue(item.data_vencimento);
 
@@ -583,6 +594,7 @@ export default function Lancamentos({
                           />
                         )}
                       </td>
+
                       <td className="py-3 px-4 whitespace-nowrap">
                         <div className="flex items-center gap-1">
                           <span className="text-neutral-900 font-black uppercase text-[10px]">
