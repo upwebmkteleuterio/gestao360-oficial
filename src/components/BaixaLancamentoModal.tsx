@@ -107,6 +107,7 @@ export default function BaixaLancamentoModal() {
   const [taxaBancaria, setTaxaBancaria] = useState('');
   const [propagateAVR, setPropagateAVR] = useState(false);
   const [isAVRConfirmationOpen, setIsAVRConfirmationOpen] = useState(false);
+  const [isFinalConfirmationOpen, setIsFinalConfirmationOpen] = useState(false);
   const [attachments, setAttachments] = useState<LocalFile[]>([]);
 
   // Quick add states
@@ -225,6 +226,16 @@ export default function BaixaLancamentoModal() {
       return;
     }
 
+    // Para baixas normais (financeira ou BPI), pedimos confirmação final
+    if (!isFinalConfirmationOpen && !isAVRConfirmationOpen) {
+      setIsFinalConfirmationOpen(true);
+      return;
+    }
+
+    await executeSubmit();
+  };
+
+  const executeSubmit = async () => {
     setLoading(true);
     try {
       await baixaLancamento({
@@ -280,6 +291,7 @@ export default function BaixaLancamentoModal() {
     } finally {
       setLoading(false);
       setIsAVRConfirmationOpen(false);
+      setIsFinalConfirmationOpen(false);
     }
   };
 
@@ -846,9 +858,7 @@ export default function BaixaLancamentoModal() {
                       type="button"
                       onClick={() => {
                         setPropagateAVR(false);
-                        // Trigger submit manually by calling handleSubmit again but bypassing the dialog check
-                        setLoading(true);
-                        handleSubmit({ preventDefault: () => {} } as any);
+                        executeSubmit();
                       }}
                       className="w-full py-4 bg-neutral-50 hover:bg-neutral-100 text-neutral-900 rounded-2xl text-[10px] font-black uppercase tracking-widest border-2 border-neutral-100 transition-all flex items-center justify-center gap-2"
                     >
@@ -858,13 +868,13 @@ export default function BaixaLancamentoModal() {
                       type="button"
                       onClick={() => {
                         setPropagateAVR(true);
-                        setLoading(true);
-                        handleSubmit({ preventDefault: () => {} } as any);
+                        executeSubmit();
                       }}
                       className="w-full py-4 bg-neutral-900 hover:bg-black text-white rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all flex items-center justify-center gap-2 shadow-lg"
                     >
                       <Plus className="w-4 h-4" /> Ajustar todas em aberto
                     </button>
+
                   </div>
   
                   <button
