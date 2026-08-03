@@ -407,7 +407,7 @@ export const lancamentosService = {
     }
   },
 
-  approveInBatch: async (ids: string[], targetStatus: 'digital' | 'confirmado_master'): Promise<void> => {
+  approveInBatch: async (ids: string[], targetStatus: 'digital' | 'confirmado_master' | 'reprovado'): Promise<void> => {
     const updatePayload: any = {
       status_aprovacao: targetStatus,
       data_aprovacao: targetStatus === 'confirmado_master' ? new Date().toISOString() : null
@@ -416,6 +416,10 @@ export const lancamentosService = {
     if (targetStatus === 'confirmado_master') {
       updatePayload.status_pagamento = 'pago';
       updatePayload.data_pagamento = new Date().toISOString().split('T')[0];
+    } else if (targetStatus === 'reprovado') {
+      // Quando reprovado, o título volta a ficar aberto e limpa datas de pagamento se existirem
+      updatePayload.status_pagamento = 'aberto';
+      updatePayload.data_pagamento = null;
     }
 
     const { error } = await supabase

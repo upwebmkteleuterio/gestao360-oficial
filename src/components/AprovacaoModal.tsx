@@ -6,8 +6,10 @@ import {
   AlertCircle,
   Loader2,
   Paperclip,
-  FileText
+  FileText,
+  XCircle
 } from 'lucide-react';
+
 import { useUIStore } from '../store/uiStore';
 import { useLancamentos } from '../hooks/useData';
 import { supabase } from '@/integrations/supabase/client';
@@ -85,6 +87,22 @@ export default function AprovacaoModal() {
       handleClose();
     } catch (err: any) {
       alert('Erro ao aprovar: ' + err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleReprove = async () => {
+    if (!confirm(`Deseja realmente reprovar ${selectedCount > 1 ? `os ${selectedCount} títulos selecionados` : 'este título'}?`)) {
+      return;
+    }
+
+    setLoading(true);
+    try {
+      await batchApprove({ ids: selectedLancamentoIdsForBatch, targetStatus: 'reprovado' });
+      handleClose();
+    } catch (err: any) {
+      alert('Erro ao reprovar: ' + err.message);
     } finally {
       setLoading(false);
     }
@@ -187,6 +205,15 @@ export default function AprovacaoModal() {
               >
                 {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <CheckCircle2 className="w-4 h-4" />}
                 Confirmar Aprovação
+              </button>
+
+              <button
+                onClick={handleReprove}
+                disabled={loading}
+                className="w-full py-4 bg-white hover:bg-red-50 text-alert-red rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all flex items-center justify-center gap-2 border-2 border-red-100 disabled:opacity-50"
+              >
+                <XCircle className="w-4 h-4" />
+                Reprovar {selectedCount > 1 ? 'Selecionados' : 'Título'}
               </button>
             </div>
 
