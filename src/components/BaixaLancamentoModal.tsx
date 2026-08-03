@@ -889,7 +889,58 @@ export default function BaixaLancamentoModal() {
             </div>
           )}
         </AnimatePresence>
-      </AnimatePresence>
+
+        {/* General Confirmation Modal */}
+        <AnimatePresence>
+          {isFinalConfirmationOpen && (
+            <div className="fixed inset-0 z-[400] flex items-center justify-center p-4">
+              <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setIsFinalConfirmationOpen(false)} className="absolute inset-0 bg-black/40 backdrop-blur-sm" />
+              <motion.div
+                initial={{ scale: 0.9, opacity: 0 }}
+                animate={{ scale: 1, opacity: 1 }}
+                exit={{ scale: 0.9, opacity: 0 }}
+                className="bg-white w-full max-w-[420px] rounded-[32px] shadow-2xl relative z-10 overflow-hidden border border-neutral-100"
+              >
+                <div className="p-8 text-center space-y-4">
+                  <div className="w-16 h-16 bg-bank-truth-green/10 rounded-full flex items-center justify-center mx-auto text-bank-truth-green">
+                    <CheckCircle2 className="w-8 h-8" />
+                  </div>
+                  <div>
+                    <h3 className="text-sm font-black uppercase tracking-widest text-neutral-900">
+                      {tipoBaixa === 'bpi' ? 'Confirmar Baixa por Inatividade?' : 'Confirmar Baixa de Título?'}
+                    </h3>
+                    <p className="text-[10px] font-bold text-secondary uppercase leading-relaxed mt-2">
+                      {tipoBaixa === 'bpi' ? (
+                        <>Você está prestes a realizar a baixa por inatividade (cancelamento) do título de <span className="text-primary font-black">{entName}</span>.</>
+                      ) : (
+                        <>Você está prestes a baixar o título de <span className="text-primary font-black">{entName}</span> no valor de <span className="text-primary font-black">R$ {formatBRL(valorDigitado)}</span>.</>
+                      )}
+                    </p>
+                  </div>
   
+                  <div className="grid grid-cols-1 gap-3 pt-4">
+                    <button
+                      type="button"
+                      onClick={() => executeSubmit()}
+                      className="w-full py-4 bg-neutral-900 hover:bg-black text-white rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all flex items-center justify-center gap-2 shadow-lg"
+                    >
+                      <CheckCircle2 className="w-4 h-4" /> Confirmar e Baixar
+                    </button>
+                  </div>
+  
+                  <button
+                    type="button"
+                    onClick={() => setIsFinalConfirmationOpen(false)}
+                    className="text-[9px] font-black uppercase text-secondary hover:text-neutral-900 transition-colors pt-2"
+                  >
+                    Voltar e Corrigir
+                  </button>
+                </div>
+              </motion.div>
+            </div>
+          )}
+        </AnimatePresence>
+      </AnimatePresence>
+
     );
   }
