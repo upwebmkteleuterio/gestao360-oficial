@@ -92,23 +92,23 @@ export const lancamentosService = {
       }
 
       if (filters.searchTerm) {
-        // Suporte para busca por código sequencial (Documento)
-        // Padrão: "1234" ou "1234-1"
-        const docPattern = /^(\d+)(?:-(\d+))?$/;
-        const match = filters.searchTerm.match(docPattern);
+        const term = `%${filters.searchTerm}%`;
+        const codeMatch = filters.searchTerm.match(/^(\d+)(?:-(\d+))?$/);
 
-        if (match) {
-          const code = parseInt(match[1]);
-          const parcel = match[2] ? parseInt(match[2]) : null;
+        if (codeMatch) {
+          const code = parseInt(codeMatch[1]);
+          const parcel = codeMatch[2] ? parseInt(codeMatch[2]) : null;
 
           if (parcel !== null) {
             query = query.eq('codigo_sequencial', code).eq('numero_parcela', parcel);
           } else {
-            // Se for apenas o número, busca pelo código sequencial ou no texto
-            query = query.or(`codigo_sequencial.eq.${code},observacoes.ilike.%${filters.searchTerm}%,entidades_negocio.nome_razao_social.ilike.%${filters.searchTerm}%`);
+            // Se for número, buscamos pelo código OU na entidade OU na observação
+            // Sintaxe Supabase para OR entre tabelas: 'coluna.eq.val,tabela(coluna.ilike.val)'
+            query = query.or(`codigo_sequencial.eq.${code},observacoes.ilike.${term},entidades_negocio(nome_razao_social.ilike.${term})`);
           }
         } else {
-          query = query.or(`entidades_negocio.nome_razao_social.ilike.%${filters.searchTerm}%,observacoes.ilike.%${filters.searchTerm}%`);
+          // Busca textual comum cruzando tabelas
+          query = query.or(`observacoes.ilike.${term},entidades_negocio(nome_razao_social.ilike.${term})`);
         }
       }
 

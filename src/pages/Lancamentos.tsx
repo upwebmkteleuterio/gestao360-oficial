@@ -135,7 +135,8 @@ export default function Lancamentos({
     estornarLancamento,
     deleteLancamento,
     isBatchApproving,
-    isLoading
+    isLoading,
+    isError
   } = useLancamentos({
     searchTerm,
     startDate,
@@ -434,7 +435,7 @@ export default function Lancamentos({
           <Search className="w-4 h-4 absolute left-4 top-1/2 -translate-y-1/2 text-neutral-300" />
           <input
             type="text"
-            placeholder="Pesquisar por documento (ex: 1001-1), entidade ou observação..."
+            placeholder="Pesquisar por documento (ex: 1061 ou 1061-1), entidade ou observação..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
             className="w-full h-12 pl-12 pr-4 bg-neutral-50 border-2 border-neutral-100 rounded-2xl text-xs font-bold focus:border-primary outline-none transition-all"
@@ -536,6 +537,8 @@ export default function Lancamentos({
             <tbody className="text-[11px] font-bold">
               {isLoading ? (
                 <tr><td colSpan={10} className="py-24 text-center"><div className="flex flex-col items-center gap-3 opacity-40"><Clock className="w-10 h-10 animate-spin text-primary" /><p className="font-black uppercase text-[10px] tracking-widest">Sincronizando registros...</p></div></td></tr>
+              ) : isError ? (
+                <tr><td colSpan={10} className="py-24 text-center"><div className="flex flex-col items-center gap-3 text-alert-red"><AlertTriangle className="w-10 h-10" /><p className="font-black uppercase text-[10px] tracking-widest">Erro ao carregar dados. Tente simplificar a busca.</p></div></td></tr>
               ) : filteredLancamentos.length === 0 ? (
                 <tr><td colSpan={10} className="py-24 text-center"><div className="flex flex-col items-center gap-3 opacity-20"><Receipt className="w-12 h-12" /><p className="font-black uppercase text-[10px] tracking-widest">Nenhum lançamento localizado</p></div></td></tr>
               ) : (
