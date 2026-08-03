@@ -493,14 +493,14 @@ export default function Lancamentos({
               ) : filteredLancamentos.length === 0 ? (
                 <tr><td colSpan={8} className="py-24 text-center"><div className="flex flex-col items-center gap-3 opacity-20"><Receipt className="w-12 h-12" /><p className="font-black uppercase text-[10px] tracking-widest">Nenhum lançamento localizado</p></div></td></tr>
               ) : (
-                filteredLancamentos.map((item) => {
+                filteredLancamentos.map((item, idx) => {
                   const isSelected = selectedIds.includes(item.id);
                   const isAprovacaoPendente = (item.status_aprovacao !== 'confirmado_master' || item.status_pagamento === 'quitação_pendente') && item.status_pagamento !== 'bpi';
                   const days = getDaysOverdue(item.data_vencimento);
 
                   return (
                     <tr
-                      key={item.id}
+                      key={`${item.id}-${idx}`}
                       onClick={() => {
                         setSelectedLancamentoIdForModal(item.id);
                         setModalOpen('isComprovanteOpen', true);
