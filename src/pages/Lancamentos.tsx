@@ -139,7 +139,7 @@ export default function Lancamentos({
     approvalStatus: statusAprovacaoOverride || approvalStatus,
     statusPagamento: statusPagamento,
     type: typeFilter === 'all' ? undefined : typeFilter,
-    authorId: authorIdFilter,
+    authorId: role === 'colaborador' ? useUIStore.getState().currentUserId : authorIdFilter,
     categoryId: categoryIdFilter,
     contaId: contaIdFilter,
     centroCustoId: centroCustoIdFilter,
@@ -777,19 +777,21 @@ export default function Lancamentos({
                 </div>
 
                 <div className="grid grid-cols-1 gap-6">
-                  <div className="space-y-2">
-                    <label className="text-[10px] font-black uppercase tracking-[0.2em] text-secondary flex items-center gap-2">
-                      <User className="w-4 h-4" /> Responsável
-                    </label>
-                    <select
-                      value={authorIdFilter}
-                      onChange={(e) => setAuthorIdIdFilter(e.target.value)}
-                      className="w-full h-11 bg-neutral-50 border border-surface-border text-xs font-bold rounded-lg px-3 outline-none focus:border-primary"
-                    >
-                      <option value="all">Todos os Usuários</option>
-                      {usuarios.map(u => <option key={u.id} value={u.id}>{u.nome || u.email}</option>)}
-                    </select>
-                  </div>
+                  {role !== 'colaborador' && (
+                    <div className="space-y-2">
+                      <label className="text-[10px] font-black uppercase tracking-[0.2em] text-secondary flex items-center gap-2">
+                        <User className="w-4 h-4" /> Responsável
+                      </label>
+                      <select
+                        value={authorIdFilter}
+                        onChange={(e) => setAuthorIdIdFilter(e.target.value)}
+                        className="w-full h-11 bg-neutral-50 border border-surface-border text-xs font-bold rounded-lg px-3 outline-none focus:border-primary"
+                      >
+                        <option value="all">Todos os Usuários</option>
+                        {usuarios.map(u => <option key={u.id} value={u.id}>{u.nome || u.email}</option>)}
+                      </select>
+                    </div>
+                  )}
 
                   <div className="space-y-2">
                     <label className="text-[10px] font-black uppercase tracking-[0.2em] text-secondary flex items-center gap-2">
