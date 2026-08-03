@@ -13,6 +13,7 @@ export type EntidadeTipo = 'cliente' | 'fornecedor' | 'ambos';
 
 export interface EntidadeNegocio {
   id: string;
+  codigo_sequencial?: number;
   tipo: EntidadeTipo;
   nome_razao_social: string;
   documento: string; // CPF or CNPJ
@@ -59,6 +60,7 @@ export type StatusPagamento = 'aberto' | 'pago' | 'pago_parcial' | 'bpi' | 'quit
 
 export interface LancamentoFinanceiro {
   id: string;
+  codigo_sequencial?: number;
   tipo: 'entrada' | 'saida';
   valor_previsto: number;
   valor_recebido?: number;

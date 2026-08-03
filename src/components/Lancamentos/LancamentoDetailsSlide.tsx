@@ -228,7 +228,7 @@ export default function LancamentoDetailsSlide() {
                       {lancamento.tipo === 'entrada' ? 'Entrada' : 'Saída'}
                     </span>
                     <span className="text-[10px] font-black uppercase tracking-widest text-secondary flex items-center gap-1">
-                      <Hash className="w-3 h-3" /> {lancamento.id.slice(0, 8)}...
+                      <Hash className="w-3 h-3" /> {lancamento.codigo_sequencial ? `${lancamento.codigo_sequencial}${lancamento.numero_parcela ? `-${lancamento.numero_parcela}` : ''}` : lancamento.id.slice(0, 8)}
                     </span>
                   </div>
                   <h3 className="text-sm font-black uppercase tracking-widest text-neutral-900">Detalhes da Operação</h3>

@@ -464,6 +464,7 @@ export default function Lancamentos({
                     />
                   )}
                 </th>
+                <th className="py-5 px-4">Documento</th>
                 {isOperationalView ? (
                   <>
                     <th className="py-5 px-4">{typeOverride === 'saida' ? 'Local / Fornecedor' : 'Local / Cliente'}</th>
@@ -500,7 +501,7 @@ export default function Lancamentos({
                   const days = getDaysOverdue(item.data_vencimento);
 
                   return (
-                    <tr
+                        <tr
                       key={`${item.id}-${idx}`}
                       onClick={() => {
                         setSelectedLancamentoIdForModal(item.id);
@@ -518,6 +519,18 @@ export default function Lancamentos({
                           />
                         )}
                       </td>
+                      <td className="py-3 px-4 whitespace-nowrap">
+                        <div className="flex items-center gap-1">
+                          <span className="text-neutral-900 font-black uppercase text-[10px]">
+                            {item.codigo_sequencial ? `${item.codigo_sequencial}${item.numero_parcela ? `-${item.numero_parcela}` : ''}` : '-'}
+                          </span>
+                          {item.numero_parcela && (
+                            <span className="text-[9px] text-neutral-400 font-bold whitespace-nowrap">
+                              (par {item.numero_parcela}/{item.quantidade_total_parcelas || '?'})
+                            </span>
+                          )}
+                        </div>
+                      </td>
                       {isOperationalView ? (
                         <>
                           <td className="py-3 px-4">
@@ -526,11 +539,6 @@ export default function Lancamentos({
                                 <span className="text-neutral-900 font-black uppercase tracking-tighter truncate max-w-[200px]">
                                   {entidades.find(e => e.id === item.entidade_id)?.nome_razao_social || 'N/A'}
                                 </span>
-                                {item.numero_parcela && (
-                                  <span className="text-[10px] font-black text-primary bg-primary/5 px-1.5 py-0.5 rounded border border-primary/10 whitespace-nowrap">
-                                    {item.numero_parcela}/{item.quantidade_total_parcelas || '?'}
-                                  </span>
-                                )}
                               </div>
                               <span className="text-[9px] text-neutral-400 uppercase tracking-widest font-bold">
                                 {item.observacoes || 'Sem descrição'}
@@ -587,11 +595,6 @@ export default function Lancamentos({
                             <div className="flex flex-col">
                               <div className="flex items-center gap-2">
                                 <span className="text-neutral-900 font-black uppercase tracking-tighter truncate max-w-[200px]">{entidades.find(e => e.id === item.entidade_id)?.nome_razao_social || 'N/A'}</span>
-                                {item.numero_parcela && (
-                                  <span className="text-[10px] font-black text-primary bg-primary/5 px-1.5 py-0.5 rounded border border-primary/10 whitespace-nowrap">
-                                    {item.numero_parcela}/{item.quantidade_total_parcelas || '?'}
-                                  </span>
-                                )}
                               </div>
                               <span className="text-[9px] text-neutral-400 uppercase tracking-widest font-bold">{item.observacoes || 'Sem descrição'}</span>
                             </div>

@@ -92,7 +92,12 @@ export const lancamentosService = {
       }
 
       if (filters.searchTerm) {
-        query = query.ilike('entidades_negocio.nome_razao_social', `%${filters.searchTerm}%`);
+        const searchAsNumber = parseInt(filters.searchTerm);
+        if (!isNaN(searchAsNumber)) {
+          query = query.or(`codigo_sequencial.eq.${searchAsNumber},observacoes.ilike.%${filters.searchTerm}%,entidades_negocio.nome_razao_social.ilike.%${filters.searchTerm}%`);
+        } else {
+          query = query.or(`entidades_negocio.nome_razao_social.ilike.%${filters.searchTerm}%,observacoes.ilike.%${filters.searchTerm}%`);
+        }
       }
 
       // Pagination

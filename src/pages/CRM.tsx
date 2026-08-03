@@ -87,9 +87,12 @@ export default function CRM() {
   });
 
   const filtered = useMemo(() => {
-
     return entidades.filter(ent => {
-      const matchesSearch = ent.nome_razao_social.toLowerCase().includes(searchTerm.toLowerCase()) || ent.documento.includes(searchTerm);
+      const searchLower = searchTerm.toLowerCase();
+      const matchesSearch =
+        ent.nome_razao_social.toLowerCase().includes(searchLower) ||
+        (ent.documento || '').includes(searchTerm) ||
+        (ent as any).codigo_sequencial?.toString().includes(searchTerm);
       const matchesTipo = tipoFilter === 'all' ? true : ent.tipo === tipoFilter;
       return matchesSearch && matchesTipo;
     });
@@ -203,6 +206,7 @@ export default function CRM() {
           <table className="w-full text-left border-collapse">
             <thead>
               <tr className="bg-neutral-50 text-neutral-400 border-b border-neutral-100 text-[9px] font-black uppercase tracking-widest">
+                <th className="py-4 px-8">Código</th>
                 <th className="py-4 px-8">Entidade / Razão Social</th>
                 <th className="py-4 px-8">CPF / CNPJ</th>
                 <th className="py-4 px-8 text-center">Tipo</th>
@@ -220,6 +224,9 @@ export default function CRM() {
                     onClick={() => handleOpenProfile(ent)}
                     className="border-b border-neutral-50 hover:bg-neutral-50/50 transition-all cursor-pointer group"
                   >
+                    <td className="py-4 px-8">
+                      <span className="text-primary font-black text-xs">#{(ent as any).codigo_sequencial || '-'}</span>
+                    </td>
                     <td className="py-4 px-8">
                       <div className="flex items-center gap-4">
                         <div className="w-10 h-10 rounded-2xl bg-neutral-100 text-neutral-400 flex items-center justify-center font-black uppercase group-hover:bg-primary/10 group-hover:text-primary transition-colors shadow-sm">
