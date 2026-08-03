@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState, useMemo, useEffect, useRef } from 'react';
 import {
   TrendingUp,
   TrendingDown,
@@ -58,6 +58,9 @@ export default function Lancamentos({
   const { role } = useAuth();
   const { setModalOpen, setSelectedLancamentoIdForModal, setActiveTab } = useUIStore();
   const dragScrollTabs = useDragScroll();
+  const tableScroll = useDragScroll();
+  const mirrorScrollRef = useRef<HTMLDivElement>(null);
+  const [tableWidth, setTableWidth] = useState(0);
   const [searchParams] = useSearchParams();
 
   const isMaster = role === 'master';
@@ -137,7 +140,7 @@ export default function Lancamentos({
     searchTerm,
     startDate,
     endDate,
-    approvalStatus: statusAprovacaoOverride || approvalStatus,
+    approvalStatus: approvalStatus,
     statusPagamento: statusPagamento === 'all' && isColaborador ? 'quitação_pendente' : statusPagamento,
     type: typeFilter === 'all' ? undefined : typeFilter,
     authorId: isColaborador ? useUIStore.getState().currentUserId : authorIdFilter,
@@ -152,6 +155,43 @@ export default function Lancamentos({
     page: currentPage,
     pageSize
   });
+
+  // Sync scroll between mirror and table
+  useEffect(() => {
+    const table = tableScroll.ref.current;
+    const mirror = mirrorScrollRef.current;
+    if (!table || !mirror) return;
+
+    const handleTableScroll = () => {
+      if (mirror.scrollLeft !== table.scrollLeft) {
+        mirror.scrollLeft = table.scrollLeft;
+      }
+    };
+
+    const handleMirrorScroll = () => {
+      if (table.scrollLeft !== mirror.scrollLeft) {
+        table.scrollLeft = mirror.scrollLeft;
+      }
+    };
+
+    table.addEventListener('scroll', handleTableScroll);
+    mirror.addEventListener('scroll', handleMirrorScroll);
+
+    // Initial width
+    setTableWidth(table.scrollWidth);
+
+    // Watch for size changes
+    const observer = new ResizeObserver(() => {
+      setTableWidth(table.scrollWidth);
+    });
+    observer.observe(table);
+
+    return () => {
+      table.removeEventListener('scroll', handleTableScroll);
+      mirror.removeEventListener('scroll', handleMirrorScroll);
+      observer.disconnect();
+    };
+  }, [allLancamentos, tableScroll.ref]);
 
   const totalPages = Math.max(Math.ceil(totalCount / pageSize), 1);
 
@@ -247,6 +287,7 @@ export default function Lancamentos({
 
   const handleOpenBaixa = (id: string) => {
     setSelectedLancamentoIdForModal(id);
+    setModalOpen('isComprovanteOpen', false);
     setModalOpen('isBaixaLancamentoOpen', true);
     setActiveMenuId(null);
   };
@@ -449,9 +490,13 @@ export default function Lancamentos({
         </div>
       </div>
 
-      <div className="bg-white border-2 border-neutral-100 rounded-[32px] overflow-hidden shadow-sm">
-        <div className="overflow-x-auto scrollbar-thin">
-          <table className="w-full text-left border-collapse min-w-[1000px]">
+      <div className="bg-white border-2 border-neutral-100 rounded-[32px] overflow-hidden shadow-sm relative">
+        <div 
+          ref={tableScroll.ref}
+          {...tableScroll.props}
+          className="overflow-x-auto scrollbar-none select-none"
+        >
+          <table className="w-full text-left border-collapse min-w-[1200px]">
             <thead>
               <tr className="bg-neutral-50/50 text-neutral-400 border-b border-neutral-100 text-[9px] font-black uppercase tracking-widest select-none">
                 <th className="py-5 px-4 w-10 text-center">
@@ -491,9 +536,9 @@ export default function Lancamentos({
             </thead>
             <tbody className="text-[11px] font-bold">
               {isLoading ? (
-                <tr><td colSpan={8} className="py-24 text-center"><div className="flex flex-col items-center gap-3 opacity-40"><Clock className="w-10 h-10 animate-spin text-primary" /><p className="font-black uppercase text-[10px] tracking-widest">Sincronizando registros...</p></div></td></tr>
+                <tr><td colSpan={10} className="py-24 text-center"><div className="flex flex-col items-center gap-3 opacity-40"><Clock className="w-10 h-10 animate-spin text-primary" /><p className="font-black uppercase text-[10px] tracking-widest">Sincronizando registros...</p></div></td></tr>
               ) : filteredLancamentos.length === 0 ? (
-                <tr><td colSpan={8} className="py-24 text-center"><div className="flex flex-col items-center gap-3 opacity-20"><Receipt className="w-12 h-12" /><p className="font-black uppercase text-[10px] tracking-widest">Nenhum lançamento localizado</p></div></td></tr>
+                <tr><td colSpan={10} className="py-24 text-center"><div className="flex flex-col items-center gap-3 opacity-20"><Receipt className="w-12 h-12" /><p className="font-black uppercase text-[10px] tracking-widest">Nenhum lançamento localizado</p></div></td></tr>
               ) : (
                 filteredLancamentos.map((item, idx) => {
                   const isSelected = selectedIds.includes(item.id);
@@ -501,7 +546,7 @@ export default function Lancamentos({
                   const days = getDaysOverdue(item.data_vencimento);
 
                   return (
-                        <tr
+                    <tr
                       key={`${item.id}-${idx}`}
                       onClick={() => {
                         setSelectedLancamentoIdForModal(item.id);
@@ -680,6 +725,14 @@ export default function Lancamentos({
               )}
             </tbody>
           </table>
+        </div>
+
+        {/* Floating Horizontal Scrollbar Mirror */}
+        <div 
+          ref={mirrorScrollRef}
+          className="sticky bottom-0 z-30 overflow-x-auto scrollbar-thin bg-white/80 backdrop-blur-md border-t border-neutral-100 flex h-4"
+        >
+          <div style={{ width: tableWidth, height: 1 }} className="shrink-0" />
         </div>
 
         {/* Pagination Bar */}
