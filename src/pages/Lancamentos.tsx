@@ -449,11 +449,11 @@ export default function Lancamentos({
         </div>
       </div>
 
-      <div className="bg-white border-2 border-neutral-100 rounded-[32px] overflow-hidden shadow-sm">
-        <div className="overflow-x-auto scrollbar-thin">
-          <table className="w-full text-left border-collapse min-w-[1000px]">
-            <thead>
-              <tr className="bg-neutral-50/50 text-neutral-400 border-b border-neutral-100 text-[9px] font-black uppercase tracking-widest select-none">
+      <div className="bg-white border-2 border-neutral-100 rounded-[32px] overflow-hidden shadow-sm flex flex-col">
+        <div className="overflow-auto scrollbar-thin max-h-[calc(100vh-320px)]">
+          <table className="w-full text-left border-collapse min-w-[1200px]">
+            <thead className="sticky top-0 z-10 bg-neutral-50 shadow-sm">
+              <tr className="text-neutral-400 border-b border-neutral-100 text-[9px] font-black uppercase tracking-widest select-none">
                 <th className="py-5 px-4 w-10 text-center">
                   {isMaster && (
                     <input
