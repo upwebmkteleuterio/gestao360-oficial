@@ -68,6 +68,7 @@ export default function Lancamentos({
 
   // Search State
   const [searchTerm, setSearchTerm] = useState('');
+  const [docSearchTerm, setDocSearchTerm] = useState('');
 
   // Preset state
   const [datePreset, setDatePreset] = useState<'15' | '30' | '90' | 'custom'>('15');
@@ -123,7 +124,7 @@ export default function Lancamentos({
   const [motivoAcrescimoFilter, setMotivoAcrescimoFilter] = useState('all');
   const [isFilterPanelOpen, setIsFilterPanelOpen] = useState(false);
 
-  const hasActiveFilters = searchTerm !== '' || approvalStatus !== 'all' || typeFilter !== (typeOverride || 'all') || authorIdFilter !== 'all' || categoryIdFilter !== 'all' || contaIdFilter !== 'all' || centroCustoIdFilter !== 'all' || condicaoFilter !== 'all' || temDescontoFilter !== 'all' || temAcrescimoFilter !== 'all' || motivoDescontoFilter !== 'all' || motivoAcrescimoFilter !== 'all';
+  const hasActiveFilters = searchTerm !== '' || docSearchTerm !== '' || approvalStatus !== 'all' || typeFilter !== (typeOverride || 'all') || authorIdFilter !== 'all' || categoryIdFilter !== 'all' || contaIdFilter !== 'all' || centroCustoIdFilter !== 'all' || condicaoFilter !== 'all' || temDescontoFilter !== 'all' || temAcrescimoFilter !== 'all' || motivoDescontoFilter !== 'all' || motivoAcrescimoFilter !== 'all';
 
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [activeMenuId, setActiveMenuId] = useState<string | null>(null);
@@ -139,6 +140,8 @@ export default function Lancamentos({
     isError
   } = useLancamentos({
     searchTerm,
+    docCode: parseInt(docSearchTerm.split('-')[0]) || undefined,
+    docParcel: parseInt(docSearchTerm.split('-')[1]) || undefined,
     startDate,
     endDate,
     approvalStatus: approvalStatus,
@@ -239,6 +242,7 @@ export default function Lancamentos({
 
   const clearFiltersShortcut = () => {
     setSearchTerm('');
+    setDocSearchTerm('');
     setApprovalStatus('all');
     setStatusPagamento(statusPagamentoOverride || (isColaborador ? 'quitação_pendente' : 'all'));
     setTypeFilter(typeOverride || 'all');
@@ -431,15 +435,28 @@ export default function Lancamentos({
 
       {/* Main filter bar */}
       <div className="bg-white border-2 border-neutral-100 p-4 rounded-3xl flex flex-col lg:flex-row gap-4 shadow-sm items-center">
-        <div className="relative flex-1 w-full">
-          <Search className="w-4 h-4 absolute left-4 top-1/2 -translate-y-1/2 text-neutral-300" />
-          <input
-            type="text"
-            placeholder="Pesquisar por documento (ex: 1061 ou 1061-1), entidade ou observação..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full h-12 pl-12 pr-4 bg-neutral-50 border-2 border-neutral-100 rounded-2xl text-xs font-bold focus:border-primary outline-none transition-all"
-          />
+        <div className="flex gap-3 w-full lg:w-auto">
+          <div className="relative w-32 shrink-0">
+            <FileText className="w-4 h-4 absolute left-4 top-1/2 -translate-y-1/2 text-neutral-300" />
+            <input
+              type="text"
+              placeholder="Cód. Doc"
+              value={docSearchTerm}
+              onChange={(e) => setDocSearchTerm(e.target.value)}
+              className="w-full h-12 pl-10 pr-4 bg-neutral-50 border-2 border-neutral-100 rounded-2xl text-xs font-bold focus:border-primary outline-none transition-all"
+            />
+          </div>
+          
+          <div className="relative flex-1 min-w-[200px]">
+            <Search className="w-4 h-4 absolute left-4 top-1/2 -translate-y-1/2 text-neutral-300" />
+            <input
+              type="text"
+              placeholder="Pesquisar por entidade ou observação..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="w-full h-12 pl-12 pr-4 bg-neutral-50 border-2 border-neutral-100 rounded-2xl text-xs font-bold focus:border-primary outline-none transition-all"
+            />
+          </div>
         </div>
 
         <div className="flex items-center gap-3 w-full lg:w-auto">

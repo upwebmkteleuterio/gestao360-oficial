@@ -3,6 +3,8 @@ import { LancamentoFinanceiro } from '../types';
 
 export interface LancamentoFilters {
   searchTerm?: string;
+  docCode?: number;
+  docParcel?: number;
   startDate?: string;
   endDate?: string;
   approvalStatus?: string;
@@ -33,6 +35,9 @@ export const lancamentosService = {
       if (filters.startDate) query = query.gte('data_vencimento', filters.startDate);
       if (filters.endDate) query = query.lte('data_vencimento', filters.endDate);
       
+      if (filters.docCode) query = query.eq('codigo_sequencial', filters.docCode);
+      if (filters.docParcel) query = query.eq('numero_parcela', filters.docParcel);
+
       if (filters.approvalStatus && filters.approvalStatus !== 'all') {
         if (filters.approvalStatus === 'pendente') {
           query = query.in('status_aprovacao', ['pendente_digital', 'digital']);
@@ -93,23 +98,7 @@ export const lancamentosService = {
 
       if (filters.searchTerm) {
         const term = `%${filters.searchTerm}%`;
-        const codeMatch = filters.searchTerm.match(/^(\d+)(?:-(\d+))?$/);
-
-        if (codeMatch) {
-          const code = parseInt(codeMatch[1]);
-          const parcel = codeMatch[2] ? parseInt(codeMatch[2]) : null;
-
-          if (parcel !== null) {
-            query = query.eq('codigo_sequencial', code).eq('numero_parcela', parcel);
-          } else {
-            // Se for número, buscamos pelo código OU na entidade OU na observação
-            // Sintaxe Supabase para OR entre tabelas: 'coluna.eq.val,tabela(coluna.ilike.val)'
-            query = query.or(`codigo_sequencial.eq.${code},observacoes.ilike.${term},entidades_negocio(nome_razao_social.ilike.${term})`);
-          }
-        } else {
-          // Busca textual comum cruzando tabelas
-          query = query.or(`observacoes.ilike.${term},entidades_negocio(nome_razao_social.ilike.${term})`);
-        }
+        query = query.or(`observacoes.ilike.${term},entidades_negocio.nome_razao_social.ilike.${term}`);
       }
 
       // Pagination
