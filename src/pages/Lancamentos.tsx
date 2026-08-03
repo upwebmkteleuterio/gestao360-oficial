@@ -61,6 +61,7 @@ export default function Lancamentos({
   const [searchParams] = useSearchParams();
 
   const isMaster = role === 'master';
+  const isColaborador = role === 'colaborador';
 
   // Search State
   const [searchTerm, setSearchTerm] = useState('');
@@ -98,15 +99,15 @@ export default function Lancamentos({
 
   // Advanced Filters
   const [approvalStatus, setApprovalStatus] = useState('all');
-  const [statusPagamento, setStatusPagamento] = useState<string>(statusPagamentoOverride || 'pago');
+  const [statusPagamento, setStatusPagamento] = useState<string>(statusPagamentoOverride || (isColaborador ? 'quitação_pendente' : 'all'));
   const [typeFilter, setTypeFilter] = useState<'all' | 'entrada' | 'saida'>(typeOverride || 'all');
 
   // Sincronizar o estado interno com as propriedades da rota ao navegar
   useEffect(() => {
-    setStatusPagamento(statusPagamentoOverride || 'pago');
+    setStatusPagamento(statusPagamentoOverride || (isColaborador ? 'quitação_pendente' : 'all'));
     setTypeFilter(typeOverride || 'all');
-    setSelectedIds([]); 
-  }, [statusPagamentoOverride, typeOverride]);
+    setSelectedIds([]);
+  }, [statusPagamentoOverride, typeOverride, isColaborador]);
 
   const [authorIdFilter, setAuthorIdIdFilter] = useState('all');
   const [categoryIdFilter, setCategoryIdFilter] = useState('all');
@@ -137,9 +138,9 @@ export default function Lancamentos({
     startDate,
     endDate,
     approvalStatus: statusAprovacaoOverride || approvalStatus,
-    statusPagamento: statusPagamento,
+    statusPagamento: statusPagamento === 'all' && isColaborador ? 'quitação_pendente' : statusPagamento,
     type: typeFilter === 'all' ? undefined : typeFilter,
-    authorId: role === 'colaborador' ? useUIStore.getState().currentUserId : authorIdFilter,
+    authorId: isColaborador ? useUIStore.getState().currentUserId : authorIdFilter,
     categoryId: categoryIdFilter,
     contaId: contaIdFilter,
     centroCustoId: centroCustoIdFilter,
@@ -199,7 +200,7 @@ export default function Lancamentos({
   const clearFiltersShortcut = () => {
     setSearchTerm('');
     setApprovalStatus('all');
-    setStatusPagamento(statusPagamentoOverride || 'pago');
+    setStatusPagamento(statusPagamentoOverride || (isColaborador ? 'quitação_pendente' : 'all'));
     setTypeFilter(typeOverride || 'all');
     setAuthorIdIdFilter('all');
     setCategoryIdFilter('all');
