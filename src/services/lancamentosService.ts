@@ -92,9 +92,21 @@ export const lancamentosService = {
       }
 
       if (filters.searchTerm) {
-        const searchAsNumber = parseInt(filters.searchTerm);
-        if (!isNaN(searchAsNumber)) {
-          query = query.or(`codigo_sequencial.eq.${searchAsNumber},observacoes.ilike.%${filters.searchTerm}%,entidades_negocio.nome_razao_social.ilike.%${filters.searchTerm}%`);
+        // Suporte para busca por código sequencial (Documento)
+        // Padrão: "1234" ou "1234-1"
+        const docPattern = /^(\d+)(?:-(\d+))?$/;
+        const match = filters.searchTerm.match(docPattern);
+
+        if (match) {
+          const code = parseInt(match[1]);
+          const parcel = match[2] ? parseInt(match[2]) : null;
+
+          if (parcel !== null) {
+            query = query.eq('codigo_sequencial', code).eq('numero_parcela', parcel);
+          } else {
+            // Se for apenas o número, busca pelo código sequencial ou no texto
+            query = query.or(`codigo_sequencial.eq.${code},observacoes.ilike.%${filters.searchTerm}%,entidades_negocio.nome_razao_social.ilike.%${filters.searchTerm}%`);
+          }
         } else {
           query = query.or(`entidades_negocio.nome_razao_social.ilike.%${filters.searchTerm}%,observacoes.ilike.%${filters.searchTerm}%`);
         }

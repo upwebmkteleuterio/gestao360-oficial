@@ -435,7 +435,7 @@ export default function Lancamentos({
           <Search className="w-4 h-4 absolute left-4 top-1/2 -translate-y-1/2 text-neutral-300" />
           <input
             type="text"
-            placeholder="Pesquisar por entidade ou observação..."
+            placeholder="Pesquisar por documento (ex: 1001-1), entidade ou observação..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
             className="w-full h-12 pl-12 pr-4 bg-neutral-50 border-2 border-neutral-100 rounded-2xl text-xs font-bold focus:border-primary outline-none transition-all"
