@@ -167,17 +167,17 @@ export default function BaixaLancamentoModal() {
     ? (totalOriginal * numericAcrescimo) / 100
     : numericAcrescimo;
 
+  // BPI locks everything, AVR allows editing valorPago
+  const isBpi = tipoBaixa === 'bpi';
+  const isAVR = tipoBaixa === 'avr';
+
   const subtotalCalculado = Math.max(0, totalOriginal - calculatedDesconto + calculatedAcrescimo + numericTaxa);
   const valorDigitado = parseMoney(valorPago);
 
   // Checks and balances
   const diff = subtotalCalculado - valorDigitado;
-  const isPartial = valorDigitado < subtotalCalculado && valorDigitado > 0;
-  const isOverpaid = valorDigitado > subtotalCalculado;
-  
-  // BPI locks everything, AVR allows editing valorPago
-  const isBpi = tipoBaixa === 'bpi';
-  const isAVR = tipoBaixa === 'avr';
+  const isPartial = !isAVR && valorDigitado < subtotalCalculado && valorDigitado > 0;
+  const isOverpaid = !isAVR && valorDigitado > subtotalCalculado;
   
   // Adjustment Reasons Logic
   const discReasons = (categoriasAjuste || []).filter(c => c.tipo === 'desconto');
@@ -580,7 +580,13 @@ export default function BaixaLancamentoModal() {
                       <span className="text-[10px] font-black uppercase tracking-tight">Excede o Subtotal!</span>
                     </div>
                   )}
-                  {valorDigitado > 0 && !isPartial && !isOverpaid && (
+                  {isAVR && (
+                    <div className="p-3 bg-primary/5 border border-primary/20 rounded-2xl flex items-center gap-2 text-primary h-12">
+                      <Shield className="w-4 h-4 shrink-0" />
+                      <span className="text-[10px] font-black uppercase tracking-tight">Correção de Valor Original</span>
+                    </div>
+                  )}
+                  {valorDigitado > 0 && !isPartial && !isOverpaid && !isAVR && (
                     <div className="p-3 bg-emerald-50 border border-emerald-200 rounded-2xl flex items-center gap-2 text-bank-truth-green h-12">
                       <CheckCircle2 className="w-4 h-4 shrink-0" />
                       <span className="text-[10px] font-black uppercase tracking-tight">Quitação Integral</span>
