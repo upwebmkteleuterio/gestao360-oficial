@@ -131,10 +131,21 @@ export const lancamentosService = {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) throw new Error('Usuário não autenticado');
 
+    // Recupera a role do usuário para segurança na criação
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('role')
+      .eq('id', user.id)
+      .single();
+
+    const isMaster = profile?.role === 'master';
+
     const lancamentoData = {
       ...item,
       user_id: user.id,
-      usuario_criador_id: user.id
+      usuario_criador_id: user.id,
+      // Se não for master, garante que não entra como confirmado
+      status_aprovacao: isMaster ? (item.status_aprovacao || 'confirmado_master') : 'digital'
     };
 
     if (!recorrencia) {
@@ -180,6 +191,23 @@ export const lancamentosService = {
   },
 
   update: async (id: string, data: any, mode: 'single' | 'all' = 'single'): Promise<LancamentoFinanceiro> => {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) throw new Error('Usuário não autenticado');
+
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('role')
+      .eq('id', user.id)
+      .single();
+
+    const isMaster = profile?.role === 'master';
+
+    // Proteção: Se não for master, não pode alterar para status de aprovação master
+    const safeData = { ...data };
+    if (!isMaster && safeData.status_aprovacao === 'confirmado_master') {
+      delete safeData.status_aprovacao;
+    }
+
     const { data: current } = await supabase
       .from('lancamentos_financeiros')
       .select('recorrencia_id')
@@ -189,7 +217,7 @@ export const lancamentosService = {
     if (mode === 'all' && current?.recorrencia_id) {
       const { data: updated, error } = await supabase
         .from('lancamentos_financeiros')
-        .update(data)
+        .update(safeData)
         .eq('recorrencia_id', current.recorrencia_id)
         .eq('status_pagamento', 'aberto')
         .select();
@@ -198,7 +226,7 @@ export const lancamentosService = {
     } else {
       const { data: updated, error } = await supabase
         .from('lancamentos_financeiros')
-        .update(data)
+        .update(safeData)
         .eq('id', id)
         .select()
         .single();
@@ -408,6 +436,13 @@ export const lancamentosService = {
   },
 
   approveInBatch: async (ids: string[], targetStatus: 'digital' | 'confirmado_master' | 'reprovado'): Promise<void> => {
+    const { data: { user } } = await supabase.auth.getUser();
+    const { data: profile } = await supabase.from('profiles').select('role').eq('id', user?.id).single();
+
+    if (targetStatus === 'confirmado_master' && profile?.role !== 'master') {
+      throw new Error('Apenas usuários Master podem confirmar saldos.');
+    }
+
     const updatePayload: any = {
       status_aprovacao: targetStatus,
       data_aprovacao: targetStatus === 'confirmado_master' ? new Date().toISOString() : null
