@@ -106,7 +106,7 @@ export default function BaixaLancamentoModal() {
   const [valorPago, setValorPago] = useState('');
   const [observacao, setObservacao] = useState('');
   const [taxaBancaria, setTaxaBancaria] = useState('');
-  const [propagateAVR, setPropagateAVR] = useState(false);
+  const [propagateAVR, setPropagateAVR] = useState<'none' | 'open' | 'all'>('none');
   const [isAVRConfirmationOpen, setIsAVRConfirmationOpen] = useState(false);
   const [isFinalConfirmationOpen, setIsFinalConfirmationOpen] = useState(false);
   const [attachments, setAttachments] = useState<LocalFile[]>([]);
@@ -135,7 +135,7 @@ export default function BaixaLancamentoModal() {
       setObservacao('');
       setTaxaBancaria('');
       setTipoBaixa('financeira');
-      setPropagateAVR(false);
+      setPropagateAVR('none');
       setIsAVRConfirmationOpen(false);
       setAttachments([]);
     }
@@ -236,7 +236,7 @@ export default function BaixaLancamentoModal() {
     await executeSubmit();
   };
 
-  const executeSubmit = async () => {
+  const executeSubmit = async (propagateModeOverride?: 'none' | 'open' | 'all') => {
     setLoading(true);
     try {
       await baixaLancamento({
@@ -253,7 +253,7 @@ export default function BaixaLancamentoModal() {
           motivo_desconto_id: motivoDescontoId || undefined,
           motivo_acrescimo_id: motivoAcrescimoId || undefined,
           motivo_ajuste: observacao,
-          propagate_avr: propagateAVR
+          propagate_avr: propagateModeOverride || propagateAVR
         }
       });
 
@@ -859,7 +859,7 @@ export default function BaixaLancamentoModal() {
                   <div>
                     <h3 className="text-sm font-black uppercase tracking-widest text-neutral-900">Propagar Ajuste (AVR)?</h3>
                     <p className="text-[10px] font-bold text-secondary uppercase leading-relaxed mt-2">
-                      Este lançamento faz parte de uma recorrência. Deseja aplicar este novo valor de <span className="text-primary font-black">R$ {formatBRL(valorDigitado)}</span> em todas as parcelas futuras que ainda estão em aberto?
+                      Este lançamento faz parte de uma recorrência. Como deseja aplicar este novo valor de <span className="text-primary font-black">R$ {formatBRL(valorDigitado)}</span>?
                     </p>
                   </div>
   
@@ -867,8 +867,8 @@ export default function BaixaLancamentoModal() {
                     <button
                       type="button"
                       onClick={() => {
-                        setPropagateAVR(false);
-                        executeSubmit();
+                        setPropagateAVR('none');
+                        setTimeout(() => executeSubmit('none'), 100);
                       }}
                       className="w-full py-4 bg-neutral-50 hover:bg-neutral-100 text-neutral-900 rounded-2xl text-[10px] font-black uppercase tracking-widest border-2 border-neutral-100 transition-all flex items-center justify-center gap-2"
                     >
@@ -877,14 +877,23 @@ export default function BaixaLancamentoModal() {
                     <button
                       type="button"
                       onClick={() => {
-                        setPropagateAVR(true);
-                        executeSubmit();
+                        setPropagateAVR('open');
+                        setTimeout(() => executeSubmit('open'), 100);
                       }}
                       className="w-full py-4 bg-neutral-900 hover:bg-black text-white rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all flex items-center justify-center gap-2 shadow-lg"
                     >
-                      <Plus className="w-4 h-4" /> Ajustar todas em aberto
+                      <Plus className="w-4 h-4" /> Todas em aberto
                     </button>
-
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setPropagateAVR('all');
+                        setTimeout(() => executeSubmit('all'), 100);
+                      }}
+                      className="w-full py-4 bg-primary hover:bg-primary-hover text-white rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all flex items-center justify-center gap-2 shadow-lg"
+                    >
+                      <AlertTriangle className="w-4 h-4" /> Todas (Histórico Completo)
+                    </button>
                   </div>
   
                   <button

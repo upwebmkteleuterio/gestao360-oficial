@@ -271,7 +271,7 @@ export const lancamentosService = {
    motivo_ajuste?: string,
    motivo_desconto_id?: string,
    motivo_acrescimo_id?: string,
-   propagate_avr?: boolean
+   propagate_avr?: 'none' | 'open' | 'all'
  }, isMaster: boolean = false): Promise<LancamentoFinanceiro> => {
     const { data: current, error: getError } = await supabase
       .from('lancamentos_financeiros')
@@ -294,7 +294,7 @@ export const lancamentosService = {
    let observacaoFinal = observacaoOriginal;
    
    if (isAVR) {
-     observacaoFinal += `\n[AVR - Ajuste Realizado em ${new Date().toLocaleDateString('pt-BR')}] Valor original alterado de R$ ${current.valor_original || current.valor_previsto} para R$ ${valorPagoEfetivo}`;
+     observacaoFinal += `\n[AVR - Ajuste Realizado em ${new Date().toLocaleDateString('pt-BR')}] Valor original alterado de R$ ${current.valor_original || current.valor_previsto} para R$ ${valorPagoEfetivo}. Motivo: ${data.motivo_ajuste || 'Não informado'}`;
    } else if (isBPI) {
      observacaoFinal += `\n[BPI - Baixa por Inatividade em ${new Date().toLocaleDateString('pt-BR')}]`;
    }
@@ -368,6 +368,10 @@ export const lancamentosService = {
 
      if (isAVR) {
        updatePayload.valor_original = valorPagoEfetivo;
+       // Se for AVR e não for master, o status de aprovação volta para digital para nova conferência do saldo real
+       if (!isMaster) {
+         updatePayload.status_aprovacao = 'digital';
+       }
      }
      
      if (isBPI) {
@@ -384,15 +388,22 @@ export const lancamentosService = {
      if (updateError) throw updateError;
 
      // Propagação do AVR se solicitado e for recorrente
-     if (isAVR && data.propagate_avr && current.recorrencia_id) {
-       await supabase
+     if (isAVR && data.propagate_avr !== 'none' && current.recorrencia_id) {
+       const propagationQuery = supabase
          .from('lancamentos_financeiros')
          .update({
            valor_previsto: valorPagoEfetivo,
-           observacoes: (current.observacoes || '') + `\n[Valor ajustado via AVR propagado em ${new Date().toLocaleDateString('pt-BR')}]`
+           valor_original: valorPagoEfetivo,
+           observacoes: (current.observacoes || '') + `\n[Valor ajustado via AVR propagado (${data.propagate_avr}) em ${new Date().toLocaleDateString('pt-BR')}]`
          })
-         .eq('recorrencia_id', current.recorrencia_id)
-         .eq('status_pagamento', 'aberto');
+         .eq('recorrencia_id', current.recorrencia_id);
+
+       if (data.propagate_avr === 'open') {
+         propagationQuery.eq('status_pagamento', 'aberto');
+       }
+       // Se for 'all', não adiciona filtro de status
+
+       await propagationQuery;
      }
 
      return updated as LancamentoFinanceiro;

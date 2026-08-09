@@ -20,7 +20,8 @@ import {
   Repeat,
   Calendar,
   CreditCard,
-  Hash
+  Hash,
+  Shield
 } from 'lucide-react';
 import { useUIStore } from '../store/uiStore';
 import { useLancamentos, useEntidades, useCentrosCusto, useCategorias, useContas, useLancamentoAnexos, useCategoriasAjuste } from '../hooks/useData';
@@ -1323,6 +1324,15 @@ export default function NovoLancamentoDrawer() {
                     <span className="text-[10px] font-black uppercase text-alert-red tracking-widest block">Saldo Insuficiente</span>
                     <span className="text-[9px] font-bold text-alert-red/80">A conta selecionada possui R$ {formatBRL((selectedConta as any)?.saldo_real)} de saldo real. Operação não permitida.</span>
                   </div>
+                </div>
+              )}
+
+              {(!role || role !== 'master') && lancamentoFormDraft.ja_recebido && (
+                <div className="px-6 py-3 bg-neutral-50 border-t border-neutral-100 flex items-center gap-3 shrink-0">
+                  <Shield className="w-4 h-4 text-neutral-400 shrink-0" />
+                  <span className="text-[9px] font-bold text-secondary uppercase tracking-tighter">
+                    Esta operação atualizará apenas o <span className="text-primary font-black">Saldo Operacional</span>. A consolidação no saldo real depende da aprovação Master.
+                  </span>
                 </div>
               )}
 
