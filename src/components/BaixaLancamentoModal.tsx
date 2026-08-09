@@ -767,6 +767,15 @@ export default function BaixaLancamentoModal() {
               </div>
             )}
 
+            {!role || role !== 'master' && (
+              <div className="px-8 py-3 bg-neutral-50 border-t border-neutral-100 flex items-center gap-3 shrink-0">
+                <Shield className="w-4 h-4 text-neutral-400 shrink-0" />
+                <span className="text-[9px] font-bold text-secondary uppercase tracking-tighter">
+                  Esta operação atualizará apenas o <span className="text-primary font-black">Saldo Operacional</span>. A consolidação no saldo real depende da aprovação Master.
+                </span>
+              </div>
+            )}
+
             <footer className="px-8 py-6 border-t border-neutral-100 bg-neutral-50 flex justify-end gap-3 shrink-0">
               <button
                 type="button"

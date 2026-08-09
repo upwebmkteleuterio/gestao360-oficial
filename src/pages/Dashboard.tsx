@@ -241,18 +241,33 @@ export default function Dashboard() {
                   <div>
                     <h3 className="text-2xl font-bold font-mono text-on-surface">{valueFormatter(stats?.total_operacional || 0)}</h3>
                     <div className="text-[10px] font-semibold text-secondary flex items-center gap-1 uppercase tracking-widest mt-1">
-                      <Clock className="w-3.5 h-3.5" /> Saldo Operacional
+                      <Clock className="w-3.5 h-3.5" /> Saldo Operacional (Disponível)
                     </div>
                   </div>
 
-                  {isMaster && (
-                    <div className="pt-4 border-t border-surface-border/50">
-                      <h4 className="text-lg font-bold font-mono text-secondary">{valueFormatter(stats?.total_consolidado || 0)}</h4>
-                      <div className="text-[10px] font-semibold text-bank-truth-green flex items-center gap-1 uppercase tracking-widest mt-1">
-                        <CheckCircle2 className="w-3.5 h-3.5" /> Saldo Confirmado (Master)
+                  <div className="pt-4 border-t border-surface-border/50">
+                    {isMaster ? (
+                      <>
+                        <h4 className="text-lg font-bold font-mono text-bank-truth-green">{valueFormatter(stats?.total_consolidado || 0)}</h4>
+                        <div className="text-[10px] font-semibold text-bank-truth-green flex items-center gap-1 uppercase tracking-widest mt-1">
+                          <CheckCircle2 className="w-3.5 h-3.5" /> Saldo Real (Confirmado Master)
+                        </div>
+                      </>
+                    ) : (
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <p className="text-[9px] font-black text-secondary uppercase tracking-widest">Em Validação Master</p>
+                          <p className="text-xs font-bold font-mono text-neutral-400">
+                            {valueFormatter(Math.max(0, (stats?.total_operacional || 0) - (stats?.total_consolidado || 0)))}
+                          </p>
+                        </div>
+                        <div className="bg-neutral-50 px-2 py-1 rounded-lg border border-neutral-100 flex items-center gap-1">
+                          <Shield className="w-3 h-3 text-neutral-300" />
+                          <span className="text-[8px] font-black text-neutral-400 uppercase">Aguardando</span>
+                        </div>
                       </div>
-                    </div>
-                  )}
+                    )}
+                  </div>
                 </div>
               </div>
 
@@ -351,12 +366,10 @@ export default function Dashboard() {
                        {valueFormatter(globalBalances.operacional)}
                        <span className="text-[9px] font-medium text-secondary ml-1 lowercase">(operacional)</span>
                      </p>
-                     {isMaster && (
-                        <p className="text-[11px] font-bold font-mono text-bank-truth-green">
-                          {valueFormatter(globalBalances.auditado)}
-                          <span className="text-[8px] font-medium ml-1 lowercase">(confirmado)</span>
-                        </p>
-                     )}
+                     <p className={`text-[11px] font-bold font-mono ${isMaster ? 'text-bank-truth-green' : 'text-neutral-400'}`}>
+                       {valueFormatter(globalBalances.auditado)}
+                       <span className="text-[8px] font-medium ml-1 lowercase">({isMaster ? 'confirmado' : 'real'})</span>
+                     </p>
                   </div>
                 </div>
 
@@ -388,12 +401,10 @@ export default function Dashboard() {
                         {valueFormatter(acc.operacional || 0)}
                         <span className="text-[9px] font-medium text-secondary ml-1 lowercase">(operacional)</span>
                       </p>
-                      {isMaster && (
-                        <p className="text-[11px] font-bold font-mono text-bank-truth-green">
-                          {valueFormatter(acc.auditado || 0)}
-                          <span className="text-[8px] font-medium ml-1 lowercase">(confirmado)</span>
-                        </p>
-                      )}
+                      <p className={`text-[11px] font-bold font-mono ${isMaster ? 'text-bank-truth-green' : 'text-neutral-400'}`}>
+                        {valueFormatter(acc.auditado || 0)}
+                        <span className="text-[8px] font-medium ml-1 lowercase">({isMaster ? 'confirmado' : 'real'})</span>
+                      </p>
                     </div>
                   </div>
                 ))}

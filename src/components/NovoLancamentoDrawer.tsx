@@ -848,27 +848,38 @@ export default function NovoLancamentoDrawer() {
                   </label>
 
                   {lancamentoFormDraft.ja_recebido && (
-                    <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} className="grid grid-cols-2 gap-4">
-                      <div className="flex flex-col gap-2">
-                        <label className="text-[10px] font-black text-secondary uppercase tracking-widest">Data do Recebimento</label>
-                        <input 
-                          type="date"
-                          value={lancamentoFormDraft.data_pagamento}
-                          onChange={(e) => setLancamentoFormDraft({ data_pagamento: e.target.value })}
-                          className="w-full h-10 bg-white border-2 border-neutral-200 text-xs font-bold rounded-lg px-3 focus:outline-none focus:border-primary shadow-xs"
-                        />
-                      </div>
-                      <div className="flex flex-col gap-2">
-                        <label className="text-[10px] font-black text-secondary uppercase tracking-widest">Valor Recebido</label>
-                        <div className="relative">
-                          <span className="absolute left-3 top-1/2 -translate-y-1/2 text-[10px] text-secondary font-black">R$</span>
-                          <MoneyInput
-                            value={lancamentoFormDraft.valor_recebido}
-                            onChange={(val) => setLancamentoFormDraft({ valor_recebido: val })}
-                            className="w-full h-10 pl-8 pr-3 bg-white border-2 border-neutral-200 rounded-lg font-mono text-xs font-black text-on-surface focus:outline-none focus:border-primary shadow-xs"
+                    <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} className="space-y-4">
+                      <div className="grid grid-cols-2 gap-4">
+                        <div className="flex flex-col gap-2">
+                          <label className="text-[10px] font-black text-secondary uppercase tracking-widest">Data do Recebimento</label>
+                          <input
+                            type="date"
+                            value={lancamentoFormDraft.data_pagamento}
+                            onChange={(e) => setLancamentoFormDraft({ data_pagamento: e.target.value })}
+                            className="w-full h-10 bg-white border-2 border-neutral-200 text-xs font-bold rounded-lg px-3 focus:outline-none focus:border-primary shadow-xs"
                           />
                         </div>
+                        <div className="flex flex-col gap-2">
+                          <label className="text-[10px] font-black text-secondary uppercase tracking-widest">Valor Recebido</label>
+                          <div className="relative">
+                            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-[10px] text-secondary font-black">R$</span>
+                            <MoneyInput
+                              value={lancamentoFormDraft.valor_recebido}
+                              onChange={(val) => setLancamentoFormDraft({ valor_recebido: val })}
+                              className="w-full h-10 pl-8 pr-3 bg-white border-2 border-neutral-200 rounded-lg font-mono text-xs font-black text-on-surface focus:outline-none focus:border-primary shadow-xs"
+                            />
+                          </div>
+                        </div>
                       </div>
+
+                      {(!role || role !== 'master') && (
+                        <div className="p-3 bg-neutral-100 border border-neutral-200 rounded-xl flex items-center gap-2">
+                          <Clock className="w-3.5 h-3.5 text-neutral-400 shrink-0" />
+                          <span className="text-[8px] font-black text-neutral-500 uppercase tracking-tighter">
+                            Este pagamento afetará apenas o <span className="text-primary">Saldo Operacional</span> até ser validado pelo Master.
+                          </span>
+                        </div>
+                      )}
                     </motion.div>
                   )}
                 </div>

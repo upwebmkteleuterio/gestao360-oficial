@@ -22,9 +22,12 @@ import {
   Zap,
   Info,
   Clock,
-  Filter
+  Filter,
+  ShieldCheck,
+  Shield
 } from 'lucide-react';
 import { useConciliacao, useContas, useLancamentos, useEntidades } from '../hooks/useData';
+import { useAuth } from '../hooks/useAuth';
 import { useUIStore } from '../store/uiStore';
 import { TransacaoBanco, LancamentoFinanceiro } from '../types';
 import Button from '../components/Button';
@@ -42,6 +45,7 @@ export default function Conciliacao() {
     isCleaning
   } = useConciliacao();
 
+  const { role } = useAuth();
   const { data: contas = [] } = useContas();
   const { data: lancamentos = [] } = useLancamentos({ pageSize: 1000 }); // Buscar volume maior para conciliar
   const { data: entidades = [] } = useEntidades();
@@ -247,6 +251,12 @@ export default function Conciliacao() {
   const selectedTxForWorkspace = useMemo(() => transacoes.find(t => t.id === selectedTransacaoForConciliationId) || null, [selectedTransacaoForConciliationId, transacoes]);
   const selectedLancForWorkspace = useMemo(() => lancamentos.find(l => l.id === selectedLancamentoForConciliationId) || null, [selectedLancamentoForConciliationId, lancamentos]);
 
+  const draftDifferenceAmount = useMemo(() => {
+    if (!selectedTxForWorkspace || !selectedLancForWorkspace) return 0;
+    const erpVal = selectedLancForWorkspace.tipo === 'saida' ? -Math.abs(selectedLancForWorkspace.valor_previsto) : Math.abs(selectedLancForWorkspace.valor_previsto);
+    return selectedTxForWorkspace.valor - erpVal;
+  }, [selectedTxForWorkspace, selectedLancForWorkspace]);
+
   return (
     <div className="space-y-6 animate-fade-in">
       <header className="flex flex-col lg:flex-row lg:items-center justify-between gap-6">
@@ -297,6 +307,15 @@ export default function Conciliacao() {
           </button>
         </div>
       </header>
+
+      {(!role || role !== 'master') && (
+        <div className="bg-neutral-100 border-2 border-neutral-200 p-4 rounded-3xl flex items-center gap-3">
+          <ShieldCheck className="w-5 h-5 text-neutral-400" />
+          <p className="text-[10px] font-black text-secondary uppercase tracking-widest">
+            Nota de Governança: A conciliação bancária impacta o <span className="text-primary">Saldo Operacional</span>. A liquidação definitiva no Saldo Real é exclusiva do nível Master.
+          </p>
+        </div>
+      )}
 
       {/* Toolbox de Lote */}
       {bankStatements.some(tx => !tx.status_conciliacao) && (
