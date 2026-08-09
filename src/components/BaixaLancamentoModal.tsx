@@ -21,8 +21,7 @@ import {
   MessageSquare,
   Repeat,
   Paperclip,
-  FileText,
-  Shield
+  FileText
 } from 'lucide-react';
 import { useUIStore } from '../store/uiStore';
 import { useLancamentos, useContas, useEntidades, useCategorias, useCategoriasAjuste, useCentrosCusto, useContasSaldos, useLancamentoAnexos } from '../hooks/useData';

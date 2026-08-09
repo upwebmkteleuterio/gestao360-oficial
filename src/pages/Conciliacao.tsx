@@ -24,10 +24,241 @@ import {
   Clock,
   Filter,
   ShieldCheck,
-  Shield,
-  Clock,
-  Filter
+  Shield
 } from 'lucide-react';
+import { useConciliacao, useContas, useLancamentos, useEntidades } from '../hooks/useData';
+import { useAuth } from '../hooks/useAuth';
+import { useUIStore } from '../store/uiStore';
+import { TransacaoBanco, LancamentoFinanceiro } from '../types';
+import Button from '../components/Button';
+
+export default function Conciliacao() {
+  const { 
+    conciliacoes = [], 
+    transacoes = [], 
+    importCSV, 
+    linkConciliacao, 
+    unlinkConciliacao, 
+    cleanupTransacoes,
+    classifyDifference,
+    isLinking,
+    isCleaning
+  } = useConciliacao();
+
+  const { role } = useAuth();
+  const { data: contas = [] } = useContas();
+  const { data: lancamentos = [] } = useLancamentos({ pageSize: 1000 }); // Buscar volume maior para conciliar
+  const { data: entidades = [] } = useEntidades();
+
+  const { 
+    currentUserId, isImportarCSVOpen, setModalOpen, selectedTransacaoForConciliationId, selectedLancamentoForConciliationId,
+    isVincularConciliarOpen, isClassificarDiferencaOpen,
+    setSelectedTransacaoForConciliationId, setSelectedLancamentoForConciliationId,
+    setCurrentConciliationDifferenceValue, setCurrentConciliationId,
+    currentConciliationId, currentConciliationDifferenceValue
+  } = useUIStore();
+
+  const [selectedContaId, setSelectedContaId] = useState<string>('');
+  const [directionFilter, setDirectionFilter] = useState<'todos' | 'entrada' | 'saida'>('todos');
+  const [selectedMonth, setSelectedMonth] = useState(() => {
+    const now = new Date();
+    return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+  });
+
+  // Import states
+  const [csvContentText, setCsvContentText] = useState('');
+  const [selectedImportContaId, setSelectedImportContaId] = useState('');
+  const [importMode, setImportMode] = useState<'entrada' | 'saida' | 'ambos'>('ambos');
+  const [columnMapping, setColumnMapping] = useState({ data: '', valor: '', descricao: '', documento: '' });
+  const [csvHeaders, setCsvHeaders] = useState<string[]>([]);
+  const [csvPreviewRows, setCsvPreviewRows] = useState<any[]>([]);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Difference states
+  const [diffType, setDiffType] = useState<'juros' | 'multa' | 'desconto' | 'tarifa' | 'pagamento_parcial' | 'ajuste_manual'>('tarifa');
+  const [diffJustification, setDiffJustification] = useState('');
+
+  useEffect(() => {
+    if (contas.length > 0 && !selectedContaId) {
+      setSelectedContaId(contas[0].id);
+      setSelectedImportContaId(contas[0].id);
+    }
+  }, [contas, selectedContaId]);
+
+  const valueFormatter = (val: number) => new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(val);
+
+  const handleCleanup = async () => {
+    if (!selectedContaId) return;
+    if (confirm('Deseja remover todas as transações importadas desta conta que ainda não foram conciliadas? Esta ação é útil para corrigir erros de importação.')) {
+      try {
+        await cleanupTransacoes(selectedContaId);
+        alert('Transações pendentes removidas com sucesso.');
+      } catch (err) { alert('Erro ao limpar dados.'); }
+    }
+  };
+
+  const processFile = (file: File) => {
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const text = e.target?.result as string;
+      setCsvContentText(text);
+      const lines = text.split('\n').filter(l => l.trim());
+      if (lines.length > 0) {
+        const sep = lines[0].includes(';') ? ';' : ',';
+        const headers = lines[0].split(sep).map(h => h.trim().replace(/"/g, ''));
+        setCsvHeaders(headers);
+        const preview = lines.slice(1, 6).map(line => {
+          const parts = line.split(sep).map(p => p.trim().replace(/"/g, ''));
+          const row: any = {};
+          headers.forEach((h, i) => { row[h] = parts[i]; });
+          return row;
+        });
+        setCsvPreviewRows(preview);
+        const mapping = { data: '', valor: '', descricao: '', documento: '' };
+        headers.forEach(h => {
+          const l = h.toLowerCase();
+          if (l.includes('dat')) mapping.data = h;
+          if (l.includes('val')) mapping.valor = h;
+          if (l.includes('desc')) mapping.descricao = h;
+          if (l.includes('doc')) mapping.documento = h;
+        });
+        setColumnMapping(mapping);
+      }
+    };
+    reader.readAsText(file);
+  };
+
+  const handleImportCSVSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    try {
+      const lines = csvContentText.split('\n').filter(l => l.trim());
+      const separator = lines[0].includes(';') ? ';' : ',';
+      const headers = lines[0].split(separator).map(h => h.trim().replace(/"/g, ''));
+      const rowsToImport = lines.slice(1).map(line => {
+        const parts = line.split(separator).map(p => p.trim().replace(/"/g, ''));
+        const rowData: any = {};
+        headers.forEach((h, i) => { rowData[h] = parts[i]; });
+        const valRaw = rowData[columnMapping.valor] || '0';
+        // Limpeza avançada de valores monetários
+        const val = parseFloat(valRaw.replace(/\./g, '').replace(',', '.').replace(/[^\d.-]/g, ''));
+        return { 
+          data: rowData[columnMapping.data], 
+          valor: val, 
+          descricao: rowData[columnMapping.descricao], 
+          documento: rowData[columnMapping.documento] || '' 
+        };
+      }).filter(r => r.data && !isNaN(r.valor));
+      
+      await importCSV({ contaBancariaId: selectedImportContaId, rows: rowsToImport, importMode });
+      setModalOpen('isImportarCSVOpen', false);
+      alert('Importação concluída com sucesso!');
+    } catch (err: any) {
+      alert('Erro na importação: ' + err.message);
+    }
+  };
+
+  const executeConciliationLink = async () => {
+    if (!selectedTransacaoForConciliationId || !selectedLancamentoForConciliationId) return;
+    try {
+      const tx = transacoes.find(t => t.id === selectedTransacaoForConciliationId);
+      const lanc = lancamentos.find(l => l.id === selectedLancamentoForConciliationId);
+      if (!tx || !lanc) return;
+      
+      const newCon = await linkConciliacao({ lancamentoId: lanc.id, transacaoBancoId: tx.id, usuarioId: currentUserId });
+      
+      const erpVal = lanc.tipo === 'saida' ? -Math.abs(lanc.valor_previsto) : Math.abs(lanc.valor_previsto);
+      const diff = tx.valor - erpVal;
+      
+      if (Math.abs(diff) > 0.01) {
+        setCurrentConciliationId(newCon.id); 
+        setCurrentConciliationDifferenceValue(diff);
+        setModalOpen('isVincularConciliarOpen', false); 
+        setModalOpen('isClassificarDiferencaOpen', true);
+      } else {
+        setModalOpen('isVincularConciliarOpen', false);
+        setSelectedTransacaoForConciliationId(null);
+        setSelectedLancamentoForConciliationId(null);
+      }
+    } catch (err: any) { alert('Erro: ' + err.message); }
+  };
+
+  const handleClassifyDiffSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!currentConciliationId) return;
+    try {
+      await classifyDifference({
+        conciliacaoId: currentConciliationId,
+        tipoDiferenca: diffType,
+        valorDiferenca: currentConciliationDifferenceValue,
+        observacaoJustificativa: diffJustification
+      });
+      setModalOpen('isClassificarDiferencaOpen', false);
+      setCurrentConciliationId(null);
+      setCurrentConciliationDifferenceValue(0);
+      setDiffJustification('');
+      setSelectedTransacaoForConciliationId(null);
+      setSelectedLancamentoForConciliationId(null);
+    } catch (err: any) { alert('Erro: ' + err.message); }
+  };
+
+  const handleUnlink = async (conId: string) => {
+    if (confirm('Deseja realmente desfazer esta conciliação? O lançamento voltará para o status "Aberto".')) {
+      try { await unlinkConciliacao({ conciliacaoId: conId }); } catch (err: any) { alert('Erro: ' + err.message); }
+    }
+  };
+
+  // 1. Processar Transações do Banco
+  const bankStatements = useMemo(() => {
+    return transacoes
+      .filter(tx => {
+        const matchConta = tx.conta_bancaria_id === selectedContaId;
+        const matchMonth = tx.data_transacao.startsWith(selectedMonth);
+        const matchDirection = directionFilter === 'todos' ? true : 
+                              directionFilter === 'entrada' ? tx.valor > 0 : tx.valor < 0;
+        return matchConta && matchMonth && matchDirection;
+      })
+      .map(tx => ({ 
+        ...tx, 
+        conciliation: conciliacoes.find(c => c.transacao_banco_id === tx.id) || null 
+      }));
+  }, [transacoes, selectedContaId, selectedMonth, directionFilter, conciliacoes]);
+
+  // 2. Processar Lançamentos do ERP
+  const availableLaunches = useMemo(() => {
+    return lancamentos.filter(l => {
+      const matchConta = l.conta_bancaria_id === selectedContaId;
+      const matchStatus = !conciliacoes.some(c => c.lancamento_id === l.id);
+      const matchMonth = l.data_vencimento.startsWith(selectedMonth);
+      const matchDirection = directionFilter === 'todos' ? true : l.tipo === directionFilter;
+      return matchConta && matchStatus && matchMonth && matchDirection;
+    });
+  }, [lancamentos, conciliacoes, selectedContaId, selectedMonth, directionFilter]);
+
+  // 3. Lógica de Smart Match (Sugestão Visual)
+  const smartMatches = useMemo(() => {
+    if (!selectedTransacaoForConciliationId) return [];
+    const tx = transacoes.find(t => t.id === selectedTransacaoForConciliationId);
+    if (!tx) return [];
+
+    return availableLaunches.filter(l => {
+      const erpVal = l.tipo === 'saida' ? -Math.abs(l.valor_previsto) : Math.abs(l.valor_previsto);
+      const sameVal = Math.abs(erpVal - tx.valor) < 0.01;
+      const sameDate = l.data_vencimento === tx.data_transacao;
+      return sameVal || (sameVal && sameDate);
+    }).map(l => l.id);
+  }, [selectedTransacaoForConciliationId, transacoes, availableLaunches]);
+
+  const selectedTxForWorkspace = useMemo(() => transacoes.find(t => t.id === selectedTransacaoForConciliationId) || null, [selectedTransacaoForConciliationId, transacoes]);
+  const selectedLancForWorkspace = useMemo(() => lancamentos.find(l => l.id === selectedLancamentoForConciliationId) || null, [selectedLancamentoForConciliationId, lancamentos]);
+
+  const draftDifferenceAmount = useMemo(() => {
+    if (!selectedTxForWorkspace || !selectedLancForWorkspace) return 0;
+    const erpVal = selectedLancForWorkspace.tipo === 'saida' ? -Math.abs(selectedLancForWorkspace.valor_previsto) : Math.abs(selectedLancForWorkspace.valor_previsto);
+    return selectedTxForWorkspace.valor - erpVal;
+  }, [selectedTxForWorkspace, selectedLancForWorkspace]);
+
+  return (
+    <div className="space-y-6 animate-fade-in">
       <header className="flex flex-col lg:flex-row lg:items-center justify-between gap-6">
         <div>
           <h1 className="text-3xl font-black text-on-surface tracking-tighter uppercase flex items-center gap-3">
@@ -525,5 +756,3 @@ import {
     </div>
   );
 }
-
-// End of file
