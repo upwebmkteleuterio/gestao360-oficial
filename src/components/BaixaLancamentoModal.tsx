@@ -220,8 +220,18 @@ export default function BaixaLancamentoModal() {
       // CCD is still useful to categorize as BPI internally
       const bpiCC = rawCCs.find(cc => cc.nome === 'BPI');
       if (bpiCC) setCentroCustoId(bpiCC.id);
-    } else {
+    } else if (tipo === 'avr') {
+      // Quando trocar para AVR, sempre restaura o centro de custo oficial do banco de dados
       setValorPago(formatBRL(lancamento.valor_previsto));
+      setCentroCustoId(lancamento.centro_custo_id || '');
+    } else {
+      // Para financeira (Quitar), restaura o valor e também o centro de custo caso estivesse no BPI
+      setValorPago(formatBRL(lancamento.valor_previsto));
+      
+      const bpiCC = rawCCs.find(cc => cc.nome === 'BPI');
+      if (centroCustoId === bpiCC?.id) {
+        setCentroCustoId(lancamento.centro_custo_id || '');
+      }
     }
   };
 
