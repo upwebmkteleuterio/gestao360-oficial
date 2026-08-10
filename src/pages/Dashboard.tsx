@@ -506,7 +506,7 @@ export default function Dashboard() {
               <table className="w-full text-left border-collapse">
                 <thead><tr className="bg-neutral-50 text-neutral-400 border-b border-neutral-100 text-[9px] font-black uppercase tracking-widest"><th className="py-4 px-8">Data</th><th className="py-4 px-8">Descrição</th><th className="py-4 px-8">Entidade</th><th className="py-4 px-8 text-right">Valor</th></tr></thead>
                 <tbody className="text-[11px] font-bold">
-                  {lancamentos.slice(0, 50).map(l => (
+                  {lancamentos.filter(l => l.status_pagamento === 'pago').slice(0, 50).map(l => (
                     <tr key={l.id} className="border-b border-neutral-50 hover:bg-neutral-50">
 
                       <td className="py-4 px-8 font-mono">{l.data_vencimento.split('-').reverse().join('/')}</td>

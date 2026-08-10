@@ -50,6 +50,7 @@ export default function Relatorios() {
   // Export CSV logic
   const handleExportCSV = () => {
     const periodItems = lancamentos.filter(l =>
+      l.status_pagamento === 'pago' &&
       l.data_vencimento >= dateRange.start &&
       l.data_vencimento <= dateRange.end &&
       (selectedCostCenter === 'all' || l.centro_custo_id === selectedCostCenter)

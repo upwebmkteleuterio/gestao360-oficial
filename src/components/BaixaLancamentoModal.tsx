@@ -102,6 +102,8 @@ export default function BaixaLancamentoModal() {
   const [acrescimoValor, setAcrescimoValor] = useState('');
   const [acrescimoTipo, setAcrescimoTipo] = useState<'valor' | 'porcentagem'>('valor');
   const [motivoAcrescimoId, setMotivoAcrescimoId] = useState('');
+
+  const [motivoAVRId, setMotivoAVRId] = useState('');
   
   const [valorPago, setValorPago] = useState('');
   const [observacao, setObservacao] = useState('');
@@ -132,6 +134,7 @@ export default function BaixaLancamentoModal() {
       setAcrescimoValor('');
       setAcrescimoTipo('valor');
       setMotivoAcrescimoId('');
+      setMotivoAVRId('');
       setObservacao('');
       setTaxaBancaria('');
       setTipoBaixa('financeira');
@@ -182,16 +185,20 @@ export default function BaixaLancamentoModal() {
   // Adjustment Reasons Logic
   const discReasons = (categoriasAjuste || []).filter(c => c.tipo === 'desconto');
   const incrReasons = (categoriasAjuste || []).filter(c => c.tipo === 'acrescimo');
+  const avrReasons = (categoriasAjuste || []).filter(c => c.tipo === 'avr');
 
   const isDescontoReasonRequired = calculatedDesconto > 0;
   const isAcrescimoReasonRequired = calculatedAcrescimo > 0;
+  const isAVRReasonRequired = isAVR;
   
   const isDescontoReasonSelected = !!motivoDescontoId;
   const isAcrescimoReasonSelected = !!motivoAcrescimoId;
+  const isAVRReasonSelected = !!motivoAVRId;
 
-  // Logic for mandatory observation: BPI, AVR or manual divergence
+  // Logic for mandatory observation: BPI or manual divergence
+  // Note: AVR now uses a dropdown instead of free text observation
   const hasFinancialDivergence = calculatedDesconto > 0 || calculatedAcrescimo > 0 || numericTaxa > 0 || isPartial;
-  const isObsRequired = isBpi || isAVR || hasFinancialDivergence;
+  const isObsRequired = isBpi || hasFinancialDivergence;
   const isObsFilled = observacao.trim().length > 0;
   
   // Saldo Insuficiente validation (Item 1)
@@ -200,6 +207,7 @@ export default function BaixaLancamentoModal() {
   const saldoInsuficienteBaixa = !isBpi && isSaida && valorDigitado > selectedContaSaldo;
 
   const canSave = (!isObsRequired || isObsFilled) &&
+                  (!isAVRReasonRequired || isAVRReasonSelected) &&
                   (!isDescontoReasonRequired || isDescontoReasonSelected) &&
                   (!isAcrescimoReasonRequired || isAcrescimoReasonSelected) &&
                   !isOverpaid && (isBpi || valorDigitado > 0) && !saldoInsuficienteBaixa;
@@ -239,6 +247,8 @@ export default function BaixaLancamentoModal() {
   const executeSubmit = async (propagateModeOverride?: 'none' | 'open' | 'all') => {
     setLoading(true);
     try {
+      const avrReasonName = isAVR ? avrReasons.find(r => r.id === motivoAVRId)?.nome : undefined;
+
       await baixaLancamento({
         id: lancamento.id,
         data: {
@@ -252,7 +262,7 @@ export default function BaixaLancamentoModal() {
           valor_acrescimo: calculatedAcrescimo + numericTaxa,
           motivo_desconto_id: motivoDescontoId || undefined,
           motivo_acrescimo_id: motivoAcrescimoId || undefined,
-          motivo_ajuste: observacao,
+          motivo_ajuste: isAVR ? avrReasonName : observacao,
           propagate_avr: propagateModeOverride || propagateAVR
         }
       });
@@ -301,7 +311,8 @@ export default function BaixaLancamentoModal() {
     try {
       const result = await createCategoriaAjuste({ nome: quickAddName, tipo: quickAddType });
       if (quickAddType === 'desconto') setMotivoDescontoId(result.id);
-      else setMotivoAcrescimoId(result.id);
+      else if (quickAddType === 'acrescimo') setMotivoAcrescimoId(result.id);
+      else if (quickAddType === 'avr') setMotivoAVRId(result.id);
       setIsQuickAddOpen(false);
       setQuickAddName('');
     } catch (err: any) {
@@ -600,8 +611,43 @@ export default function BaixaLancamentoModal() {
 
               {/* CONTEXTUAL JUSTIFICATION BOX */}
               <AnimatePresence>
+                {isAVR && (
+                  <motion.div
+                    initial={{ opacity: 0, height: 0, scale: 0.95 }}
+                    animate={{ opacity: 1, height: 'auto', scale: 1 }}
+                    exit={{ opacity: 0, height: 0, scale: 0.95 }}
+                    className="space-y-3 p-5 bg-primary/5 rounded-3xl border-2 border-primary/20 shadow-sm overflow-hidden"
+                  >
+                    <div className="flex justify-between items-center">
+                      <label className="text-[10px] font-black uppercase text-primary tracking-widest flex items-center gap-2">
+                        <Tag className="w-4 h-4" /> Motivo do Ajuste (AVR) <span className="text-alert-red">*</span>
+                      </label>
+                      <button
+                        type="button"
+                        onClick={() => { setQuickAddType('avr'); setIsQuickAddOpen(true); }}
+                        className="text-[8px] font-black uppercase text-primary hover:underline flex items-center gap-1"
+                      >
+                        <Plus className="w-2.5 h-2.5" /> Novo
+                      </button>
+                    </div>
+                    <select
+                      value={motivoAVRId}
+                      onChange={(e) => setMotivoAVRId(e.target.value)}
+                      className={`w-full h-12 bg-white border-2 rounded-2xl px-4 text-xs font-bold outline-none appearance-none cursor-pointer transition-all ${
+                        isAVRReasonSelected ? 'border-primary/30 focus:border-primary' : 'border-alert-red/30 focus:border-alert-red'
+                      }`}
+                    >
+                      <option value="">Selecione o motivo do ajuste...</option>
+                      {avrReasons.map(r => (
+                        <option key={r.id} value={r.id}>{r.nome}</option>
+                      ))}
+                    </select>
+                    <p className="text-[8px] font-bold text-secondary uppercase tracking-tight">Este motivo será registrado no log de auditoria do título.</p>
+                  </motion.div>
+                )}
+
                 {isObsRequired && (
-                  <motion.div 
+                  <motion.div
                     initial={{ opacity: 0, height: 0, scale: 0.95 }}
                     animate={{ opacity: 1, height: 'auto', scale: 1 }}
                     exit={{ opacity: 0, height: 0, scale: 0.95 }}
@@ -609,7 +655,7 @@ export default function BaixaLancamentoModal() {
                   >
                     <div className="flex justify-between items-center">
                       <label className="text-[10px] font-black uppercase text-amber-700 tracking-widest flex items-center gap-2">
-                        <MessageSquare className="w-4 h-4" /> Justificativa da Alteração <span className="text-alert-red">*</span>
+                        <MessageSquare className="w-4 h-4" /> Justificativa da Baixa <span className="text-alert-red">*</span>
                       </label>
                       <span className="text-[8px] bg-amber-200/50 text-amber-800 font-black uppercase px-2 py-0.5 rounded">Obrigatório</span>
                     </div>
@@ -618,11 +664,9 @@ export default function BaixaLancamentoModal() {
                       value={observacao}
                       onChange={(e) => setObservacao(e.target.value)}
                       placeholder={
-                        isBpi 
-                          ? "Explique o motivo desta baixa por inatividade (Cancelamento)..." 
-                          : isAVR 
-                            ? "Justifique o ajuste do valor real do título..." 
-                            : "Explique o motivo da diferença no pagamento (ex: Juros, arredondamento, taxa)..."
+                        isBpi
+                          ? "Explique o motivo desta baixa por inatividade (Cancelamento)..."
+                          : "Explique o motivo da diferença no pagamento (ex: Juros, arredondamento, taxa)..."
                       }
                       className="w-full p-4 bg-white border-2 border-amber-200 rounded-2xl text-xs font-bold text-neutral-800 focus:border-amber-400 outline-none resize-none shadow-inner"
                       rows={3}
