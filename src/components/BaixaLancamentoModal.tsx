@@ -915,6 +915,13 @@ export default function BaixaLancamentoModal() {
                 exit={{ scale: 0.9, opacity: 0 }}
                 className="bg-white w-full max-w-[420px] rounded-[32px] shadow-2xl relative z-10 overflow-hidden border border-neutral-100"
               >
+                <button
+                  onClick={() => setIsAVRConfirmationOpen(false)}
+                  className="absolute top-6 right-6 p-2 hover:bg-neutral-100 rounded-xl transition-all z-20"
+                >
+                  <X className="w-4 h-4 text-secondary" />
+                </button>
+
                 <div className="p-8 text-center space-y-4">
                   <div className="w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center mx-auto text-primary">
                     <Repeat className="w-8 h-8" />
@@ -926,46 +933,31 @@ export default function BaixaLancamentoModal() {
                     </p>
                   </div>
   
-                  <div className="grid grid-cols-1 gap-3 pt-4">
+                  <div className="flex flex-col gap-3 pt-4 items-center">
                     <button
                       type="button"
                       onClick={() => {
                         setPropagateAVR('none');
                         setTimeout(() => executeSubmit('none'), 100);
                       }}
-                      className="w-full py-4 bg-neutral-50 hover:bg-neutral-100 text-neutral-900 rounded-2xl text-[10px] font-black uppercase tracking-widest border-2 border-neutral-100 transition-all flex items-center justify-center gap-2"
+                      className="w-full py-4 bg-neutral-900 hover:bg-black text-white rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all flex items-center justify-center gap-2 shadow-lg hover:scale-[1.02] active:scale-[0.98]"
                     >
-                      <CheckCircle2 className="w-4 h-4 text-secondary" /> Ajustar apenas esta
+                      <CheckCircle2 className="w-4 h-4 text-white/40" /> Ajustar apenas esta
                     </button>
+
+                    <span className="text-[8px] font-black uppercase text-secondary/40 tracking-[0.3em] py-1">ou</span>
+
                     <button
                       type="button"
                       onClick={() => {
                         setPropagateAVR('open');
                         setTimeout(() => executeSubmit('open'), 100);
                       }}
-                      className="w-full py-4 bg-neutral-900 hover:bg-black text-white rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all flex items-center justify-center gap-2 shadow-lg"
+                      className="w-full py-4 bg-neutral-900 hover:bg-black text-white rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all flex items-center justify-center gap-2 shadow-lg hover:scale-[1.02] active:scale-[0.98]"
                     >
-                      <Plus className="w-4 h-4" /> Todas em aberto
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setPropagateAVR('all');
-                        setTimeout(() => executeSubmit('all'), 100);
-                      }}
-                      className="w-full py-4 bg-primary hover:bg-primary-hover text-white rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all flex items-center justify-center gap-2 shadow-lg"
-                    >
-                      <AlertTriangle className="w-4 h-4" /> Todas (Histórico Completo)
+                      <Plus className="w-4 h-4 text-white/40" /> Todas em aberto
                     </button>
                   </div>
-  
-                  <button
-                    type="button"
-                    onClick={() => setIsAVRConfirmationOpen(false)}
-                    className="text-[9px] font-black uppercase text-secondary hover:text-neutral-900 transition-colors pt-2"
-                  >
-                    Voltar e Revisar
-                  </button>
                 </div>
               </motion.div>
             </div>
@@ -983,6 +975,13 @@ export default function BaixaLancamentoModal() {
                 exit={{ scale: 0.9, opacity: 0 }}
                 className="bg-white w-full max-w-[420px] rounded-[32px] shadow-2xl relative z-10 overflow-hidden border border-neutral-100"
               >
+                <button
+                  onClick={() => setIsFinalConfirmationOpen(false)}
+                  className="absolute top-6 right-6 p-2 hover:bg-neutral-100 rounded-xl transition-all z-20"
+                >
+                  <X className="w-4 h-4 text-secondary" />
+                </button>
+
                 <div className="p-8 text-center space-y-4">
                   <div className={`w-16 h-16 rounded-full flex items-center justify-center mx-auto ${
                     isAVR ? 'bg-primary/10 text-primary' : 'bg-bank-truth-green/10 text-bank-truth-green'
@@ -1008,7 +1007,7 @@ export default function BaixaLancamentoModal() {
                     <button
                       type="button"
                       onClick={() => executeSubmit()}
-                      className={`w-full py-4 text-white rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all flex items-center justify-center gap-2 shadow-lg ${
+                      className={`w-full py-4 text-white rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all flex items-center justify-center gap-2 shadow-lg hover:scale-[1.02] active:scale-[0.98] ${
                         isAVR ? 'bg-primary hover:bg-primary-hover' : 'bg-neutral-900 hover:bg-black'
                       }`}
                     >
@@ -1016,14 +1015,6 @@ export default function BaixaLancamentoModal() {
                       {isAVR ? 'Confirmar e Salvar' : 'Confirmar e Baixar'}
                     </button>
                   </div>
-  
-                  <button
-                    type="button"
-                    onClick={() => setIsFinalConfirmationOpen(false)}
-                    className="text-[9px] font-black uppercase text-secondary hover:text-neutral-900 transition-colors pt-2"
-                  >
-                    Voltar e Corrigir
-                  </button>
                 </div>
               </motion.div>
             </div>
