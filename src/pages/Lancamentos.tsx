@@ -111,12 +111,12 @@ export default function Lancamentos({
 
   // Advanced Filters
   const [approvalStatus, setApprovalStatus] = useState('all');
-  const [statusPagamento, setStatusPagamento] = useState<string>(statusPagamentoOverride || (isColaborador ? 'quitação_pendente' : 'all'));
+  const [statusPagamento, setStatusPagamento] = useState<string>(statusPagamentoOverride || (isColaborador ? 'quitação_pendente' : 'pago'));
   const [typeFilter, setTypeFilter] = useState<'all' | 'entrada' | 'saida'>(typeOverride || 'all');
 
   // Sincronizar o estado interno com as propriedades da rota ao navegar
   useEffect(() => {
-    setStatusPagamento(statusPagamentoOverride || (isColaborador ? 'quitação_pendente' : 'all'));
+    setStatusPagamento(statusPagamentoOverride || (isColaborador ? 'quitação_pendente' : 'pago'));
     setTypeFilter(typeOverride || 'all');
     setSelectedLancamentoIdsForBatch([]);
   }, [statusPagamentoOverride, typeOverride, isColaborador]);
@@ -252,7 +252,7 @@ export default function Lancamentos({
     setSearchTerm('');
     setDocSearchTerm('');
     setApprovalStatus('all');
-    setStatusPagamento(statusPagamentoOverride || (isColaborador ? 'quitação_pendente' : 'all'));
+    setStatusPagamento(statusPagamentoOverride || (isColaborador ? 'quitação_pendente' : 'pago'));
     setTypeFilter(typeOverride || 'all');
     setAuthorIdIdFilter('all');
     setCategoryIdFilter('all');
