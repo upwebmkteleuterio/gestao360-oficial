@@ -553,15 +553,18 @@ export default function BaixaLancamentoModal() {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <label className="text-[10px] font-black uppercase text-secondary tracking-widest flex items-center gap-2">
-                    <Wallet className="w-4 h-4" /> Valor Recebido / Pago
+                    {isAVR ? <DollarSign className="w-4 h-4" /> : <Wallet className="w-4 h-4" />}
+                    {isAVR ? 'Novo Valor Original' : 'Valor Recebido / Pago'}
                   </label>
                   <div className="relative">
                     <span className="absolute left-4 top-1/2 -translate-y-1/2 text-xs font-black text-secondary">R$</span>
-                    <MoneyInput 
+                    <MoneyInput
                       disabled={isBpi}
                       value={valorPago}
                       onChange={setValorPago}
-                      className="w-full h-12 pl-10 pr-4 bg-neutral-50 border-2 border-neutral-100 rounded-2xl text-sm font-black text-on-surface focus:outline-none focus:border-primary transition-all disabled:opacity-50"
+                      className={`w-full h-12 pl-10 pr-4 border-2 rounded-2xl text-sm font-black focus:outline-none transition-all ${
+                        isAVR ? 'bg-primary/5 border-primary/30 text-primary focus:border-primary' : 'bg-neutral-50 border-neutral-100 text-on-surface focus:border-primary disabled:opacity-50'
+                      }`}
                     />
                   </div>
                 </div>
@@ -791,17 +794,17 @@ export default function BaixaLancamentoModal() {
               >
                 Cancelar
               </button>
-              <button 
+              <button
                 onClick={handleSubmit}
                 disabled={loading || !canSave}
                 className={`px-10 py-3 text-white text-[10px] font-black uppercase tracking-[0.2em] rounded-xl shadow-lg transition-all active:scale-[0.98] flex items-center gap-2 ${
-                  canSave 
-                    ? 'bg-neutral-900 hover:bg-black cursor-pointer' 
+                  canSave
+                    ? (isAVR ? 'bg-primary hover:bg-primary-hover' : 'bg-neutral-900 hover:bg-black') + ' cursor-pointer'
                     : 'bg-neutral-300 cursor-not-allowed opacity-50'
                 }`}
               >
-                {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <CheckCircle2 className="w-4 h-4" />}
-                {isPartial ? 'Confirmar Parcial' : 'Baixar Título'}
+                {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : (isAVR ? <FileText className="w-4 h-4" /> : <CheckCircle2 className="w-4 h-4" />)}
+                {isAVR ? 'Salvar Ajuste (AVR)' : (isPartial ? 'Confirmar Parcial' : 'Baixar Título')}
               </button>
             </footer>
           </motion.div>
@@ -927,19 +930,23 @@ export default function BaixaLancamentoModal() {
                 className="bg-white w-full max-w-[420px] rounded-[32px] shadow-2xl relative z-10 overflow-hidden border border-neutral-100"
               >
                 <div className="p-8 text-center space-y-4">
-                  <div className="w-16 h-16 bg-bank-truth-green/10 rounded-full flex items-center justify-center mx-auto text-bank-truth-green">
-                    <CheckCircle2 className="w-8 h-8" />
+                  <div className={`w-16 h-16 rounded-full flex items-center justify-center mx-auto ${
+                    isAVR ? 'bg-primary/10 text-primary' : 'bg-bank-truth-green/10 text-bank-truth-green'
+                  }`}>
+                    {isAVR ? <FileText className="w-8 h-8" /> : <CheckCircle2 className="w-8 h-8" />}
                   </div>
                   <div>
                     <h3 className="text-sm font-black uppercase tracking-widest text-neutral-900">
-                      {tipoBaixa === 'bpi' ? 'Confirmar Baixa por Inatividade?' : 'Confirmar Baixa de Título?'}
+                      {isAVR ? 'Confirmar Ajuste AVR?' : (tipoBaixa === 'bpi' ? 'Confirmar Baixa por Inatividade?' : 'Confirmar Baixa de Título?')}
                     </h3>
                     <p className="text-[10px] font-bold text-secondary uppercase leading-relaxed mt-2">
-                      {tipoBaixa === 'bpi' ? (
+                      {isAVR ? (
+                        <>Você está corrigindo o valor original para <span className="text-primary font-black">R$ {formatBRL(valorDigitado)}</span> sem gerar movimentação de caixa.</>
+                      ) : (tipoBaixa === 'bpi' ? (
                         <>Você está prestes a realizar a baixa por inatividade (cancelamento) do título de <span className="text-primary font-black">{entName}</span>.</>
                       ) : (
                         <>Você está prestes a baixar o título de <span className="text-primary font-black">{entName}</span> no valor de <span className="text-primary font-black">R$ {formatBRL(valorDigitado)}</span>.</>
-                      )}
+                      ))}
                     </p>
                   </div>
   
@@ -947,9 +954,12 @@ export default function BaixaLancamentoModal() {
                     <button
                       type="button"
                       onClick={() => executeSubmit()}
-                      className="w-full py-4 bg-neutral-900 hover:bg-black text-white rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all flex items-center justify-center gap-2 shadow-lg"
+                      className={`w-full py-4 text-white rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all flex items-center justify-center gap-2 shadow-lg ${
+                        isAVR ? 'bg-primary hover:bg-primary-hover' : 'bg-neutral-900 hover:bg-black'
+                      }`}
                     >
-                      <CheckCircle2 className="w-4 h-4" /> Confirmar e Baixar
+                      {isAVR ? <FileText className="w-4 h-4" /> : <CheckCircle2 className="w-4 h-4" />}
+                      {isAVR ? 'Confirmar e Salvar' : 'Confirmar e Baixar'}
                     </button>
                   </div>
   

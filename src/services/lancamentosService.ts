@@ -283,7 +283,7 @@ export const lancamentosService = {
 
     const isBPI = data.tipo_baixa === 'bpi';
     const isAVR = data.tipo_baixa === 'avr';
-    const valorPagoEfetivo = isBPI ? 0 : (data.valor_pago > 0 ? data.valor_pago : current.valor_previsto);
+    const valorPagoEfetivo = (isBPI || isAVR) ? (data.valor_pago > 0 ? data.valor_pago : (isBPI ? 0 : current.valor_previsto)) : (data.valor_pago > 0 ? data.valor_pago : current.valor_previsto);
     const subtotal = current.valor_previsto - (data.valor_desconto || 0) + (data.valor_acrescimo || 0);
     const isPartial = valorPagoEfetivo < subtotal;
     const dataPagamentoVal = data.data_pagamento || new Date().toISOString().split('T')[0];
@@ -301,6 +301,52 @@ export const lancamentosService = {
 
    // Define final payment status based on role
    const finalPaymentStatus = isBPI ? 'bpi' : (isMaster ? 'pago' : 'quitação_pendente');
+
+   // AVR logic: Skip financial movement and only update values
+   if (isAVR) {
+     const now = new Date();
+     const timestampStr = `${now.toLocaleDateString('pt-BR')} às ${now.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}`;
+     const { data: { user } } = await supabase.auth.getUser();
+     
+     const updatePayload: any = {
+       valor_previsto: valorPagoEfetivo,
+       valor_original: valorPagoEfetivo,
+       observacoes: (current.observacoes || '') + `\n[AVR - Ajuste Realizado em ${timestampStr}] Valor alterado de R$ ${current.valor_original || current.valor_previsto} para R$ ${valorPagoEfetivo}. Motivo: ${data.motivo_ajuste || 'Não informado'}`,
+     };
+
+     // Se não for master, o status de aprovação volta para digital para conferência
+     if (!isMaster) {
+       updatePayload.status_aprovacao = 'digital';
+     }
+
+     const { data: updated, error: updateError } = await supabase
+       .from('lancamentos_financeiros')
+       .update(updatePayload)
+       .eq('id', id)
+       .select()
+       .single();
+
+     if (updateError) throw updateError;
+
+     // Propagação do AVR se solicitado e for recorrente
+     if (data.propagate_avr !== 'none' && current.recorrencia_id) {
+       const propagationQuery = supabase
+         .from('lancamentos_financeiros')
+         .update({
+           valor_previsto: valorPagoEfetivo,
+           valor_original: valorPagoEfetivo,
+           observacoes: (current.observacoes || '') + `\n[AVR Propagado (${data.propagate_avr}) em ${timestampStr}]`
+         })
+         .eq('recorrencia_id', current.recorrencia_id);
+
+       if (data.propagate_avr === 'open') {
+         propagationQuery.eq('status_pagamento', 'aberto');
+       }
+       await propagationQuery;
+     }
+
+     return updated as LancamentoFinanceiro;
+   }
 
    if (isPartial && !isBPI) {
      const saldoRestante = subtotal - valorPagoEfetivo;
