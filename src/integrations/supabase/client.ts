@@ -3,6 +3,6 @@
 import { createClient } from '@supabase/supabase-js';
 
 const SUPABASE_URL = "https://rfjolkadxfixxagpidws.supabase.co";
-const SUPABASE_PUBLISHABLE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJmam9sa2FkeGZpeHhhZ3BpZHdzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODM1NDE2MDQsImV4cCI6MjA5OTExNzYwNH0.QSrIvD5B7FseFHDXK0ejay9HGgs6g1UfigauikvbCOA";
+const SUPABASE_PUBLISHABLE_KEY = "sb_publishable_0hhJclSJdUdu25v1GVRN4Q_Qlp7Od57";
 
 export const supabase = createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY);
