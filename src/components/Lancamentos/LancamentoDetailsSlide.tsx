@@ -28,8 +28,9 @@ import {
   Download
 } from 'lucide-react';
 import { useUIStore } from '../../store/uiStore';
-import { useLancamento, useEntidades, useCategorias, useUsuarios, useLancamentoAnexos, useLancamentos } from '../../hooks/useData';
+import { useLancamento, useEntidades, useCategorias, useUsuarios, useLancamentoAnexos, useLancamentos, useContas } from '../../hooks/useData';
 import { useAuth } from '../../hooks/useAuth';
+import { supabase } from '@/integrations/supabase/client';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 
@@ -47,6 +48,9 @@ export default function LancamentoDetailsSlide() {
   const { data: entidades = [] } = useEntidades();
   const { data: categorias = [] } = useCategorias();
   const { data: usuarios = [] } = useUsuarios();
+  const { data: contas = [] } = useContas();
+
+  const [parcelas, setParcelas] = useState<any[]>([]);
 
   const isMaster = role === 'master';
 
@@ -61,6 +65,30 @@ export default function LancamentoDetailsSlide() {
 
   const { data: lancamento, isLoading: loadingItem } = useLancamento(selectedLancamentoIdForModal);
   const { anexos = [] } = useLancamentoAnexos(selectedLancamentoIdForModal);
+
+  useEffect(() => {
+    if (!lancamento) {
+      setParcelas([]);
+      return;
+    }
+
+    const loadParcelas = async () => {
+      if (!lancamento.recorrencia_id) {
+        setParcelas([lancamento]);
+        return;
+      }
+
+      const { data } = await supabase
+        .from('lancamentos_financeiros')
+        .select('id, numero_parcela, quantidade_total_parcelas, valor_previsto, valor_recebido, data_vencimento, data_pagamento, hora_pagamento, status_pagamento, conta_bancaria_id')
+        .eq('recorrencia_id', lancamento.recorrencia_id)
+        .order('numero_parcela', { ascending: true });
+
+      setParcelas(data?.length ? data : [lancamento]);
+    };
+
+    loadParcelas();
+  }, [lancamento?.id, lancamento?.recorrencia_id]);
 
   const [dispensarComprovante, setDispensarComprovante] = useState(false);
 
@@ -99,6 +127,18 @@ export default function LancamentoDetailsSlide() {
     } catch { return dateStr; }
   };
 
+  const formatPaymentDateTime = (dateStr: string | null | undefined, timeStr: string | null | undefined) => {
+    if (!dateStr) return '-';
+    if (!timeStr) return formatDate(dateStr);
+    return formatDateTime(`${dateStr}T${timeStr}`);
+  };
+
+  const getAccountName = (id: string | null | undefined) => {
+    if (!id) return 'Não informado';
+    const conta = contas.find(item => item.id === id);
+    return conta?.nome_banco || conta?.nome || 'Conta não encontrada';
+  };
+
   const handlePrintReceipt = () => {
     window.print();
   };
@@ -106,6 +146,7 @@ export default function LancamentoDetailsSlide() {
   const hasAnexo = anexos.length > 0;
   const isQuitacaoPendente = lancamento?.status_pagamento === 'quitação_pendente';
   const canApprove = hasAnexo || dispensarComprovante;
+  const quantidadeParcelas = lancamento?.quantidade_total_parcelas || parcelas.length;
 
   return (
     <AnimatePresence>
@@ -289,7 +330,7 @@ export default function LancamentoDetailsSlide() {
                       <DetailItem icon={<User className="w-3.5 h-3.5" />} label="Responsável" value={getUsuarioName(lancamento.usuario_criador_id)} />
                       <DetailItem icon={<Tag className="w-3.5 h-3.5" />} label="Local / Cliente" value={getEntidadeName(lancamento.entidade_id)} />
                       <DetailItem icon={<FileText className="w-3.5 h-3.5" />} label="Categoria" value={getCategoriaName(lancamento.categoria_id)} />
-                      <DetailItem icon={<CreditCard className="w-3.5 h-3.5" />} label="Conta / Caixa" value="Dados do Lançamento" />
+                      <DetailItem icon={<CreditCard className="w-3.5 h-3.5" />} label="Banco / Conta" value={getAccountName(lancamento.conta_bancaria_id)} />
                     </div>
                   </div>
 
@@ -347,7 +388,50 @@ export default function LancamentoDetailsSlide() {
 
                       <DetailItem icon={<Calendar className="w-3.5 h-3.5" />} label="Vencimento" value={formatDate(lancamento.data_vencimento)} />
                       <DetailItem icon={<Calendar className="w-3.5 h-3.5" />} label="Data Competência" value={formatDate(lancamento.data_competencia)} />
-                      <DetailItem icon={<Calendar className="w-3.5 h-3.5" />} label="Recebido em" value={formatDate(lancamento.data_pagamento)} />
+                      <DetailItem icon={<Calendar className="w-3.5 h-3.5" />} label="Recebido em" value={formatPaymentDateTime(lancamento.data_pagamento, (lancamento as any).hora_pagamento)} />
+                    </div>
+
+                    <div className="rounded-2xl border border-neutral-100 overflow-hidden">
+                      <div className="px-4 py-3 bg-neutral-50 flex items-center justify-between">
+                        <div>
+                          <span className="text-[9px] font-black uppercase tracking-widest text-primary block">Parcelamento</span>
+                          <span className="text-[10px] font-bold text-secondary">{quantidadeParcelas} {quantidadeParcelas === 1 ? 'parcela' : 'parcelas'} no título</span>
+                        </div>
+                        <CreditCard className="w-4 h-4 text-primary" />
+                      </div>
+                      <div className="divide-y divide-neutral-100">
+                        {parcelas.map((parcela, index) => {
+                          const pago = parcela.status_pagamento === 'pago';
+                          const pendente = parcela.status_pagamento === 'quitação_pendente';
+                          return (
+                            <div key={parcela.id || index} className="px-4 py-3 flex items-center justify-between gap-3">
+                              <div className="min-w-0">
+                                <div className="flex items-center gap-2">
+                                  <span className="text-[10px] font-black text-neutral-900">Parcela {parcela.numero_parcela || index + 1}</span>
+                                  <span className={`px-1.5 py-0.5 rounded text-[8px] font-black uppercase ${
+                                    pago ? 'bg-bank-truth-green/10 text-bank-truth-green' : pendente ? 'bg-amber-100 text-amber-700' : 'bg-neutral-100 text-secondary'
+                                  }`}>
+                                    {pago ? 'Paga' : pendente ? 'Pendente' : 'Em aberto'}
+                                  </span>
+                                </div>
+                                <span className="text-[9px] font-bold text-secondary block mt-1">Vencimento: {formatDate(parcela.data_vencimento)}</span>
+                                {parcela.data_pagamento && <span className="text-[9px] font-bold text-secondary block">Recebida: {formatPaymentDateTime(parcela.data_pagamento, parcela.hora_pagamento)}</span>}
+                              </div>
+                              <div className="text-right shrink-0">
+                                <div className="flex items-center justify-end gap-2">
+                                  <span className="text-[11px] font-black text-neutral-900">{formatCurrency(parcela.valor_previsto || 0)}</span>
+                                  <span className={`px-1.5 py-0.5 rounded text-[8px] font-black uppercase ${
+                                    pago ? 'bg-bank-truth-green/10 text-bank-truth-green' : pendente ? 'bg-amber-100 text-amber-700' : 'bg-neutral-100 text-secondary'
+                                  }`}>
+                                    {pago ? 'Paga' : pendente ? 'Pendente' : 'Em aberto'}
+                                  </span>
+                                </div>
+                                <span className="text-[8px] font-bold text-secondary uppercase block mt-1">{getAccountName(parcela.conta_bancaria_id)}</span>
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
                     </div>
 
                     <div className="p-4 bg-neutral-900 text-white rounded-2xl flex items-center justify-between">

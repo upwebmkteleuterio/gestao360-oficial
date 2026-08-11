@@ -292,6 +292,7 @@ export const lancamentosService = {
     const subtotal = current.valor_previsto - (data.valor_desconto || 0) + (data.valor_acrescimo || 0);
     const isPartial = valorPagoEfetivo < subtotal;
     const dataPagamentoVal = data.data_pagamento || new Date().toISOString().split('T')[0];
+    const horaPagamentoVal = new Date().toTimeString().slice(0, 8);
    const contaBancariaVal = data.conta_bancaria_id || current.conta_bancaria_id;
 
    // AVR logic: Update history and handle original value
@@ -488,6 +489,7 @@ export const lancamentosService = {
          valor_recebido: valorPagoEfetivo,
          status_pagamento: isMaster ? 'pago' : 'quitação_pendente',
          data_pagamento: dataPagamentoVal,
+         hora_pagamento: horaPagamentoVal,
 
          conta_bancaria_id: contaBancariaVal,
          centro_custo_id: data.centro_custo_id || current.centro_custo_id,
@@ -509,6 +511,7 @@ export const lancamentosService = {
      const updatePayload: any = {
        status_pagamento: finalPaymentStatus,
        data_pagamento: dataPagamentoVal,
+       hora_pagamento: isBPI ? null : horaPagamentoVal,
 
        conta_bancaria_id: contaBancariaVal,
        centro_custo_id: data.centro_custo_id || current.centro_custo_id,

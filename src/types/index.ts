@@ -68,6 +68,7 @@ export interface LancamentoFinanceiro {
   data_emissao: string;
   data_competencia?: string;
   data_pagamento?: string;
+  hora_pagamento?: string;
   condicao?: 'a_vista' | 'a_prazo';
   entidade_id: string;
   centro_custo_id: string;
