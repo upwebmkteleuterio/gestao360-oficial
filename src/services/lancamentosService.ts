@@ -274,7 +274,8 @@ export const lancamentosService = {
    condicao?: 'a_vista' | 'a_prazo',
    data_competencia?: string,
    data_emissao?: string,
-   parcelas?: Array<{ id: string; data: string; valor: string; status: string }>,
+   parcelas?: Array<{ id?: string; numero: number; data: string; valor: string; status: string }>,
+   parcela_config?: { quantidade: number; periodicidade: string; periodicidade_customizada_dias?: number; com_entrada: boolean },
    propagate_avr?: 'none' | 'open' | 'all'
  }, isMaster: boolean = false): Promise<LancamentoFinanceiro> => {
     const { data: current, error: getError } = await supabase
@@ -311,10 +312,49 @@ export const lancamentosService = {
      const now = new Date();
      const timestampStr = `${now.toLocaleDateString('pt-BR')} às ${now.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}`;
      const { data: { user } } = await supabase.auth.getUser();
+     let recurrenceId = current.recorrencia_id;
+
+     if (data.parcelas?.length && !recurrenceId) {
+       if (!user) throw new Error('Usuário não autenticado');
+       const config = data.parcela_config || {
+         quantidade: data.parcelas.length,
+         periodicidade: 'mensal',
+         com_entrada: false
+       };
+       const { data: recurrence, error: recurrenceError } = await supabase
+         .from('recorrencias')
+         .insert([{
+           user_id: user.id,
+           periodicidade: config.periodicidade,
+           quantidade_total_parcelas: config.quantidade,
+           data_inicio: data.parcelas[0].data,
+           periodicidade_customizada_dias: config.periodicidade_customizada_dias
+         }])
+         .select('id')
+         .single();
+       if (recurrenceError) throw recurrenceError;
+       recurrenceId = recurrence.id;
+     } else if (recurrenceId && data.parcela_config) {
+       const { error: recurrenceError } = await supabase
+         .from('recorrencias')
+         .update({
+           periodicidade: data.parcela_config.periodicidade,
+           quantidade_total_parcelas: data.parcela_config.quantidade,
+           periodicidade_customizada_dias: data.parcela_config.periodicidade_customizada_dias,
+           data_inicio: data.parcelas?.[0]?.data || current.data_vencimento
+         })
+         .eq('id', recurrenceId);
+       if (recurrenceError) throw recurrenceError;
+     }
      
      const updatePayload: any = {
        valor_previsto: valorPagoEfetivo,
        valor_original: valorPagoEfetivo,
+       ...(recurrenceId ? {
+         recorrencia_id: recurrenceId,
+         numero_parcela: data.parcelas?.find(parcela => parcela.id === id)?.numero || 1,
+         quantidade_total_parcelas: data.parcela_config?.quantidade || data.parcelas?.length
+       } : {}),
        ...(data.condicao ? { condicao: data.condicao } : {}),
        ...(data.data_competencia ? { data_competencia: data.data_competencia } : {}),
        ...(data.data_emissao ? { data_emissao: data.data_emissao } : {}),
@@ -335,24 +375,63 @@ export const lancamentosService = {
 
      if (updateError) throw updateError;
 
-     if (data.parcelas?.length) {
+     if (data.parcelas?.length && recurrenceId) {
+       const submittedIds = data.parcelas.map(parcela => parcela.id).filter(Boolean);
+       const { data: openParcelas, error: openParcelasError } = await supabase
+         .from('lancamentos_financeiros')
+         .select('id')
+         .eq('recorrencia_id', recurrenceId)
+         .eq('status_pagamento', 'aberto');
+       if (openParcelasError) throw openParcelasError;
+
+       const idsToRemove = (openParcelas || [])
+         .map(parcela => parcela.id)
+         .filter(parcelId => !submittedIds.includes(parcelId) && parcelId !== id);
+       if (idsToRemove.length) {
+         const { error: deleteError } = await supabase
+           .from('lancamentos_financeiros')
+           .delete()
+           .in('id', idsToRemove);
+         if (deleteError) throw deleteError;
+       }
+
        for (const parcela of data.parcelas) {
          if (parcela.status !== 'aberto' && parcela.id !== id) continue;
 
          const parcelaValor = Number(parcela.valor.replace(/\./g, '').replace(',', '.')) || 0;
-         const { error: parcelaError } = await supabase
-           .from('lancamentos_financeiros')
-           .update({
-             data_vencimento: parcela.data,
-             valor_previsto: parcelaValor,
-             valor_original: parcelaValor,
-             ...(data.condicao ? { condicao: data.condicao } : {}),
-             ...(data.data_competencia ? { data_competencia: data.data_competencia } : {}),
-             ...(data.data_emissao ? { data_emissao: data.data_emissao } : {})
-           })
-           .eq('id', parcela.id);
+         const parcelaPayload: any = {
+           data_vencimento: parcela.data,
+           valor_previsto: parcelaValor,
+           valor_original: parcelaValor,
+           numero_parcela: parcela.numero,
+           recorrencia_id: recurrenceId,
+           quantidade_total_parcelas: data.parcela_config?.quantidade || data.parcelas.length,
+           ...(data.condicao ? { condicao: data.condicao } : {}),
+           ...(data.data_competencia ? { data_competencia: data.data_competencia } : {}),
+           ...(data.data_emissao ? { data_emissao: data.data_emissao } : {})
+         };
 
-         if (parcelaError) throw parcelaError;
+         if (parcela.id) {
+           const { error: parcelaError } = await supabase
+             .from('lancamentos_financeiros')
+             .update(parcelaPayload)
+             .eq('id', parcela.id);
+           if (parcelaError) throw parcelaError;
+         } else {
+           const { id: _id, created_at: _createdAt, updated_at: _updatedAt, ...base } = current;
+           const { error: parcelaError } = await supabase
+             .from('lancamentos_financeiros')
+             .insert([{
+               ...base,
+               ...parcelaPayload,
+               status_pagamento: 'aberto',
+               status_aprovacao: current.status_aprovacao,
+               valor_recebido: 0,
+               data_pagamento: null,
+               tipo_baixa: 'financeira'
+             }]);
+           if (parcelaError) throw parcelaError;
+         }
        }
      }
 

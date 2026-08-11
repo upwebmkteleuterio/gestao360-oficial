@@ -92,7 +92,11 @@ export default function BaixaLancamentoModal() {
   const [dataCompetencia, setDataCompetencia] = useState('');
   const [dataLancamento, setDataLancamento] = useState('');
   const [condicao, setCondicao] = useState<'a_vista' | 'a_prazo'>('a_prazo');
-  const [parcelasAVR, setParcelasAVR] = useState<Array<{ id: string; numero: number; data: string; valor: string; status: string }>>([]);
+  const [quantidadeParcelasAVR, setQuantidadeParcelasAVR] = useState('1');
+  const [periodicidadeAVR, setPeriodicidadeAVR] = useState('mensal');
+  const [diasPersonalizadosAVR, setDiasPersonalizadosAVR] = useState('30');
+  const [comEntradaAVR, setComEntradaAVR] = useState(false);
+  const [parcelasAVR, setParcelasAVR] = useState<Array<{ id?: string; numero: number; data: string; valor: string; status: string }>>([]);
   const [contaId, setContaId] = useState('');
   const [categoriaId, setCategoriaId] = useState('');
   const [centroCustoId, setCentroCustoId] = useState('');
@@ -128,6 +132,10 @@ export default function BaixaLancamentoModal() {
   useEffect(() => {
     if (lancamento) {
       setValorPago(formatBRL(lancamento.valor_previsto));
+      setQuantidadeParcelasAVR('1');
+      setPeriodicidadeAVR('mensal');
+      setDiasPersonalizadosAVR('30');
+      setComEntradaAVR(false);
       setParcelasAVR([]);
       setDataPagamento(lancamento.data_pagamento || new Date().toISOString().split('T')[0]);
       setDataCompetencia(lancamento.data_competencia || '');
@@ -154,28 +162,56 @@ export default function BaixaLancamentoModal() {
   }, [lancamento, contas]);
 
   useEffect(() => {
-    if (!lancamento?.recorrencia_id) return;
+    if (!lancamento) return;
 
     const loadParcelas = async () => {
-      const { data, error } = await supabase
-        .from('lancamentos_financeiros')
-        .select('id, numero_parcela, data_vencimento, valor_previsto, status_pagamento')
-        .eq('recorrencia_id', lancamento.recorrencia_id)
-        .order('numero_parcela', { ascending: true });
+      let recurrence: any = null;
+      if (lancamento.recorrencia_id) {
+        const { data } = await supabase
+          .from('recorrencias')
+          .select('quantidade_total_parcelas, periodicidade, periodicidade_customizada_dias')
+          .eq('id', lancamento.recorrencia_id)
+          .maybeSingle();
+        recurrence = data;
+      }
+
+      const { data, error } = lancamento.recorrencia_id
+        ? await supabase
+          .from('lancamentos_financeiros')
+          .select('id, numero_parcela, data_vencimento, valor_previsto, status_pagamento')
+          .eq('recorrencia_id', lancamento.recorrencia_id)
+          .order('numero_parcela', { ascending: true })
+        : { data: [], error: null };
+
+      const parcelas = (data || []).map((parcela: any) => ({
+        id: parcela.id,
+        numero: parcela.numero_parcela || 1,
+        data: parcela.data_vencimento,
+        valor: formatBRL(parcela.valor_previsto),
+        status: parcela.status_pagamento
+      }));
+
+      if (parcelas.length === 0) {
+        parcelas.push({
+          id: lancamento.id,
+          numero: 1,
+          data: lancamento.data_vencimento,
+          valor: formatBRL(lancamento.valor_previsto),
+          status: lancamento.status_pagamento
+        });
+      }
 
       if (!error) {
-        setParcelasAVR((data || []).map((parcela: any) => ({
-          id: parcela.id,
-          numero: parcela.numero_parcela || 1,
-          data: parcela.data_vencimento,
-          valor: formatBRL(parcela.valor_previsto),
-          status: parcela.status_pagamento
-        })));
+        setQuantidadeParcelasAVR(String(recurrence?.quantidade_total_parcelas || parcelas.length));
+        setPeriodicidadeAVR(recurrence?.periodicidade || 'mensal');
+        setDiasPersonalizadosAVR(String(recurrence?.periodicidade_customizada_dias || 30));
+        setComEntradaAVR(parcelas[0]?.data === lancamento.data_emissao);
+        setParcelasAVR(parcelas);
       }
     };
 
     loadParcelas();
-  }, [lancamento?.recorrencia_id]);
+  }, [lancamento?.id, lancamento?.recorrencia_id]);
 
   if (!lancamento) return null;
 
@@ -245,6 +281,36 @@ export default function BaixaLancamentoModal() {
                   (!isAcrescimoReasonRequired || isAcrescimoReasonSelected) &&
                   !isOverpaid && (isBpi || valorDigitado > 0) && !saldoInsuficienteBaixa;
 
+  const gerarParcelasAVR = () => {
+    const total = Math.max(1, Math.min(120, parseInt(quantidadeParcelasAVR) || 1));
+    const valorParcela = valorDigitado / total;
+    const parcelasGeradas = [];
+    let currentDate = new Date(`${comEntradaAVR ? dataLancamento : lancamento.data_vencimento}T00:00:00`);
+
+    for (let index = 0; index < total; index += 1) {
+      const parcelaExistente = parcelasAVR[index];
+      parcelasGeradas.push({
+        id: parcelaExistente?.id,
+        numero: index + 1,
+        data: currentDate.toISOString().split('T')[0],
+        valor: formatBRL(valorParcela),
+        status: parcelaExistente?.status || 'aberto'
+      });
+
+      if (periodicidadeAVR === 'diario') currentDate.setDate(currentDate.getDate() + 1);
+      else if (periodicidadeAVR === 'semanal') currentDate.setDate(currentDate.getDate() + 7);
+      else if (periodicidadeAVR === 'quinzenal') currentDate.setDate(currentDate.getDate() + 15);
+      else if (periodicidadeAVR === 'bimestral') currentDate.setMonth(currentDate.getMonth() + 2);
+      else if (periodicidadeAVR === 'trimestral') currentDate.setMonth(currentDate.getMonth() + 3);
+      else if (periodicidadeAVR === 'semestral') currentDate.setMonth(currentDate.getMonth() + 6);
+      else if (periodicidadeAVR === 'anual') currentDate.setFullYear(currentDate.getFullYear() + 1);
+      else if (periodicidadeAVR === 'personalizado') currentDate.setDate(currentDate.getDate() + (parseInt(diasPersonalizadosAVR) || 30));
+      else currentDate.setMonth(currentDate.getMonth() + 1);
+    }
+
+    setParcelasAVR(parcelasGeradas);
+  };
+
   const handleTipoBaixaChange = (tipo: 'financeira' | 'bpi' | 'avr') => {
     setTipoBaixa(tipo);
     if (tipo === 'bpi') {
@@ -308,6 +374,12 @@ export default function BaixaLancamentoModal() {
             ...parcela,
             valor: parcela.id === lancamento.id ? formatBRL(valorDigitado) : parcela.valor
           })) : undefined,
+          parcela_config: isAVR && condicao === 'a_prazo' ? {
+            quantidade: Math.max(1, parseInt(quantidadeParcelasAVR) || parcelasAVR.length || 1),
+            periodicidade: periodicidadeAVR,
+            periodicidade_customizada_dias: periodicidadeAVR === 'personalizado' ? parseInt(diasPersonalizadosAVR) || 30 : undefined,
+            com_entrada: comEntradaAVR
+          } : undefined,
           valor_desconto: calculatedDesconto,
           valor_acrescimo: calculatedAcrescimo + numericTaxa,
           motivo_desconto_id: motivoDescontoId || undefined,
@@ -714,6 +786,78 @@ export default function BaixaLancamentoModal() {
                       </div>
                     </div>
 
+                    {condicao === 'a_prazo' && (
+                      <div className="space-y-4 pt-2 border-t border-primary/10">
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <label className="text-[10px] font-black uppercase text-primary tracking-widest">Configuração de Parcelas</label>
+                            <p className="text-[8px] font-bold text-secondary uppercase tracking-tight mt-1">Defina como os lançamentos serão gerados</p>
+                          </div>
+                          <label className="flex items-center gap-2 cursor-pointer select-none">
+                            <span className="text-[9px] font-black text-secondary uppercase tracking-widest">Com Entrada?</span>
+                            <input
+                              type="checkbox"
+                              checked={comEntradaAVR}
+                              onChange={(e) => setComEntradaAVR(e.target.checked)}
+                              className="rounded-md border-primary/30 text-primary focus:ring-primary w-4 h-4"
+                            />
+                          </label>
+                        </div>
+
+                        <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                          <div className="space-y-1.5">
+                            <label className="text-[9px] font-black uppercase text-secondary tracking-widest">Nº vezes</label>
+                            <input
+                              type="number"
+                              min="1"
+                              max="120"
+                              value={quantidadeParcelasAVR}
+                              onChange={(e) => setQuantidadeParcelasAVR(e.target.value)}
+                              className="w-full h-10 bg-white border-2 border-primary/10 rounded-xl px-3 text-xs font-bold outline-none focus:border-primary"
+                            />
+                          </div>
+                          <div className="space-y-1.5">
+                            <label className="text-[9px] font-black uppercase text-secondary tracking-widest">Intervalo</label>
+                            <select
+                              value={periodicidadeAVR}
+                              onChange={(e) => setPeriodicidadeAVR(e.target.value)}
+                              className="w-full h-10 bg-white border-2 border-primary/10 rounded-xl px-3 text-xs font-bold outline-none focus:border-primary appearance-none"
+                            >
+                              <option value="diario">Diário</option>
+                              <option value="semanal">Semanal</option>
+                              <option value="quinzenal">Quinzenal</option>
+                              <option value="mensal">Mensal</option>
+                              <option value="bimestral">Bimestral</option>
+                              <option value="trimestral">Trimestral</option>
+                              <option value="semestral">Semestral</option>
+                              <option value="anual">Anual</option>
+                              <option value="personalizado">Personalizado</option>
+                            </select>
+                          </div>
+                          {periodicidadeAVR === 'personalizado' && (
+                            <div className="space-y-1.5">
+                              <label className="text-[9px] font-black uppercase text-secondary tracking-widest">Qtd. Dias</label>
+                              <input
+                                type="number"
+                                min="1"
+                                value={diasPersonalizadosAVR}
+                                onChange={(e) => setDiasPersonalizadosAVR(e.target.value)}
+                                className="w-full h-10 bg-white border-2 border-primary/10 rounded-xl px-3 text-xs font-bold outline-none focus:border-primary"
+                              />
+                            </div>
+                          )}
+                        </div>
+
+                        <button
+                          type="button"
+                          onClick={gerarParcelasAVR}
+                          className="w-full h-10 bg-primary/10 text-primary rounded-xl text-[9px] font-black uppercase tracking-widest hover:bg-primary/20 transition-all"
+                        >
+                          Gerar / Atualizar Parcelas
+                        </button>
+                      </div>
+                    )}
+
                     <div className="grid grid-cols-2 gap-3 pt-2">
                       <div className="space-y-1.5">
                         <label className="text-[9px] font-black uppercase text-primary tracking-widest">Data de Competência</label>
@@ -752,7 +896,7 @@ export default function BaixaLancamentoModal() {
                             </thead>
                             <tbody className="divide-y divide-primary/10">
                               {parcelasAVR.map((parcela, index) => (
-                                <tr key={parcela.id}>
+                                <tr key={`${parcela.id || 'nova'}-${parcela.numero}`}>
                                   <td className="px-2 py-1.5 text-[10px] font-black text-neutral-400">#{parcela.numero}</td>
                                   <td className="px-1 py-1">
                                     <input
