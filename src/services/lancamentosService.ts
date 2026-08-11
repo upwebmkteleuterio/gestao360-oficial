@@ -274,6 +274,7 @@ export const lancamentosService = {
    condicao?: 'a_vista' | 'a_prazo',
    data_competencia?: string,
    data_emissao?: string,
+   parcelas?: Array<{ id: string; data: string; valor: string; status: string }>,
    propagate_avr?: 'none' | 'open' | 'all'
  }, isMaster: boolean = false): Promise<LancamentoFinanceiro> => {
     const { data: current, error: getError } = await supabase
@@ -334,13 +335,36 @@ export const lancamentosService = {
 
      if (updateError) throw updateError;
 
+     if (data.parcelas?.length) {
+       for (const parcela of data.parcelas) {
+         if (parcela.status !== 'aberto' && parcela.id !== id) continue;
+
+         const parcelaValor = Number(parcela.valor.replace(/\./g, '').replace(',', '.')) || 0;
+         const { error: parcelaError } = await supabase
+           .from('lancamentos_financeiros')
+           .update({
+             data_vencimento: parcela.data,
+             valor_previsto: parcelaValor,
+             valor_original: parcelaValor,
+             ...(data.condicao ? { condicao: data.condicao } : {}),
+             ...(data.data_competencia ? { data_competencia: data.data_competencia } : {}),
+             ...(data.data_emissao ? { data_emissao: data.data_emissao } : {})
+           })
+           .eq('id', parcela.id);
+
+         if (parcelaError) throw parcelaError;
+       }
+     }
+
      // Propagação do AVR se solicitado e for recorrente
      if (data.propagate_avr !== 'none' && current.recorrencia_id) {
        const propagationQuery = supabase
          .from('lancamentos_financeiros')
          .update({
-           valor_previsto: valorPagoEfetivo,
-           valor_original: valorPagoEfetivo,
+           ...(data.parcelas?.length ? {} : {
+             valor_previsto: valorPagoEfetivo,
+             valor_original: valorPagoEfetivo
+           }),
            ...(data.condicao ? { condicao: data.condicao } : {}),
            ...(data.data_competencia ? { data_competencia: data.data_competencia } : {}),
            ...(data.data_emissao ? { data_emissao: data.data_emissao } : {}),

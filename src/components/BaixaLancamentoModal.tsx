@@ -92,6 +92,7 @@ export default function BaixaLancamentoModal() {
   const [dataCompetencia, setDataCompetencia] = useState('');
   const [dataLancamento, setDataLancamento] = useState('');
   const [condicao, setCondicao] = useState<'a_vista' | 'a_prazo'>('a_prazo');
+  const [parcelasAVR, setParcelasAVR] = useState<Array<{ id: string; numero: number; data: string; valor: string; status: string }>>([]);
   const [contaId, setContaId] = useState('');
   const [categoriaId, setCategoriaId] = useState('');
   const [centroCustoId, setCentroCustoId] = useState('');
@@ -127,6 +128,7 @@ export default function BaixaLancamentoModal() {
   useEffect(() => {
     if (lancamento) {
       setValorPago(formatBRL(lancamento.valor_previsto));
+      setParcelasAVR([]);
       setDataPagamento(lancamento.data_pagamento || new Date().toISOString().split('T')[0]);
       setDataCompetencia(lancamento.data_competencia || '');
       setDataLancamento(lancamento.data_emissao || '');
@@ -150,6 +152,30 @@ export default function BaixaLancamentoModal() {
       setAttachments([]);
     }
   }, [lancamento, contas]);
+
+  useEffect(() => {
+    if (!lancamento?.recorrencia_id) return;
+
+    const loadParcelas = async () => {
+      const { data, error } = await supabase
+        .from('lancamentos_financeiros')
+        .select('id, numero_parcela, data_vencimento, valor_previsto, status_pagamento')
+        .eq('recorrencia_id', lancamento.recorrencia_id)
+        .order('numero_parcela', { ascending: true });
+
+      if (!error) {
+        setParcelasAVR((data || []).map((parcela: any) => ({
+          id: parcela.id,
+          numero: parcela.numero_parcela || 1,
+          data: parcela.data_vencimento,
+          valor: formatBRL(parcela.valor_previsto),
+          status: parcela.status_pagamento
+        })));
+      }
+    };
+
+    loadParcelas();
+  }, [lancamento?.recorrencia_id]);
 
   if (!lancamento) return null;
 
@@ -278,6 +304,10 @@ export default function BaixaLancamentoModal() {
           condicao: isAVR ? condicao : undefined,
           data_competencia: isAVR ? dataCompetencia || undefined : undefined,
           data_emissao: isAVR ? dataLancamento || undefined : undefined,
+          parcelas: isAVR && condicao === 'a_prazo' ? parcelasAVR.map(parcela => ({
+            ...parcela,
+            valor: parcela.id === lancamento.id ? formatBRL(valorDigitado) : parcela.valor
+          })) : undefined,
           valor_desconto: calculatedDesconto,
           valor_acrescimo: calculatedAcrescimo + numericTaxa,
           motivo_desconto_id: motivoDescontoId || undefined,
@@ -704,6 +734,54 @@ export default function BaixaLancamentoModal() {
                         />
                       </div>
                     </div>
+
+                    {condicao === 'a_prazo' && parcelasAVR.length > 0 && (
+                      <div className="space-y-3 pt-3 border-t border-primary/10">
+                        <div>
+                          <label className="text-[10px] font-black uppercase text-primary tracking-widest">Parcelas do Título</label>
+                          <p className="text-[8px] font-bold text-secondary uppercase tracking-tight mt-1">Edite o vencimento e o valor de cada parcela configurada neste lançamento.</p>
+                        </div>
+                        <div className="border-2 border-primary/10 rounded-xl overflow-hidden bg-white">
+                          <table className="w-full border-collapse">
+                            <thead>
+                              <tr className="bg-primary/5 border-b border-primary/10">
+                                <th className="px-2 py-2 text-[8px] font-black text-secondary uppercase text-left">Parc.</th>
+                                <th className="px-2 py-2 text-[8px] font-black text-secondary uppercase text-left">Vencimento</th>
+                                <th className="px-2 py-2 text-[8px] font-black text-secondary uppercase text-left">Valor (R$)</th>
+                              </tr>
+                            </thead>
+                            <tbody className="divide-y divide-primary/10">
+                              {parcelasAVR.map((parcela, index) => (
+                                <tr key={parcela.id}>
+                                  <td className="px-2 py-1.5 text-[10px] font-black text-neutral-400">#{parcela.numero}</td>
+                                  <td className="px-1 py-1">
+                                    <input
+                                      type="date"
+                                      disabled={parcela.status !== 'aberto'}
+                                      value={parcela.data}
+                                      onChange={(e) => setParcelasAVR(prev => prev.map((item, itemIndex) => itemIndex === index ? { ...item, data: e.target.value } : item))}
+                                      className="w-full bg-transparent border-none text-[10px] font-bold p-1 focus:ring-0 disabled:opacity-50"
+                                    />
+                                  </td>
+                                  <td className="px-1 py-1">
+                                    <MoneyInput
+                                      disabled={parcela.status !== 'aberto'}
+                                      value={parcela.id === lancamento.id ? valorPago : parcela.valor}
+                                      onChange={(value) => {
+                                        if (parcela.id === lancamento.id) setValorPago(value);
+                                        setParcelasAVR(prev => prev.map((item, itemIndex) => itemIndex === index ? { ...item, valor: value } : item));
+                                      }}
+                                      className="w-full bg-transparent border-none text-[10px] font-black p-1 font-mono focus:ring-0 disabled:opacity-50"
+                                    />
+                                  </td>
+                                </tr>
+                              ))}
+                            </tbody>
+                          </table>
+                        </div>
+                        <p className="text-[8px] font-bold text-secondary uppercase">Parcelas já pagas permanecem bloqueadas.</p>
+                      </div>
+                    )}
                   </motion.div>
                 )}
 
