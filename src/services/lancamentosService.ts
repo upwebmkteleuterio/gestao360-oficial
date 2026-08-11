@@ -271,6 +271,9 @@ export const lancamentosService = {
    motivo_ajuste?: string,
    motivo_desconto_id?: string,
    motivo_acrescimo_id?: string,
+   condicao?: 'a_vista' | 'a_prazo',
+   data_competencia?: string,
+   data_emissao?: string,
    propagate_avr?: 'none' | 'open' | 'all'
  }, isMaster: boolean = false): Promise<LancamentoFinanceiro> => {
     const { data: current, error: getError } = await supabase
@@ -311,6 +314,9 @@ export const lancamentosService = {
      const updatePayload: any = {
        valor_previsto: valorPagoEfetivo,
        valor_original: valorPagoEfetivo,
+       ...(data.condicao ? { condicao: data.condicao } : {}),
+       ...(data.data_competencia ? { data_competencia: data.data_competencia } : {}),
+       ...(data.data_emissao ? { data_emissao: data.data_emissao } : {}),
        observacoes: (current.observacoes || '') + `\n[AVR - Ajuste Realizado em ${timestampStr}] Valor alterado de R$ ${current.valor_original || current.valor_previsto} para R$ ${valorPagoEfetivo}. Motivo: ${data.motivo_ajuste || 'Não informado'}`,
      };
 
@@ -335,6 +341,9 @@ export const lancamentosService = {
          .update({
            valor_previsto: valorPagoEfetivo,
            valor_original: valorPagoEfetivo,
+           ...(data.condicao ? { condicao: data.condicao } : {}),
+           ...(data.data_competencia ? { data_competencia: data.data_competencia } : {}),
+           ...(data.data_emissao ? { data_emissao: data.data_emissao } : {}),
            observacoes: (current.observacoes || '') + `\n[AVR Propagado (${data.propagate_avr}) em ${timestampStr}]`
          })
          .eq('recorrencia_id', current.recorrencia_id);

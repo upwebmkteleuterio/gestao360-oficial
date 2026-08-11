@@ -89,12 +89,15 @@ export default function BaixaLancamentoModal() {
   
   // Fields
   const [dataPagamento, setDataPagamento] = useState(new Date().toISOString().split('T')[0]);
+  const [dataCompetencia, setDataCompetencia] = useState('');
+  const [dataLancamento, setDataLancamento] = useState('');
+  const [condicao, setCondicao] = useState<'a_vista' | 'a_prazo'>('a_prazo');
   const [contaId, setContaId] = useState('');
   const [categoriaId, setCategoriaId] = useState('');
   const [centroCustoId, setCentroCustoId] = useState('');
   
   const [tipoBaixa, setTipoBaixa] = useState<'financeira' | 'bpi' | 'avr'>('financeira');
-  
+
   const [descontoValor, setDescontoValor] = useState('');
   const [descontoTipo, setDescontoTipo] = useState<'valor' | 'porcentagem'>('valor');
   const [motivoDescontoId, setMotivoDescontoId] = useState('');
@@ -124,6 +127,10 @@ export default function BaixaLancamentoModal() {
   useEffect(() => {
     if (lancamento) {
       setValorPago(formatBRL(lancamento.valor_previsto));
+      setDataPagamento(lancamento.data_pagamento || new Date().toISOString().split('T')[0]);
+      setDataCompetencia(lancamento.data_competencia || '');
+      setDataLancamento(lancamento.data_emissao || '');
+      setCondicao(lancamento.condicao === 'a_vista' ? 'a_vista' : 'a_prazo');
       setContaId(lancamento.conta_bancaria_id || (contas[0]?.id || ''));
       setCategoriaId(lancamento.categoria_id || '');
       setCentroCustoId(lancamento.centro_custo_id || '');
@@ -268,6 +275,9 @@ export default function BaixaLancamentoModal() {
           centro_custo_id: centroCustoId || undefined,
           categoria_id: categoriaId || undefined,
           tipo_baixa: tipoBaixa,
+          condicao: isAVR ? condicao : undefined,
+          data_competencia: isAVR ? dataCompetencia || undefined : undefined,
+          data_emissao: isAVR ? dataLancamento || undefined : undefined,
           valor_desconto: calculatedDesconto,
           valor_acrescimo: calculatedAcrescimo + numericTaxa,
           motivo_desconto_id: motivoDescontoId || undefined,
@@ -653,6 +663,47 @@ export default function BaixaLancamentoModal() {
                       ))}
                     </select>
                     <p className="text-[8px] font-bold text-secondary uppercase tracking-tight">Este motivo será registrado no log de auditoria do título.</p>
+
+                    <div className="space-y-3 pt-2 border-t border-primary/10">
+                      <label className="text-[10px] font-black uppercase text-primary tracking-widest">Condição do Título</label>
+                      <div className="flex bg-white border-2 border-primary/10 rounded-xl p-1 h-11">
+                        <button
+                          type="button"
+                          onClick={() => setCondicao('a_vista')}
+                          className={`flex-1 text-[10px] font-black rounded-lg uppercase tracking-tighter transition-all ${condicao === 'a_vista' ? 'bg-primary text-white shadow-sm' : 'text-secondary hover:text-on-surface'}`}
+                        >
+                          À Vista
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setCondicao('a_prazo')}
+                          className={`flex-1 text-[10px] font-black rounded-lg uppercase tracking-tighter transition-all ${condicao === 'a_prazo' ? 'bg-primary text-white shadow-sm' : 'text-secondary hover:text-on-surface'}`}
+                        >
+                          A Prazo
+                        </button>
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-3 pt-2">
+                      <div className="space-y-1.5">
+                        <label className="text-[9px] font-black uppercase text-primary tracking-widest">Data de Competência</label>
+                        <input
+                          type="date"
+                          value={dataCompetencia}
+                          onChange={(e) => setDataCompetencia(e.target.value)}
+                          className="w-full h-10 bg-white border-2 border-primary/10 rounded-xl px-3 text-xs font-bold outline-none focus:border-primary"
+                        />
+                      </div>
+                      <div className="space-y-1.5">
+                        <label className="text-[9px] font-black uppercase text-primary tracking-widest">Data de Lançamento</label>
+                        <input
+                          type="date"
+                          value={dataLancamento}
+                          onChange={(e) => setDataLancamento(e.target.value)}
+                          className="w-full h-10 bg-white border-2 border-primary/10 rounded-xl px-3 text-xs font-bold outline-none focus:border-primary"
+                        />
+                      </div>
+                    </div>
                   </motion.div>
                 )}
 
