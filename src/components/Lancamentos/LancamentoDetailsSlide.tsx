@@ -80,7 +80,7 @@ export default function LancamentoDetailsSlide() {
 
       const { data } = await supabase
         .from('lancamentos_financeiros')
-        .select('id, numero_parcela, quantidade_total_parcelas, valor_previsto, valor_recebido, data_vencimento, data_pagamento, hora_pagamento, status_pagamento, conta_bancaria_id')
+        .select('id, numero_parcela, quantidade_total_parcelas, valor_previsto, valor_recebido, data_vencimento, data_pagamento, hora_pagamento, created_at, status_pagamento, conta_bancaria_id')
         .eq('recorrencia_id', lancamento.recorrencia_id)
         .order('numero_parcela', { ascending: true });
 
@@ -388,7 +388,8 @@ export default function LancamentoDetailsSlide() {
 
                       <DetailItem icon={<Calendar className="w-3.5 h-3.5" />} label="Vencimento" value={formatDate(lancamento.data_vencimento)} />
                       <DetailItem icon={<Calendar className="w-3.5 h-3.5" />} label="Data Competência" value={formatDate(lancamento.data_competencia)} />
-                      <DetailItem icon={<Calendar className="w-3.5 h-3.5" />} label="Recebido em" value={formatPaymentDateTime(lancamento.data_pagamento, (lancamento as any).hora_pagamento)} />
+                      <DetailItem icon={<Clock className="w-3.5 h-3.5" />} label="Registrado em" value={formatDateTime(lancamento.created_at)} />
+                      <DetailItem icon={<CheckCircle2 className="w-3.5 h-3.5" />} label="Baixa realizada em" value={formatPaymentDateTime(lancamento.data_pagamento, lancamento.hora_pagamento)} />
                     </div>
 
                     <div className="rounded-2xl border border-neutral-100 overflow-hidden">
@@ -415,7 +416,8 @@ export default function LancamentoDetailsSlide() {
                                   </span>
                                 </div>
                                 <span className="text-[9px] font-bold text-secondary block mt-1">Vencimento: {formatDate(parcela.data_vencimento)}</span>
-                                {parcela.data_pagamento && <span className="text-[9px] font-bold text-secondary block">Recebida: {formatPaymentDateTime(parcela.data_pagamento, parcela.hora_pagamento)}</span>}
+                                {parcela.created_at && <span className="text-[9px] font-bold text-secondary block">Registrada: {formatDateTime(parcela.created_at)}</span>}
+                                {parcela.data_pagamento && <span className="text-[9px] font-bold text-secondary block">Baixa: {formatPaymentDateTime(parcela.data_pagamento, parcela.hora_pagamento)}</span>}
                               </div>
                               <div className="text-right shrink-0">
                                 <div className="flex items-center justify-end gap-2">
