@@ -750,7 +750,9 @@ export default function Lancamentos({
                           <div className="flex items-center gap-1.5 mr-2">
                             {item.status_pagamento === 'aberto' && (
                               <button
+                                type="button"
                                 onClick={() => handleOpenBaixa(item.id)}
+
                                 className="px-3 py-1.5 bg-bank-truth-green text-white text-[9px] font-black uppercase tracking-widest rounded-lg hover:brightness-110 transition-all flex items-center gap-1.5 shadow-sm"
                               >
                                 <CheckCircle2 className="w-3 h-3" /> Dar baixa

@@ -25,7 +25,8 @@ import {
   Shield
 } from 'lucide-react';
 import { useUIStore } from '../store/uiStore';
-import { useLancamentos, useContas, useEntidades, useCategorias, useCategoriasAjuste, useCentrosCusto, useContasSaldos, useLancamentoAnexos } from '../hooks/useData';
+import { useLancamentos, useLancamento, useContas, useEntidades, useCategorias, useCategoriasAjuste, useCentrosCusto, useContasSaldos, useLancamentoAnexos } from '../hooks/useData';
+
 import { useAuth } from '../hooks/useAuth';
 import MoneyInput from './MoneyInput';
 import Button from './Button';
@@ -66,7 +67,9 @@ export default function BaixaLancamentoModal() {
 
   const { role } = useAuth();
   const { data: lancamentos = [], baixaLancamento } = useLancamentos();
+  const { data: selectedLancamento } = useLancamento(selectedLancamentoIdForModal);
   const { data: rawContas = [] } = useContas();
+
   const { data: rawCCs = [] } = useCentrosCusto();
   const { data: contasSaldos = [] } = useContasSaldos();
   const { data: entidades = [] } = useEntidades();
@@ -126,7 +129,7 @@ export default function BaixaLancamentoModal() {
   const [quickAddType, setQuickAddType] = useState<'desconto' | 'acrescimo'>('desconto');
   const [quickAddName, setQuickAddName] = useState('');
 
-  const lancamento = lancamentos.find(l => l.id === selectedLancamentoIdForModal);
+  const lancamento = selectedLancamento || lancamentos.find(l => l.id === selectedLancamentoIdForModal);
   const { anexos: existingAnexos, deleteAnexo } = useLancamentoAnexos(selectedLancamentoIdForModal);
 
   useEffect(() => {
