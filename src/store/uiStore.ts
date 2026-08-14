@@ -37,6 +37,7 @@ interface UIState {
   isNovoUsuarioOpen: boolean;
   isLegacyImportOpen: boolean;
   isBaixaLancamentoOpen: boolean;
+  isAVRModalOpen: boolean;
   isAprovacaoModalOpen: boolean;
   isSidebarCollapsed: boolean;
 
@@ -192,6 +193,7 @@ export const useUIStore = create<UIState>()(
       isNovoUsuarioOpen: false,
       isLegacyImportOpen: false,
       isBaixaLancamentoOpen: false,
+      isAVRModalOpen: false,
       isAprovacaoModalOpen: false,
       isSidebarCollapsed: false,
 

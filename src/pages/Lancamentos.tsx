@@ -317,7 +317,9 @@ export default function Lancamentos({
 
   const handleEdit = (l: LancamentoFinanceiro) => {
     setSelectedLancamentoIdForModal(l.id);
-    setModalOpen('isNovoLancamentoOpen', true);
+    setModalOpen('isNovoLancamentoOpen', false);
+    setModalOpen('isBaixaLancamentoOpen', false);
+    setModalOpen('isAVRModalOpen', true);
     setActiveMenuId(null);
   };
 
