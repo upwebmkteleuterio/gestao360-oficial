@@ -208,7 +208,7 @@ export default function NovoLancamentoDrawer() {
     resetAllDrafts
   } = useUIStore();
 
-  const { createLancamento, updateLancamento, isCreating, isUpdating, data: lancamentos = [] } = useLancamentos();
+  const { createLancamento, updateLancamento, baixaLancamento, isCreating, isUpdating, data: lancamentos = [] } = useLancamentos();
   const { data: entidades = [] } = useEntidades();
   const { data: rawCentros = [] } = useCentrosCusto();
   const { data: rawCategorias = [] } = useCategorias();
@@ -227,6 +227,15 @@ export default function NovoLancamentoDrawer() {
   const [attachments, setAttachments] = useState<LocalFile[]>([]);
 
   const [parcelasManuais, setParcelasManuais] = useState<Array<{ numero: number; data: string; valor: string }>>([]);
+  const [isAVREdit, setIsAVREdit] = useState(false);
+  const [avrReasonId, setAvrReasonId] = useState('');
+  const [avrQuantity, setAvrQuantity] = useState('1');
+  const [avrPeriodicity, setAvrPeriodicity] = useState('mensal');
+  const [avrCustomDays, setAvrCustomDays] = useState('30');
+  const [avrWithEntry, setAvrWithEntry] = useState(false);
+  const [avrParcels, setAvrParcels] = useState<Array<{ id?: string; numero: number; data: string; valor: string; status: string }>>([]);
+  const [avrPropagation, setAvrPropagation] = useState<'none' | 'open'>('none');
+  const [isAVRConfirmationOpen, setIsAVRConfirmationOpen] = useState(false);
 
   // Filter out soft-deleted items for new selection
   const centros = useMemo(() => rawCentros.filter((c: any) => c.status !== 'excluido'), [rawCentros]);
@@ -308,6 +317,47 @@ export default function NovoLancamentoDrawer() {
       });
     }
   }, [editingItem]);
+
+  useEffect(() => {
+    if (!editingItem) {
+      setIsAVREdit(false);
+      setAvrReasonId('');
+      setAvrParcels([]);
+      return;
+    }
+
+    setIsAVREdit((editingItem as any).tipo_baixa === 'avr' || !!(editingItem as any).motivo_ajuste);
+    const existingAvrReason = (categoriasAjuste as any[]).find(reason => reason.nome === (editingItem as any).motivo_ajuste);
+    setAvrReasonId((editingItem as any).motivo_ajuste_id || existingAvrReason?.id || '');
+    setAvrQuantity(String(editingItem.quantidade_total_parcelas || 1));
+    setAvrPeriodicity('mensal');
+    setAvrCustomDays('30');
+    setAvrWithEntry(false);
+    setAvrParcels([]);
+
+    const loadAVRData = async () => {
+      if (!editingItem.recorrencia_id) return;
+      const [{ data: recurrence }, { data: parcels }] = await Promise.all([
+        supabase.from('recorrencias').select('quantidade_total_parcelas, periodicidade, periodicidade_customizada_dias').eq('id', editingItem.recorrencia_id).maybeSingle(),
+        supabase.from('lancamentos_financeiros').select('id, numero_parcela, data_vencimento, valor_previsto, status_pagamento').eq('recorrencia_id', editingItem.recorrencia_id).order('numero_parcela', { ascending: true })
+      ]);
+      if (recurrence) {
+        setAvrQuantity(String(recurrence.quantidade_total_parcelas || 1));
+        setAvrPeriodicity(recurrence.periodicidade || 'mensal');
+        setAvrCustomDays(String(recurrence.periodicidade_customizada_dias || 30));
+      }
+      const loadedParcels = (parcels || []).map((parcel: any) => ({
+        id: parcel.id,
+        numero: parcel.numero_parcela || 1,
+        data: parcel.data_vencimento,
+        valor: formatBRL(parcel.valor_previsto),
+        status: parcel.status_pagamento
+      }));
+      setAvrParcels(loadedParcels);
+      setParcelasManuais(loadedParcels.map(({ id, status, ...parcel }) => parcel));
+    };
+    loadAVRData();
+  }, [editingItem, categoriasAjuste]);
 
   useEffect(() => {
     if (contas.length > 0 && !lancamentoFormDraft.conta_bancaria_id) {
@@ -442,8 +492,90 @@ export default function NovoLancamentoDrawer() {
     setSelectedRecorrenciaAction(null);
   };
 
+  const generateAVRParcels = () => {
+    const total = Math.max(1, Math.min(120, parseInt(avrQuantity) || 1));
+    const amount = parseMoney(lancamentoFormDraft.valor_previsto) / total;
+    const nextParcels = [];
+    let currentDate = new Date(`${avrWithEntry ? lancamentoFormDraft.data_emissao : lancamentoFormDraft.data_vencimento}T00:00:00`);
+
+    for (let index = 0; index < total; index += 1) {
+      const existing = avrParcels[index];
+      nextParcels.push({
+        id: existing?.id,
+        numero: index + 1,
+        data: currentDate.toISOString().split('T')[0],
+        valor: formatBRL(amount),
+        status: existing?.status || 'aberto'
+      });
+      if (avrPeriodicity === 'diario') currentDate.setDate(currentDate.getDate() + 1);
+      else if (avrPeriodicity === 'semanal') currentDate.setDate(currentDate.getDate() + 7);
+      else if (avrPeriodicity === 'quinzenal') currentDate.setDate(currentDate.getDate() + 15);
+      else if (avrPeriodicity === 'bimestral') currentDate.setMonth(currentDate.getMonth() + 2);
+      else if (avrPeriodicity === 'trimestral') currentDate.setMonth(currentDate.getMonth() + 3);
+      else if (avrPeriodicity === 'semestral') currentDate.setMonth(currentDate.getMonth() + 6);
+      else if (avrPeriodicity === 'anual') currentDate.setFullYear(currentDate.getFullYear() + 1);
+      else if (avrPeriodicity === 'personalizado') currentDate.setDate(currentDate.getDate() + (parseInt(avrCustomDays) || 30));
+      else currentDate.setMonth(currentDate.getMonth() + 1);
+    }
+    setAvrParcels(nextParcels);
+  };
+
+  const handleAVRSubmit = async (propagationOverride?: 'none' | 'open') => {
+    if (!editingItem || !avrReasonId) {
+      showToast('Selecione um motivo para o AVR.', 'warning');
+      return;
+    }
+    if (lancamentoFormDraft.condicao === 'a_prazo' && avrParcels.length === 0) {
+      showToast('Gere as parcelas do AVR antes de salvar.', 'warning');
+      setIsAVRConfirmationOpen(false);
+      return;
+    }
+    setIsSubmitting(true);
+    try {
+      await baixaLancamento({
+        id: editingItem.id,
+        data: {
+          tipo_baixa: 'avr',
+          valor_pago: parseMoney(lancamentoFormDraft.valor_previsto),
+          data_pagamento: lancamentoFormDraft.data_pagamento,
+          conta_bancaria_id: lancamentoFormDraft.conta_bancaria_id,
+          centro_custo_id: lancamentoFormDraft.centro_custo_id,
+          categoria_id: lancamentoFormDraft.categoria_id,
+          condicao: lancamentoFormDraft.condicao,
+          data_competencia: lancamentoFormDraft.data_competencia,
+          data_emissao: lancamentoFormDraft.data_emissao,
+          parcelas: lancamentoFormDraft.condicao === 'a_prazo' ? avrParcels : undefined,
+          parcela_config: lancamentoFormDraft.condicao === 'a_prazo' ? {
+            quantidade: Math.max(1, parseInt(avrQuantity) || avrParcels.length || 1),
+            periodicidade: avrPeriodicity,
+            periodicidade_customizada_dias: avrPeriodicity === 'personalizado' ? parseInt(avrCustomDays) || 30 : undefined,
+            com_entrada: avrWithEntry
+          } : undefined,
+          motivo_ajuste: (categoriasAjuste as any[]).find(reason => reason.id === avrReasonId)?.nome,
+          propagate_avr: propagationOverride || avrPropagation
+        }
+      });
+      showToast('AVR atualizado com sucesso!', 'success');
+      setIsAVRConfirmationOpen(false);
+      resetAllDrafts();
+      handleClose();
+    } catch (err: any) {
+      showToast('Ocorreu um problema: ' + err.message, 'error');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
   const handleFormSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (isAVREdit) {
+      if (!avrReasonId) {
+        showToast('Selecione um motivo para o AVR.', 'warning');
+        return;
+      }
+      setIsAVRConfirmationOpen(true);
+      return;
+    }
     setIsSubmitting(true);
     
     const val = parseMoney(lancamentoFormDraft.valor_previsto);
@@ -1111,7 +1243,7 @@ export default function NovoLancamentoDrawer() {
                 </div>
 
                 {/* Seção de Parcelamento / Repetição */}
-                {!editingItem && (lancamentoFormDraft.condicao === 'a_prazo' || lancamentoFormDraft.recorrencia_repeat) && (
+                {(lancamentoFormDraft.condicao === 'a_prazo' || lancamentoFormDraft.recorrencia_repeat) && (
                   <motion.div
                     initial={{ opacity: 0, y: 10 }}
                     animate={{ opacity: 1, y: 0 }}
@@ -1234,6 +1366,54 @@ export default function NovoLancamentoDrawer() {
                       </div>
                     )}
                   </motion.div>
+                )}
+
+                {editingItem && (
+                  <div className="p-5 bg-primary/5 border-2 border-primary/20 rounded-2xl space-y-4">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <h3 className="text-xs font-black uppercase tracking-tight text-primary">Ajuste de Valor Real (AVR)</h3>
+                        <p className="text-[9px] font-bold text-secondary uppercase tracking-widest mt-1">Mantém o mesmo painel de edição e não gera movimentação de caixa</p>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => setIsAVREdit(!isAVREdit)}
+                        className={`px-3 py-2 rounded-lg text-[9px] font-black uppercase tracking-widest ${isAVREdit ? 'bg-primary text-white' : 'bg-white text-primary border border-primary/20'}`}
+                      >
+                        {isAVREdit ? 'AVR Ativo' : 'Usar AVR'}
+                      </button>
+                    </div>
+                    {isAVREdit && (
+                      <>
+                        <div className="grid grid-cols-2 gap-4">
+                          <div className="space-y-2">
+                            <label className="text-[9px] font-black uppercase text-primary tracking-widest">Motivo do AVR *</label>
+                            <select value={avrReasonId} onChange={(e) => setAvrReasonId(e.target.value)} className="w-full h-10 bg-white border-2 border-primary/10 rounded-xl px-3 text-[10px] font-bold outline-none focus:border-primary">
+                              <option value="">Selecione o motivo...</option>
+                              {(categoriasAjuste as any[]).filter(reason => reason.tipo === 'avr' && reason.status !== 'inativo').map(reason => <option key={reason.id} value={reason.id}>{reason.nome}</option>)}
+                            </select>
+                          </div>
+                          <div className="space-y-2">
+                            <label className="text-[9px] font-black uppercase text-primary tracking-widest">Novo valor original *</label>
+                            <MoneyInput value={lancamentoFormDraft.valor_previsto} onChange={(value) => setLancamentoFormDraft({ valor_previsto: value })} className="w-full h-10 bg-white border-2 border-primary/10 rounded-xl px-3 text-xs font-black outline-none focus:border-primary" />
+                          </div>
+                        </div>
+
+                        {lancamentoFormDraft.condicao === 'a_prazo' && (
+                          <div className="space-y-3 border-t border-primary/10 pt-4">
+                            <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                              <label className="space-y-1.5"><span className="text-[9px] font-black uppercase text-secondary">Nº vezes</span><input type="number" min="1" max="120" value={avrQuantity} onChange={(e) => setAvrQuantity(e.target.value)} className="w-full h-10 bg-white border-2 border-primary/10 rounded-xl px-3 text-xs font-bold" /></label>
+                              <label className="space-y-1.5"><span className="text-[9px] font-black uppercase text-secondary">Intervalo</span><select value={avrPeriodicity} onChange={(e) => setAvrPeriodicity(e.target.value)} className="w-full h-10 bg-white border-2 border-primary/10 rounded-xl px-3 text-xs font-bold"><option value="diario">Diário</option><option value="semanal">Semanal</option><option value="quinzenal">Quinzenal</option><option value="mensal">Mensal</option><option value="bimestral">Bimestral</option><option value="trimestral">Trimestral</option><option value="semestral">Semestral</option><option value="anual">Anual</option><option value="personalizado">Personalizado</option></select></label>
+                              {avrPeriodicity === 'personalizado' && <label className="space-y-1.5"><span className="text-[9px] font-black uppercase text-secondary">Qtd. dias</span><input type="number" min="1" value={avrCustomDays} onChange={(e) => setAvrCustomDays(e.target.value)} className="w-full h-10 bg-white border-2 border-primary/10 rounded-xl px-3 text-xs font-bold" /></label>}
+                            </div>
+                            <label className="flex items-center gap-2 text-[9px] font-black uppercase text-secondary"><input type="checkbox" checked={avrWithEntry} onChange={(e) => setAvrWithEntry(e.target.checked)} className="rounded text-primary" /> Com entrada</label>
+                            <button type="button" onClick={generateAVRParcels} className="w-full h-10 bg-primary/10 text-primary rounded-xl text-[9px] font-black uppercase tracking-widest">Gerar / Atualizar Parcelas</button>
+                            {avrParcels.length > 0 && <div className="border-2 border-primary/10 rounded-xl overflow-hidden bg-white"><table className="w-full"><tbody>{avrParcels.map((parcel, index) => <tr key={`${parcel.id || 'new'}-${parcel.numero}`} className="border-b border-primary/10"><td className="px-2 py-2 text-[10px] font-black">#{parcel.numero}</td><td className="px-1 py-1"><input type="date" disabled={parcel.status !== 'aberto'} value={parcel.data} onChange={(e) => setAvrParcels(prev => prev.map((item, itemIndex) => itemIndex === index ? { ...item, data: e.target.value } : item))} className="w-full border-none text-[10px]" /></td><td className="px-1 py-1"><MoneyInput disabled={parcel.status !== 'aberto'} value={parcel.valor} onChange={(value) => setAvrParcels(prev => prev.map((item, itemIndex) => itemIndex === index ? { ...item, valor: value } : item))} className="w-full border-none text-[10px] font-black" /></td></tr>)}</tbody></table></div>}
+                          </div>
+                        )}
+                      </>
+                    )}
+                  </div>
                 )}
 
                 <div className="flex flex-col gap-2">
@@ -1359,6 +1539,21 @@ export default function NovoLancamentoDrawer() {
                 </button>
               </footer>
             </motion.form>
+          </div>
+        )}
+      </AnimatePresence>
+
+      <AnimatePresence>
+        {isAVRConfirmationOpen && (
+          <div className="fixed inset-0 z-[450] flex items-center justify-center p-4">
+            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setIsAVRConfirmationOpen(false)} className="absolute inset-0 bg-black/40 backdrop-blur-sm" />
+            <motion.div initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.9, opacity: 0 }} className="bg-white w-full max-w-[420px] rounded-3xl shadow-2xl relative z-10 p-8 space-y-5 text-center">
+              <div className="w-14 h-14 rounded-full bg-primary/10 text-primary flex items-center justify-center mx-auto"><Shield className="w-7 h-7" /></div>
+              <div><h3 className="text-sm font-black uppercase tracking-widest">Confirmar ajuste AVR?</h3><p className="text-[10px] font-bold text-secondary uppercase leading-relaxed mt-2">O novo valor será salvo sem gerar movimentação de caixa.</p></div>
+              {editingItem?.recorrencia_id && <div className="grid gap-2"><button type="button" onClick={() => { setAvrPropagation('none'); handleAVRSubmit('none'); }} className="w-full py-3 bg-neutral-900 text-white rounded-xl text-[10px] font-black uppercase tracking-widest">Ajustar apenas este</button><button type="button" onClick={() => { setAvrPropagation('open'); handleAVRSubmit('open'); }} className="w-full py-3 bg-primary text-white rounded-xl text-[10px] font-black uppercase tracking-widest">Todas em aberto</button></div>}
+              {!editingItem?.recorrencia_id && <button type="button" onClick={handleAVRSubmit} className="w-full py-3 bg-primary text-white rounded-xl text-[10px] font-black uppercase tracking-widest">Confirmar e salvar</button>}
+              <button type="button" onClick={() => setIsAVRConfirmationOpen(false)} className="text-[10px] font-black uppercase text-secondary">Cancelar</button>
+            </motion.div>
           </div>
         )}
       </AnimatePresence>

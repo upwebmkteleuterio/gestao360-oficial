@@ -501,11 +501,10 @@ export default function BaixaLancamentoModal() {
               {/* Tipo de Baixa */}
               <div className="space-y-2">
                 <label className="text-[10px] font-black uppercase text-secondary tracking-widest">Tipo de Baixa</label>
-                <div className="grid grid-cols-3 gap-2">
+                <div className="grid grid-cols-2 gap-2">
                   {[
                     { id: 'financeira', label: 'Quitar', desc: 'Liquidação normal' },
-                    { id: 'bpi', label: 'BPI', desc: 'Baixa por inatividade' },
-                    { id: 'avr', label: 'AVR', desc: 'Ajuste do valor real' }
+                    { id: 'bpi', label: 'BPI', desc: 'Baixa por inatividade' }
                   ].map(opt => (
                     <button
                       key={opt.id}
