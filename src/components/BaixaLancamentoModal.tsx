@@ -759,8 +759,8 @@ export default function BaixaLancamentoModal() {
                       }`}
                     >
                       <option value="">Selecione o motivo do ajuste...</option>
-                      {avrReasons.map(r => (
-                        <option key={r.id} value={r.id}>{r.nome}</option>
+                      {avrReasons.map((r, index) => (
+                        <option key={`avr-${r.id || 'motivo'}-${index}`} value={r.id}>{r.nome}</option>
                       ))}
                     </select>
                     <p className="text-[8px] font-bold text-secondary uppercase tracking-tight">Este motivo será registrado no log de auditoria do título.</p>
@@ -968,8 +968,8 @@ export default function BaixaLancamentoModal() {
                     className="w-full h-12 bg-neutral-50 border-2 border-neutral-100 rounded-2xl px-4 text-xs font-bold outline-none focus:border-primary appearance-none cursor-pointer disabled:opacity-50"
                   >
                     <option value="">Selecione...</option>
-                    {categorias.filter(c => c.tipo === lancamento.tipo).map(c => (
-                      <option key={c.id} value={c.id}>{c.nome}</option>
+                    {categorias.filter(c => c.tipo === lancamento.tipo).map((c, index) => (
+                      <option key={`categoria-${c.id || 'item'}-${index}`} value={c.id}>{c.nome}</option>
                     ))}
                   </select>
                 </div>
@@ -983,8 +983,8 @@ export default function BaixaLancamentoModal() {
                     className="w-full h-12 bg-neutral-50 border-2 border-neutral-100 rounded-2xl px-4 text-xs font-bold outline-none focus:border-primary appearance-none cursor-pointer disabled:opacity-50"
                   >
                     <option value="">Selecione...</option>
-                    {rawCCs.filter((cc: any) => cc.status !== 'excluido').map(cc => (
-                      <option key={cc.id} value={cc.id}>{cc.nome}</option>
+                    {rawCCs.filter((cc: any) => cc.status !== 'excluido').map((cc, index) => (
+                      <option key={`centro-${cc.id || 'item'}-${index}`} value={cc.id}>{cc.nome}</option>
                     ))}
                   </select>
                 </div>
@@ -1010,8 +1010,8 @@ export default function BaixaLancamentoModal() {
                     onChange={(e) => setContaId(e.target.value)}
                     className="w-full h-12 bg-neutral-50 border-2 border-neutral-100 rounded-2xl px-4 text-xs font-bold outline-none focus:border-primary appearance-none cursor-pointer disabled:opacity-50"
                   >
-                    {contas.map((c: any) => (
-                      <option key={c.id} value={c.id}>{c.nome_banco} (Saldo: R$ {formatBRL(c.saldo_real)})</option>
+                    {contas.map((c: any, index: number) => (
+                      <option key={`conta-${c.id || 'item'}-${index}`} value={c.id}>{c.nome_banco} (Saldo: R$ {formatBRL(c.saldo_real)})</option>
                     ))}
                   </select>
                 </div>
@@ -1053,7 +1053,7 @@ export default function BaixaLancamentoModal() {
                 <div className="space-y-2">
                   {/* Existing Remote Attachments */}
                   {existingAnexos && existingAnexos.map((anexo: any, index: number) => (
-                    <div key={`comprovante-${index}`} className="flex items-center justify-between p-3 bg-primary/5 border border-primary/20 rounded-xl">
+                    <div key={`baixa-anexo-${anexo.id || 'arquivo'}-${index}`} className="flex items-center justify-between p-3 bg-primary/5 border border-primary/20 rounded-xl">
                       <div className="flex items-center gap-2">
                         <FileText className="w-3.5 h-3.5 text-primary" />
                         <span className="text-[10px] font-bold truncate max-w-[150px] text-primary">{anexo.nome} (Salvo)</span>

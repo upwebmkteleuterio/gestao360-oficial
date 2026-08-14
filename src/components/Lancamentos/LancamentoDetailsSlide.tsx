@@ -149,10 +149,11 @@ export default function LancamentoDetailsSlide() {
     setIsUploadingComprovante(true);
     try {
       const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error('Usuário não autenticado.');
       for (const file of Array.from(files)) {
         const extension = file.name.split('.').pop() || 'bin';
-        const filePath = `lancamentos/${selectedLancamentoIdForModal}/${crypto.randomUUID()}.${extension}`;
-        const { error: uploadError } = await supabase.storage.from('documents').upload(filePath, file);
+        const filePath = `lancamentos/${selectedLancamentoIdForModal}/${Date.now()}-${Math.random().toString(36).slice(2)}.${extension}`;
+        const { error: uploadError } = await supabase.storage.from('documents').upload(filePath, file, { upsert: false });
         if (uploadError) throw uploadError;
         const { data: { publicUrl } } = supabase.storage.from('documents').getPublicUrl(filePath);
         const { error: insertError } = await (supabase.from('lancamento_anexos') as any).insert({
@@ -435,7 +436,7 @@ export default function LancamentoDetailsSlide() {
                           const pago = parcela.status_pagamento === 'pago';
                           const pendente = parcela.status_pagamento === 'quitação_pendente';
                           return (
-                            <div key={parcela.id || index} className="px-4 py-3 flex items-center justify-between gap-3">
+                            <div key={`parcela-${parcela.id || 'item'}-${index}`} className="px-4 py-3 flex items-center justify-between gap-3">
                               <div className="min-w-0">
                                 <div className="flex items-center gap-2">
                                   <span className="text-[10px] font-black text-neutral-900">Parcela {parcela.numero_parcela || index + 1}</span>
