@@ -31,7 +31,9 @@ import { useUIStore } from '../../store/uiStore';
 import { useLancamento, useEntidades, useCategorias, useUsuarios, useLancamentoAnexos, useLancamentos, useContas } from '../../hooks/useData';
 import { useAuth } from '../../hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
+import { diagnosticLogger } from '../../services/diagnosticLogger';
 import { format } from 'date-fns';
+
 import { ptBR } from 'date-fns/locale';
 
 export default function LancamentoDetailsSlide() {
@@ -64,8 +66,17 @@ export default function LancamentoDetailsSlide() {
   }, [searchParams]);
 
   const { data: lancamento, isLoading: loadingItem } = useLancamento(selectedLancamentoIdForModal);
-  const { anexos = [], refetch: refetchAnexos, deleteAnexo } = useLancamentoAnexos(selectedLancamentoIdForModal);
+  const { anexos = [], error: anexosError, refetch: refetchAnexos, deleteAnexo } = useLancamentoAnexos(selectedLancamentoIdForModal);
   const [isUploadingComprovante, setIsUploadingComprovante] = useState(false);
+
+  useEffect(() => {
+    if (anexosError) {
+      diagnosticLogger.error('lancamento-anexos-ui', 'A UI recebeu erro ao carregar anexos', {
+        lancamentoId: selectedLancamentoIdForModal,
+        error: anexosError,
+      });
+    }
+  }, [anexosError, selectedLancamentoIdForModal]);
 
   useEffect(() => {
     if (!lancamento) {
@@ -145,30 +156,64 @@ export default function LancamentoDetailsSlide() {
   };
 
   const handleUploadComprovante = async (files: FileList | null) => {
-    if (!files || !selectedLancamentoIdForModal) return;
+    if (!files || !selectedLancamentoIdForModal) {
+      diagnosticLogger.warn('lancamento-anexos-upload', 'Upload ignorado: arquivo ou lançamento ausente', {
+        hasFiles: !!files,
+        lancamentoId: selectedLancamentoIdForModal,
+      });
+      return;
+    }
+
     setIsUploadingComprovante(true);
+    diagnosticLogger.info('lancamento-anexos-upload', 'Upload iniciado', {
+      lancamentoId: selectedLancamentoIdForModal,
+      files: Array.from(files).map(file => ({ name: file.name, size: file.size, type: file.type })),
+    });
+
     try {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error('Usuário não autenticado.');
+
       for (const file of Array.from(files)) {
         const extension = file.name.split('.').pop() || 'bin';
         const filePath = `lancamentos/${selectedLancamentoIdForModal}/${Date.now()}-${Math.random().toString(36).slice(2)}.${extension}`;
+        diagnosticLogger.info('lancamento-anexos-upload', 'Enviando arquivo para o Storage', { filePath, name: file.name });
         const { error: uploadError } = await supabase.storage.from('documents').upload(filePath, file, { upsert: false });
-        if (uploadError) throw uploadError;
+        if (uploadError) {
+          diagnosticLogger.error('lancamento-anexos-upload', 'Falha no upload para o Storage', { filePath, error: uploadError });
+          throw uploadError;
+        }
+
         const { data: { publicUrl } } = supabase.storage.from('documents').getPublicUrl(filePath);
-        const { error: insertError } = await (supabase.from('lancamento_anexos') as any).insert({
+        diagnosticLogger.info('lancamento-anexos-upload', 'Arquivo salvo no Storage; inserindo registro', { filePath, publicUrl });
+        const { data: insertedRows, error: insertError } = await (supabase.from('lancamento_anexos') as any).insert({
           lancamento_id: selectedLancamentoIdForModal,
           nome: file.name,
           url: publicUrl,
           tamanho: file.size,
           tipo_arquivo: file.type,
-          user_id: user?.id
-        });
-        if (insertError) throw insertError;
+          user_id: user.id
+        }).select();
+        if (insertError) {
+          diagnosticLogger.error('lancamento-anexos-upload', 'Arquivo subiu, mas registro não foi salvo no banco', { filePath, error: insertError });
+          throw insertError;
+        }
+        diagnosticLogger.info('lancamento-anexos-upload', 'Registro do anexo salvo no banco', { filePath, insertedRows });
       }
-      await refetchAnexos();
+
+      const refreshed = await refetchAnexos();
+      diagnosticLogger.info('lancamento-anexos-upload', 'Upload finalizado e UI atualizada', {
+        lancamentoId: selectedLancamentoIdForModal,
+        count: refreshed.data?.length || 0,
+        queryError: refreshed.error,
+      });
+      if (refreshed.error) throw refreshed.error;
     } catch (error: any) {
-      alert('Erro ao anexar comprovante: ' + error.message);
+      diagnosticLogger.error('lancamento-anexos-upload', 'Upload interrompido com erro', {
+        lancamentoId: selectedLancamentoIdForModal,
+        error,
+      });
+      alert('Erro ao anexar comprovante: ' + (error?.message || 'erro desconhecido; consulte os logs do diagnóstico'));
     } finally {
       setIsUploadingComprovante(false);
     }
@@ -503,8 +548,15 @@ export default function LancamentoDetailsSlide() {
                       <span className="text-[9px] font-black uppercase tracking-widest">{isUploadingComprovante ? 'Enviando comprovante...' : 'Anexar comprovante'}</span>
                       <input type="file" multiple disabled={isUploadingComprovante} onChange={(event) => { handleUploadComprovante(event.target.files); event.currentTarget.value = ''; }} className="absolute inset-0 opacity-0 cursor-pointer disabled:cursor-not-allowed" />
                     </label>
+                    {anexosError && (
+                      <div className="p-3 rounded-xl border border-alert-red/30 bg-alert-red/5 text-alert-red">
+                        <p className="text-[9px] font-black uppercase">Não foi possível carregar os anexos</p>
+                        <p className="text-[8px] font-bold mt-1">{anexosError instanceof Error ? anexosError.message : 'Erro desconhecido. O diagnóstico foi registrado.'}</p>
+                      </div>
+                    )}
                     <div className="grid grid-cols-1 gap-2">
                       {anexos.length > 0 ? (
+
                       anexos.map((anexo: any, index: number) => (
                         <div key={`comprovante-${index}`} className="group flex items-center justify-between p-4 bg-neutral-50 hover:bg-neutral-100 border border-neutral-100 rounded-2xl transition-all">
                           <a href={anexo.url} target="_blank" rel="noreferrer" download className="flex items-center gap-3 min-w-0">

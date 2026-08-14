@@ -12,6 +12,7 @@ import { conciliacoesService } from '../services/conciliacoesService';
 import { usuariosService } from '../services/usuariosService';
 import { auditoriaService } from '../services/auditoriaService';
 import { notificationsService } from '../services/notificationsService';
+import { diagnosticLogger } from '../services/diagnosticLogger';
 import { TipoDiferenca } from '../types';
 
 export function useNotifications() {
@@ -211,10 +212,22 @@ export function useLancamento(id: string | null) {
 
 export function useLancamentoAnexos(lancamentoId: string | null) {
   const queryClient = useQueryClient();
-  const query = useQuery({ queryKey: ['lancamentoAnexos', lancamentoId], queryFn: () => lancamentoId ? lancamentosService.getAnexos(lancamentoId) : Promise.resolve([]), enabled: !!lancamentoId });
+  const query = useQuery({
+    queryKey: ['lancamentoAnexos', lancamentoId],
+    queryFn: async () => {
+      if (!lancamentoId) return [];
+      diagnosticLogger.info('lancamento-anexos', 'Consultando anexos', { lancamentoId });
+      const anexos = await lancamentosService.getAnexos(lancamentoId);
+      diagnosticLogger.info('lancamento-anexos', 'Anexos consultados', { lancamentoId, count: anexos.length });
+      return anexos;
+    },
+    enabled: !!lancamentoId,
+    meta: { feature: 'lancamento-anexos' },
+  });
   const deleteMutation = useMutation({ mutationFn: ({ id, path }: { id: string, path: string }) => lancamentosService.deleteAnexo(id, path), onSuccess: () => queryClient.invalidateQueries({ queryKey: ['lancamentoAnexos', lancamentoId] }) });
 
   return { ...query, anexos: query.data || [], deleteAnexo: deleteMutation.mutateAsync, isDeleting: deleteMutation.isPending };
+
 }
 
 export function useRecorrencias() {

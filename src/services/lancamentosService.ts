@@ -1,4 +1,5 @@
 import { supabase } from '@/integrations/supabase/client';
+import { diagnosticLogger } from './diagnosticLogger';
 import { LancamentoFinanceiro } from '../types';
 
 export interface LancamentoFilters {
@@ -668,12 +669,17 @@ export const lancamentosService = {
   },
 
   getAnexos: async (lancamentoId: string): Promise<any[]> => {
+    diagnosticLogger.info('lancamento-anexos', 'Iniciando leitura dos anexos no banco', { lancamentoId });
     const { data, error } = await supabase
       .from('lancamento_anexos')
       .select('*')
       .eq('lancamento_id', lancamentoId);
-    if (error) throw error;
-    return data;
+    if (error) {
+      diagnosticLogger.error('lancamento-anexos', 'Erro na leitura dos anexos no banco', { lancamentoId, error });
+      throw error;
+    }
+    diagnosticLogger.info('lancamento-anexos', 'Leitura dos anexos concluída', { lancamentoId, count: data?.length || 0, rows: data });
+    return data || [];
   },
 
   deleteAnexo: async (id: string, filePath: string): Promise<void> => {
