@@ -211,9 +211,9 @@ export default function ComprovanteDrawer() {
                 </span>
                 {anexos.length > 0 ? (
                   <div className="grid grid-cols-1 gap-2">
-                    {anexos.map((anexo: any) => (
+                    {anexos.map((anexo: any, index: number) => (
                       <a
-                        key={anexo.id}
+                        key={`comprovante-${index}`}
                         href={anexo.url}
                         target="_blank"
                         rel="noopener noreferrer"

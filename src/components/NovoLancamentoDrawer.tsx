@@ -1453,7 +1453,7 @@ export default function NovoLancamentoDrawer() {
                 <div className="space-y-2">
                   {/* Existing Remote Attachments */}
                   {existingAnexos && existingAnexos.map((anexo: any, index: number) => (
-                    <div key={`${anexo.id || 'anexo'}-${anexo.url || anexo.nome || 'arquivo'}-${index}`} className="flex items-center justify-between p-3 bg-primary/5 border border-primary/20 rounded-xl">
+                    <div key={`comprovante-${index}`} className="flex items-center justify-between p-3 bg-primary/5 border border-primary/20 rounded-xl">
                       <div className="flex items-center gap-2">
                         <FileText className="w-3.5 h-3.5 text-primary" />
                         <a

@@ -505,14 +505,14 @@ export default function LancamentoDetailsSlide() {
                     <div className="grid grid-cols-1 gap-2">
                       {anexos.length > 0 ? (
                       anexos.map((anexo: any, index: number) => (
-                        <div key={`${anexo.id || 'anexo'}-${anexo.url || anexo.nome || 'arquivo'}-${index}`} className="group flex items-center justify-between p-4 bg-neutral-50 hover:bg-neutral-100 border border-neutral-100 rounded-2xl transition-all">
+                        <div key={`comprovante-${index}`} className="group flex items-center justify-between p-4 bg-neutral-50 hover:bg-neutral-100 border border-neutral-100 rounded-2xl transition-all">
                           <a href={anexo.url} target="_blank" rel="noreferrer" download className="flex items-center gap-3 min-w-0">
                             <div className="w-10 h-10 rounded-xl bg-white border border-neutral-200 flex items-center justify-center text-primary shrink-0">
                               <Eye className="w-5 h-5" />
                             </div>
                             <div className="min-w-0">
                               <p className="text-[10px] font-black uppercase text-neutral-900 truncate max-w-[200px]">{anexo.nome || 'Visualizar Comprovante'}</p>
-                              <p className="text-[8px] font-bold text-secondary uppercase">Clique para abrir em nova aba</p>
+                              <p className="text-[8px] font-bold text-secondary uppercase">{anexo.tipo_arquivo || 'Formato não informado'} • {anexo.created_at ? formatDateTime(anexo.created_at) : 'Data não informada'}</p>
                             </div>
                           </a>
                           <div className="flex items-center gap-2 shrink-0">

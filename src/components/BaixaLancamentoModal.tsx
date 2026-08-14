@@ -1052,8 +1052,8 @@ export default function BaixaLancamentoModal() {
 
                 <div className="space-y-2">
                   {/* Existing Remote Attachments */}
-                  {existingAnexos && existingAnexos.map((anexo: any) => (
-                    <div key={anexo.id} className="flex items-center justify-between p-3 bg-primary/5 border border-primary/20 rounded-xl">
+                  {existingAnexos && existingAnexos.map((anexo: any, index: number) => (
+                    <div key={`comprovante-${index}`} className="flex items-center justify-between p-3 bg-primary/5 border border-primary/20 rounded-xl">
                       <div className="flex items-center gap-2">
                         <FileText className="w-3.5 h-3.5 text-primary" />
                         <span className="text-[10px] font-bold truncate max-w-[150px] text-primary">{anexo.nome} (Salvo)</span>
