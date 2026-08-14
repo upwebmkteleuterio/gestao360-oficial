@@ -829,6 +829,11 @@ export default function NovoLancamentoDrawer() {
                   <span className="text-[10px] uppercase font-black text-primary block mt-0.5 tracking-widest">
                     {editingItem ? 'Ajuste de registro' : 'Inserir nova previsão financeira'}
                   </span>
+                  {editingItem?.codigo_sequencial && (
+                    <span className="text-[9px] uppercase font-black text-secondary block mt-2 tracking-widest">
+                      Código da conta: {editingItem.codigo_sequencial}{editingItem.numero_parcela ? `-${editingItem.numero_parcela}` : ''}
+                    </span>
+                  )}
                 </div>
 
                 <button 
