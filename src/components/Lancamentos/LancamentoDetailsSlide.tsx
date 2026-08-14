@@ -64,7 +64,8 @@ export default function LancamentoDetailsSlide() {
   }, [searchParams]);
 
   const { data: lancamento, isLoading: loadingItem } = useLancamento(selectedLancamentoIdForModal);
-  const { anexos = [] } = useLancamentoAnexos(selectedLancamentoIdForModal);
+  const { anexos = [], refetch: refetchAnexos } = useLancamentoAnexos(selectedLancamentoIdForModal);
+  const [isUploadingComprovante, setIsUploadingComprovante] = useState(false);
 
   useEffect(() => {
     if (!lancamento) {
@@ -141,6 +142,35 @@ export default function LancamentoDetailsSlide() {
 
   const handlePrintReceipt = () => {
     window.print();
+  };
+
+  const handleUploadComprovante = async (files: FileList | null) => {
+    if (!files || !selectedLancamentoIdForModal) return;
+    setIsUploadingComprovante(true);
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      for (const file of Array.from(files)) {
+        const extension = file.name.split('.').pop() || 'bin';
+        const filePath = `lancamentos/${selectedLancamentoIdForModal}/${crypto.randomUUID()}.${extension}`;
+        const { error: uploadError } = await supabase.storage.from('documents').upload(filePath, file);
+        if (uploadError) throw uploadError;
+        const { data: { publicUrl } } = supabase.storage.from('documents').getPublicUrl(filePath);
+        const { error: insertError } = await (supabase.from('lancamento_anexos') as any).insert({
+          lancamento_id: selectedLancamentoIdForModal,
+          nome: file.name,
+          url: publicUrl,
+          tamanho: file.size,
+          tipo_arquivo: file.type,
+          user_id: user?.id
+        });
+        if (insertError) throw insertError;
+      }
+      await refetchAnexos();
+    } catch (error: any) {
+      alert('Erro ao anexar comprovante: ' + error.message);
+    } finally {
+      setIsUploadingComprovante(false);
+    }
   };
 
   const hasAnexo = anexos.length > 0;
@@ -467,7 +497,11 @@ export default function LancamentoDetailsSlide() {
                     <h4 className="text-[10px] font-black uppercase tracking-widest text-primary flex items-center gap-2 border-b border-neutral-100 pb-2">
                       <Paperclip className="w-4 h-4" /> Comprovantes e Anexos
                     </h4>
-                    
+                    <label className={`relative flex items-center justify-center gap-2 h-11 rounded-xl border-2 border-dashed transition-all ${isUploadingComprovante ? 'border-neutral-200 bg-neutral-100 text-neutral-400' : 'border-primary/20 bg-primary/5 text-primary hover:bg-primary/10 cursor-pointer'}`}>
+                      {isUploadingComprovante ? <Loader2 className="w-4 h-4 animate-spin" /> : <Paperclip className="w-4 h-4" />}
+                      <span className="text-[9px] font-black uppercase tracking-widest">{isUploadingComprovante ? 'Enviando comprovante...' : 'Anexar comprovante'}</span>
+                      <input type="file" multiple disabled={isUploadingComprovante} onChange={(event) => { handleUploadComprovante(event.target.files); event.currentTarget.value = ''; }} className="absolute inset-0 opacity-0 cursor-pointer disabled:cursor-not-allowed" />
+                    </label>
                     <div className="grid grid-cols-1 gap-2">
                       {anexos.length > 0 ? (
                       anexos.map((anexo: any) => (
