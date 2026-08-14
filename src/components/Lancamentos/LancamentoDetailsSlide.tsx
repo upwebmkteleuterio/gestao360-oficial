@@ -519,8 +519,8 @@ export default function LancamentoDetailsSlide() {
                       </div>
                       <div className="flex justify-between items-end">
                          <span className={`text-2xl font-black font-mono ${lancamento.tipo === 'entrada' ? 'text-bank-truth-green' : 'text-alert-red'}`}>
-                          {lancamento.tipo === 'entrada' ? '+' : '-'} {formatCurrency(lancamento.valor_previsto)}
-                        </span>
+                           {lancamento.tipo === 'entrada' ? '+' : '-'} {formatCurrency((lancamento as any).tipo_baixa === 'avr' ? (lancamento.valor_original || lancamento.valor_previsto) : lancamento.valor_previsto)}
+                         </span>
                       </div>
                     </div>
                   )}

@@ -295,7 +295,7 @@ export default function NovoLancamentoDrawer() {
     if (editingItem) {
       setLancamentoFormDraft({
         tipo: editingItem.tipo,
-        valor_previsto: formatBRL(editingItem.valor_previsto),
+        valor_previsto: formatBRL((editingItem as any).tipo_baixa === 'avr' || (editingItem as any).motivo_ajuste ? (editingItem.valor_original || editingItem.valor_previsto) : editingItem.valor_previsto),
         data_emissao: editingItem.data_emissao,
         data_vencimento: editingItem.data_vencimento,
         data_competencia: editingItem.data_competencia || editingItem.data_emissao,
