@@ -547,14 +547,18 @@ export default function LancamentoDetailsSlide() {
                     {lancamento.status_pagamento === 'aberto' ? (
                       <button
                         type="button"
+                        disabled={!canApprove}
                         onClick={() => {
+                          if (!canApprove) return;
                           setSelectedLancamentoIdForModal(lancamento.id);
                           setModalOpen('isComprovanteOpen', false);
                           setModalOpen('isBaixaLancamentoOpen', true);
                         }}
-                        className="w-full h-14 bg-bank-truth-green hover:brightness-110 text-white transition-all rounded-2xl text-[10px] font-black uppercase tracking-[0.2em] flex items-center justify-center gap-3 shadow-lg"
+                        className={`w-full h-14 text-white transition-all rounded-2xl text-[10px] font-black uppercase tracking-[0.2em] flex items-center justify-center gap-3 shadow-lg ${
+                          canApprove ? 'bg-bank-truth-green hover:brightness-110' : 'bg-neutral-300 cursor-not-allowed opacity-70'
+                        }`}
                       >
-                        <CheckCircle2 className="w-5 h-5" /> Dar baixa agora
+                        <CheckCircle2 className="w-5 h-5" /> {canApprove ? 'Dar baixa agora' : 'Anexe o comprovante ou dispense'}
                       </button>
                     ) : (
                       <div className="w-full p-4 bg-neutral-100 rounded-2xl border border-neutral-200 text-center">
