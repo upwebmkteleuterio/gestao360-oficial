@@ -909,21 +909,23 @@ export default function NovoLancamentoDrawer() {
                   </div>
                 </div>
 
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="flex flex-col gap-2">
-                    <label className="text-[10px] font-black text-secondary uppercase tracking-widest">Valor Estimado <span className="text-alert-red">*</span></label>
-                    <div className={`relative group ${shouldLockFields ? 'opacity-50 pointer-events-none' : ''}`}>
-                      <span className="absolute left-4 top-1/2 -translate-y-1/2 text-xs text-secondary font-black">R$</span>
-                      <MoneyInput
-                        value={lancamentoFormDraft.valor_previsto}
-                        onChange={(val) => setLancamentoFormDraft({ valor_previsto: val })}
-                        className="w-full h-12 pl-10 pr-4 bg-white border-2 border-neutral-200 rounded-xl font-mono text-sm font-black text-on-surface focus:outline-none focus:border-primary transition-all shadow-xs"
-                        placeholder="0,00"
-                        required
-                        disabled={shouldLockFields}
-                      />
+                <div className={`grid gap-4 ${isAVREdit ? 'grid-cols-1' : 'grid-cols-2'}`}>
+                  {!isAVREdit && (
+                    <div className="flex flex-col gap-2">
+                      <label className="text-[10px] font-black text-secondary uppercase tracking-widest">Valor Estimado <span className="text-alert-red">*</span></label>
+                      <div className={`relative group ${shouldLockFields ? 'opacity-50 pointer-events-none' : ''}`}>
+                        <span className="absolute left-4 top-1/2 -translate-y-1/2 text-xs text-secondary font-black">R$</span>
+                        <MoneyInput
+                          value={lancamentoFormDraft.valor_previsto}
+                          onChange={(val) => setLancamentoFormDraft({ valor_previsto: val })}
+                          className="w-full h-12 pl-10 pr-4 bg-white border-2 border-neutral-200 rounded-xl font-mono text-sm font-black text-on-surface focus:outline-none focus:border-primary transition-all shadow-xs"
+                          placeholder="0,00"
+                          required
+                          disabled={shouldLockFields}
+                        />
+                      </div>
                     </div>
-                  </div>
+                  )}
 
                   <div className="flex flex-col gap-2">
                     <div className="flex justify-between items-center">
@@ -969,7 +971,8 @@ export default function NovoLancamentoDrawer() {
 
                 </div>
 
-                <div className="p-4 bg-neutral-50 rounded-2xl border-2 border-neutral-100 space-y-4">
+                {!isAVREdit && (
+                  <div className="p-4 bg-neutral-50 rounded-2xl border-2 border-neutral-100 space-y-4">
                   <label className="flex items-center gap-3 cursor-pointer select-none">
                     <input 
                       type="checkbox"
@@ -1015,7 +1018,8 @@ export default function NovoLancamentoDrawer() {
                       )}
                     </motion.div>
                   )}
-                </div>
+                  </div>
+                )}
 
                 <div className="grid grid-cols-2 gap-4">
                   <div className="flex flex-col gap-2">

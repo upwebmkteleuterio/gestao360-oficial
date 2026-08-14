@@ -438,24 +438,31 @@ export const lancamentosService = {
 
      // Propagação do AVR se solicitado e for recorrente
      if (data.propagate_avr !== 'none' && current.recorrencia_id) {
-       const propagationQuery = supabase
+       const { data: openParcels, error: openParcelsError } = await supabase
          .from('lancamentos_financeiros')
-         .update({
-           ...(data.parcelas?.length ? {} : {
-             valor_previsto: valorPagoEfetivo,
-             valor_original: valorPagoEfetivo
-           }),
-           ...(data.condicao ? { condicao: data.condicao } : {}),
-           ...(data.data_competencia ? { data_competencia: data.data_competencia } : {}),
-           ...(data.data_emissao ? { data_emissao: data.data_emissao } : {}),
-           observacoes: (current.observacoes || '') + `\n[AVR Propagado (${data.propagate_avr}) em ${timestampStr}]`
-         })
-         .eq('recorrencia_id', current.recorrencia_id);
+         .select('id, numero_parcela')
+         .eq('recorrencia_id', current.recorrencia_id)
+         .eq('status_pagamento', 'aberto');
+       if (openParcelsError) throw openParcelsError;
 
-       if (data.propagate_avr === 'open') {
-         propagationQuery.eq('status_pagamento', 'aberto');
+       for (const openParcel of openParcels || []) {
+         const submittedParcel = data.parcelas?.find(parcel => parcel.numero === openParcel.numero_parcela);
+         const parcelValue = submittedParcel
+           ? Number(submittedParcel.valor.replace(/\./g, '').replace(',', '.')) || 0
+           : valorPagoEfetivo;
+         const { error: propagationError } = await supabase
+           .from('lancamentos_financeiros')
+           .update({
+             valor_previsto: parcelValue,
+             valor_original: parcelValue,
+             ...(data.condicao ? { condicao: data.condicao } : {}),
+             ...(data.data_competencia ? { data_competencia: data.data_competencia } : {}),
+             ...(data.data_emissao ? { data_emissao: data.data_emissao } : {}),
+             observacoes: (current.observacoes || '') + `\\n[AVR Propagado (${data.propagate_avr}) em ${timestampStr}]`
+           })
+           .eq('id', openParcel.id);
+         if (propagationError) throw propagationError;
        }
-       await propagationQuery;
      }
 
      return updated as LancamentoFinanceiro;
