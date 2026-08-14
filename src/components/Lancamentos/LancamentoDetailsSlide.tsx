@@ -155,12 +155,14 @@ export default function LancamentoDetailsSlide() {
     window.print();
   };
 
-  const handleUploadComprovante = async (files: FileList | null) => {
-    if (!files || !selectedLancamentoIdForModal) {
+  const handleUploadComprovante = async (files: File[] | null) => {
+    if (!files || files.length === 0 || !selectedLancamentoIdForModal) {
       diagnosticLogger.warn('lancamento-anexos-upload', 'Upload ignorado: arquivo ou lançamento ausente', {
-        hasFiles: !!files,
+        hasFiles: !!files && files.length > 0,
+        fileCount: files?.length || 0,
         lancamentoId: selectedLancamentoIdForModal,
       });
+
       return;
     }
 
@@ -228,7 +230,8 @@ export default function LancamentoDetailsSlide() {
     <AnimatePresence>
       {/* Printable Receipt Layout (Visible only during window.print()) */}
       {lancamento && (
-        <div className="hidden print:block print:fixed print:inset-0 print:bg-white print:p-8 print:z-[99999] text-black font-sans">
+        <div key="printable-receipt" className="hidden print:block print:fixed print:inset-0 print:bg-white print:p-8 print:z-[99999] text-black font-sans">
+
           <div className="max-w-2xl mx-auto border-2 border-black p-8 rounded-xl space-y-6">
             <div className="flex justify-between items-start border-b-2 border-black pb-4">
               <div>
@@ -303,8 +306,9 @@ export default function LancamentoDetailsSlide() {
         </div>
       )}
 
-      <div className="fixed inset-0 z-[500] flex items-center justify-center p-4 print:hidden">
-        <motion.div 
+      <div key="details-drawer" className="fixed inset-0 z-[500] flex items-center justify-center p-4 print:hidden">
+        <motion.div
+
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
@@ -546,7 +550,8 @@ export default function LancamentoDetailsSlide() {
                     <label className={`relative flex items-center justify-center gap-2 h-11 rounded-xl border-2 border-dashed transition-all ${isUploadingComprovante ? 'border-neutral-200 bg-neutral-100 text-neutral-400' : 'border-primary/20 bg-primary/5 text-primary hover:bg-primary/10 cursor-pointer'}`}>
                       {isUploadingComprovante ? <Loader2 className="w-4 h-4 animate-spin" /> : <Paperclip className="w-4 h-4" />}
                       <span className="text-[9px] font-black uppercase tracking-widest">{isUploadingComprovante ? 'Enviando comprovante...' : 'Anexar comprovante'}</span>
-                      <input type="file" multiple disabled={isUploadingComprovante} onChange={(event) => { handleUploadComprovante(event.target.files); event.currentTarget.value = ''; }} className="absolute inset-0 opacity-0 cursor-pointer disabled:cursor-not-allowed" />
+                      <input type="file" multiple disabled={isUploadingComprovante} onChange={(event) => { const selectedFiles = event.target.files ? Array.from(event.target.files) as File[] : []; handleUploadComprovante(selectedFiles); event.currentTarget.value = ''; }} className="absolute inset-0 opacity-0 cursor-pointer disabled:cursor-not-allowed" />
+
                     </label>
                     {anexosError && (
                       <div className="p-3 rounded-xl border border-alert-red/30 bg-alert-red/5 text-alert-red">
