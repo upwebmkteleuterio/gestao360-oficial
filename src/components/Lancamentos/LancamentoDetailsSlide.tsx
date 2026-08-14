@@ -64,7 +64,7 @@ export default function LancamentoDetailsSlide() {
   }, [searchParams]);
 
   const { data: lancamento, isLoading: loadingItem } = useLancamento(selectedLancamentoIdForModal);
-  const { anexos = [], refetch: refetchAnexos } = useLancamentoAnexos(selectedLancamentoIdForModal);
+  const { anexos = [], refetch: refetchAnexos, deleteAnexo } = useLancamentoAnexos(selectedLancamentoIdForModal);
   const [isUploadingComprovante, setIsUploadingComprovante] = useState(false);
 
   useEffect(() => {
@@ -505,26 +505,22 @@ export default function LancamentoDetailsSlide() {
                     <div className="grid grid-cols-1 gap-2">
                       {anexos.length > 0 ? (
                       anexos.map((anexo: any) => (
-                        <a
-                          key={anexo.id}
-                          href={anexo.url}
-                          target="_blank"
-                          rel="noreferrer"
-                          download
-                          className="group flex items-center justify-between p-4 bg-neutral-50 hover:bg-neutral-100 border border-neutral-100 rounded-2xl transition-all"
-                        >
-                            <div className="flex items-center gap-3">
-                              <div className="w-10 h-10 rounded-xl bg-white border border-neutral-200 flex items-center justify-center text-primary">
-                                <Eye className="w-5 h-5" />
-                              </div>
-                              <div>
-                                <p className="text-[10px] font-black uppercase text-neutral-900 truncate max-w-[200px]">{anexo.nome || 'Visualizar Comprovante'}</p>
-                                <p className="text-[8px] font-bold text-secondary uppercase">Clique para abrir em nova aba</p>
-                              </div>
+                        <div key={anexo.id} className="group flex items-center justify-between p-4 bg-neutral-50 hover:bg-neutral-100 border border-neutral-100 rounded-2xl transition-all">
+                          <a href={anexo.url} target="_blank" rel="noreferrer" download className="flex items-center gap-3 min-w-0">
+                            <div className="w-10 h-10 rounded-xl bg-white border border-neutral-200 flex items-center justify-center text-primary shrink-0">
+                              <Eye className="w-5 h-5" />
                             </div>
-                            <ExternalLink className="w-4 h-4 text-secondary group-hover:text-primary transition-colors" />
+                            <div className="min-w-0">
+                              <p className="text-[10px] font-black uppercase text-neutral-900 truncate max-w-[200px]">{anexo.nome || 'Visualizar Comprovante'}</p>
+                              <p className="text-[8px] font-bold text-secondary uppercase">Clique para abrir em nova aba</p>
+                            </div>
                           </a>
-                        ))
+                          <div className="flex items-center gap-2 shrink-0">
+                            <ExternalLink className="w-4 h-4 text-secondary" />
+                            <button type="button" onClick={() => { if (confirm('Excluir este comprovante permanentemente?')) { const filePath = anexo.url.split('documents/')[1]; deleteAnexo({ id: anexo.id, path: filePath }); } }} className="text-[8px] font-black uppercase text-alert-red hover:underline">Excluir</button>
+                          </div>
+                        </div>
+                      ))
                       ) : (
                         <div className="p-8 bg-neutral-50 rounded-2xl border-2 border-dashed border-neutral-200 flex flex-col items-center justify-center text-center">
                           <Paperclip className="w-8 h-8 text-neutral-300 mb-2" />
