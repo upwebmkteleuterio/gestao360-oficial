@@ -1247,7 +1247,7 @@ export default function NovoLancamentoDrawer() {
                 </div>
 
                 {/* Seção de Parcelamento / Repetição */}
-                {(lancamentoFormDraft.condicao === 'a_prazo' || lancamentoFormDraft.recorrencia_repeat) && (
+                {!editingItem && (lancamentoFormDraft.condicao === 'a_prazo' || lancamentoFormDraft.recorrencia_repeat) && (
                   <motion.div
                     initial={{ opacity: 0, y: 10 }}
                     animate={{ opacity: 1, y: 0 }}
@@ -1491,12 +1491,13 @@ export default function NovoLancamentoDrawer() {
 
                 <div className="flex flex-col gap-2">
                   <label className="text-[10px] font-black text-secondary uppercase tracking-widest">Observações Contábeis</label>
-                  <textarea 
+                  <textarea
                     rows={4}
+                    readOnly={!!editingItem}
                     placeholder="Digite descrições detalhadas..."
                     value={lancamentoFormDraft.observacoes}
                     onChange={(e) => setLancamentoFormDraft({ observacoes: e.target.value })}
-                    className="w-full bg-white border-2 border-neutral-200 text-sm font-medium rounded-xl focus:outline-none focus:border-primary transition-all p-4 resize-none shadow-xs"
+                    className={`w-full bg-white border-2 border-neutral-200 text-sm font-medium rounded-xl focus:outline-none focus:border-primary transition-all p-4 resize-none shadow-xs ${editingItem ? 'bg-neutral-100 text-neutral-500 cursor-not-allowed' : ''}`}
                   />
                 </div>
               </div>

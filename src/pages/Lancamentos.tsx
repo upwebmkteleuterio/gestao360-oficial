@@ -136,6 +136,7 @@ export default function Lancamentos({
   const hasActiveFilters = searchTerm !== '' || docSearchTerm !== '' || approvalStatus !== 'all' || typeFilter !== (typeOverride || 'all') || authorIdFilter !== 'all' || categoryIdFilter !== 'all' || contaIdFilter !== 'all' || centroCustoIdFilter !== 'all' || condicaoFilter !== 'all' || temDescontoFilter !== 'all' || temAcrescimoFilter !== 'all' || motivoDescontoFilter !== 'all' || motivoAcrescimoFilter !== 'all';
 
   const [activeMenuId, setActiveMenuId] = useState<string | null>(null);
+  const [selectedLogItem, setSelectedLogItem] = useState<LancamentoFinanceiro | null>(null);
 
   const {
     data: allLancamentos = [],
@@ -246,6 +247,27 @@ export default function Lancamentos({
     const desconto = Number((item as any).desconto_valor) || 0;
     const acrescimo = Number((item as any).acrescimo_valor) || 0;
     return desconto > 0 || acrescimo > 0;
+  };
+
+  const renderObservacoes = (item: LancamentoFinanceiro) => {
+    const observacao = item.observacoes || 'Sem descrição';
+    return (
+      <div className="max-w-[240px]">
+        <p className="text-[9px] text-neutral-400 uppercase tracking-widest font-bold line-clamp-2 break-words">{observacao}</p>
+        {item.observacoes && (
+          <button
+            type="button"
+            onClick={(event) => {
+              event.stopPropagation();
+              setSelectedLogItem(item);
+            }}
+            className="mt-1 text-[8px] font-black uppercase tracking-widest text-primary hover:underline"
+          >
+            Ver logs completo
+          </button>
+        )}
+      </div>
+    );
   };
 
   const clearFiltersShortcut = () => {
@@ -616,9 +638,7 @@ export default function Lancamentos({
                                   {entidades.find(e => e.id === item.entidade_id)?.nome_razao_social || 'N/A'}
                                 </span>
                               </div>
-                              <span className="text-[9px] text-neutral-400 uppercase tracking-widest font-bold">
-                                {item.observacoes || 'Sem descrição'}
-                              </span>
+                              {renderObservacoes(item)}
                             </div>
                           </td>
                           <td className="py-3 px-4 whitespace-nowrap font-mono text-xs">
@@ -672,7 +692,7 @@ export default function Lancamentos({
                               <div className="flex items-center gap-2">
                                 <span className="text-neutral-900 font-black uppercase tracking-tighter truncate max-w-[200px]">{entidades.find(e => e.id === item.entidade_id)?.nome_razao_social || 'N/A'}</span>
                               </div>
-                              <span className="text-[9px] text-neutral-400 uppercase tracking-widest font-bold">{item.observacoes || 'Sem descrição'}</span>
+                              {renderObservacoes(item)}
                             </div>
                           </td>
                           <td className="py-3 px-4 whitespace-nowrap text-neutral-500 font-mono">{item.data_vencimento.split('-').reverse().join('/')}</td>
@@ -930,6 +950,26 @@ export default function Lancamentos({
                 <button onClick={clearFiltersShortcut} className="w-full h-12 text-[10px] font-black uppercase tracking-widest text-neutral-400 hover:text-neutral-900 transition-colors">Limpar Filtros</button>
                 <button onClick={() => { setIsFilterPanelOpen(false); setCurrentPage(1); }} className="w-full h-14 bg-neutral-900 text-white rounded-2xl text-[10px] font-black uppercase tracking-widest shadow-xl hover:bg-black transition-all">Aplicar e Fechar</button>
               </footer>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      <AnimatePresence>
+        {selectedLogItem && (
+          <div className="fixed inset-0 z-[500] flex items-center justify-center p-4">
+            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setSelectedLogItem(null)} className="absolute inset-0 bg-neutral-900/60 backdrop-blur-sm" />
+            <motion.div initial={{ scale: 0.95, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.95, opacity: 0 }} className="relative z-10 w-full max-w-[560px] max-h-[80vh] bg-white rounded-3xl shadow-2xl overflow-hidden">
+              <header className="px-6 py-5 border-b border-neutral-100 flex items-center justify-between bg-neutral-50/70">
+                <div>
+                  <h3 className="text-xs font-black uppercase tracking-widest text-neutral-900">Logs completos</h3>
+                  <p className="text-[9px] font-bold uppercase tracking-widest text-secondary mt-1">Registro {selectedLogItem.codigo_sequencial || selectedLogItem.id}</p>
+                </div>
+                <button type="button" onClick={() => setSelectedLogItem(null)} className="p-2 rounded-xl hover:bg-neutral-200"><X className="w-5 h-5 text-secondary" /></button>
+              </header>
+              <div className="p-6 max-h-[60vh] overflow-y-auto">
+                <p className="whitespace-pre-wrap break-words text-xs leading-relaxed font-bold text-neutral-700">{selectedLogItem.observacoes || 'Sem logs registrados.'}</p>
+              </div>
             </motion.div>
           </div>
         )}
