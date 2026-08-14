@@ -468,6 +468,15 @@ export const lancamentosService = {
        }
      }
 
+     // Mantém o total do título no registro exibido pela listagem, sem alterar o valor individual da parcela.
+     if (data.parcelas?.length) {
+       const { error: totalError } = await supabase
+         .from('lancamentos_financeiros')
+         .update({ valor_original: valorTotalAVR })
+         .eq('id', id);
+       if (totalError) throw totalError;
+     }
+
      return updated as LancamentoFinanceiro;
    }
 
