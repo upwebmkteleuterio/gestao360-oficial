@@ -28,6 +28,7 @@ export const lancamentosService = {
     let query = supabase
       .from('lancamentos_financeiros')
       .select('*, entidades_negocio!inner(nome_razao_social)', { count: 'exact' })
+      .order('codigo_sequencial', { ascending: true })
       .order('data_vencimento', { ascending: false })
       .order('created_at', { ascending: false });
 

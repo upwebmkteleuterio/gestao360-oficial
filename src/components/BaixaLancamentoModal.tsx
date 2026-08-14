@@ -505,9 +505,9 @@ export default function BaixaLancamentoModal() {
                   {[
                     { id: 'financeira', label: 'Quitar', desc: 'Liquidação normal' },
                     { id: 'bpi', label: 'BPI', desc: 'Baixa por inatividade' }
-                  ].map(opt => (
+                  ].map((opt, index) => (
                     <button
-                      key={opt.id}
+                      key={`tipo-baixa-${opt.id}-${index}`}
                       type="button"
                       onClick={() => handleTipoBaixaChange(opt.id as any)}
                       className={`p-3 rounded-2xl border-2 text-left transition-all ${
@@ -571,8 +571,8 @@ export default function BaixaLancamentoModal() {
                         }`}
                       >
                         <option value="">Selecione o motivo...</option>
-                        {discReasons.map(r => (
-                          <option key={r.id} value={r.id}>{r.nome}</option>
+                        {discReasons.map((r, index) => (
+                          <option key={`desconto-${r.id || 'motivo'}-${index}`} value={r.id}>{r.nome}</option>
                         ))}
                       </select>
                     </div>
@@ -623,8 +623,8 @@ export default function BaixaLancamentoModal() {
                         }`}
                       >
                         <option value="">Selecione o motivo...</option>
-                        {incrReasons.map(r => (
-                          <option key={r.id} value={r.id}>{r.nome}</option>
+                        {incrReasons.map((r, index) => (
+                          <option key={`acrescimo-${r.id || 'motivo'}-${index}`} value={r.id}>{r.nome}</option>
                         ))}
                       </select>
                     </div>
