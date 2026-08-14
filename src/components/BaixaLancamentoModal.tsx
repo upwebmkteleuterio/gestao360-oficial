@@ -57,15 +57,12 @@ function parseMoney(value: string | number | undefined | null): number {
 }
 
 export default function BaixaLancamentoModal() {
-  const {
-    isBaixaLancamentoOpen,
-    isAVRModalOpen,
-    setModalOpen,
+  const { 
+    isBaixaLancamentoOpen, 
+    setModalOpen, 
     selectedLancamentoIdForModal,
     setSelectedLancamentoIdForModal
   } = useUIStore();
-
-  const isAVREditMode = isAVRModalOpen;
 
   const { role } = useAuth();
   const { data: lancamentos = [], baixaLancamento } = useLancamentos();
@@ -157,12 +154,12 @@ export default function BaixaLancamentoModal() {
       setMotivoAVRId('');
       setObservacao('');
       setTaxaBancaria('');
-      setTipoBaixa(isAVREditMode ? 'avr' : 'financeira');
+      setTipoBaixa('financeira');
       setPropagateAVR('none');
       setIsAVRConfirmationOpen(false);
       setAttachments([]);
     }
-  }, [lancamento, contas, isAVREditMode]);
+  }, [lancamento, contas]);
 
   useEffect(() => {
     if (!lancamento) return;
@@ -220,7 +217,6 @@ export default function BaixaLancamentoModal() {
 
   const handleClose = () => {
     setModalOpen('isBaixaLancamentoOpen', false);
-    setModalOpen('isAVRModalOpen', false);
     setSelectedLancamentoIdForModal(null);
   };
 
@@ -452,7 +448,7 @@ export default function BaixaLancamentoModal() {
 
   return (
     <AnimatePresence>
-      {(isBaixaLancamentoOpen || isAVRModalOpen) && (
+      {isBaixaLancamentoOpen && (
         <div className="fixed inset-0 z-[300] flex items-center justify-center p-4">
           <motion.div 
             initial={{ opacity: 0 }}
@@ -470,7 +466,7 @@ export default function BaixaLancamentoModal() {
           >
             <header className="px-8 py-6 border-b border-neutral-100 flex justify-between items-center bg-neutral-50/50 shrink-0">
               <div>
-                <h3 className="text-sm font-black uppercase tracking-widest text-neutral-900">{isAVREditMode ? 'Ajuste de Valor Real (AVR)' : 'Operações de Baixa de Título'}</h3>
+                <h3 className="text-sm font-black uppercase tracking-widest text-neutral-900">Operações de Baixa de Título</h3>
                 <div className="flex flex-wrap gap-x-4 gap-y-1 mt-2">
                   <div className="flex items-center gap-1.5 text-[9px] font-black uppercase text-secondary">
                     <User className="w-3 h-3" /> {entName}
@@ -506,13 +502,11 @@ export default function BaixaLancamentoModal() {
               <div className="space-y-2">
                 <label className="text-[10px] font-black uppercase text-secondary tracking-widest">Tipo de Baixa</label>
                 <div className="grid grid-cols-3 gap-2">
-                  {(isAVREditMode
-                    ? [{ id: 'avr', label: 'AVR', desc: 'Ajuste do valor real' }]
-                    : [
-                        { id: 'financeira', label: 'Quitar', desc: 'Liquidação normal' },
-                        { id: 'bpi', label: 'BPI', desc: 'Baixa por inatividade' }
-                      ]
-                  ).map(opt => (
+                  {[
+                    { id: 'financeira', label: 'Quitar', desc: 'Liquidação normal' },
+                    { id: 'bpi', label: 'BPI', desc: 'Baixa por inatividade' },
+                    { id: 'avr', label: 'AVR', desc: 'Ajuste do valor real' }
+                  ].map(opt => (
                     <button
                       key={opt.id}
                       type="button"
