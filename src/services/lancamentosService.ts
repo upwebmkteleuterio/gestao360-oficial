@@ -289,6 +289,9 @@ export const lancamentosService = {
     const isBPI = data.tipo_baixa === 'bpi';
     const isAVR = data.tipo_baixa === 'avr';
     const valorPagoEfetivo = (isBPI || isAVR) ? (data.valor_pago > 0 ? data.valor_pago : (isBPI ? 0 : current.valor_previsto)) : (data.valor_pago > 0 ? data.valor_pago : current.valor_previsto);
+    const valorTotalAVR = data.parcelas?.length
+      ? data.parcelas.reduce((total, parcela) => total + (Number(parcela.valor.replace(/\./g, '').replace(',', '.')) || 0), 0)
+      : valorPagoEfetivo;
     const subtotal = current.valor_previsto - (data.valor_desconto || 0) + (data.valor_acrescimo || 0);
     const isPartial = valorPagoEfetivo < subtotal;
     const dataPagamentoVal = data.data_pagamento || new Date().toISOString().split('T')[0];
@@ -300,7 +303,7 @@ export const lancamentosService = {
    let observacaoFinal = observacaoOriginal;
    
    if (isAVR) {
-     observacaoFinal += `\n[AVR - Ajuste Realizado em ${new Date().toLocaleDateString('pt-BR')}] Valor original alterado de R$ ${current.valor_original || current.valor_previsto} para R$ ${valorPagoEfetivo}. Motivo: ${data.motivo_ajuste || 'Não informado'}`;
+     observacaoFinal += `\n[AVR - Ajuste Realizado em ${new Date().toLocaleDateString('pt-BR')}] Valor original alterado de R$ ${current.valor_original || current.valor_previsto} para R$ ${valorTotalAVR}. Motivo: ${data.motivo_ajuste || 'Não informado'}`;
    } else if (isBPI) {
      observacaoFinal += `\n[BPI - Baixa por Inatividade em ${new Date().toLocaleDateString('pt-BR')}]`;
    }
@@ -349,8 +352,8 @@ export const lancamentosService = {
      }
      
      const updatePayload: any = {
-       valor_previsto: valorPagoEfetivo,
-       valor_original: valorPagoEfetivo,
+       valor_previsto: valorTotalAVR,
+       valor_original: valorTotalAVR,
        ...(recurrenceId ? {
          recorrencia_id: recurrenceId,
          numero_parcela: data.parcelas?.find(parcela => parcela.id === id)?.numero || 1,
@@ -359,7 +362,7 @@ export const lancamentosService = {
        ...(data.condicao ? { condicao: data.condicao } : {}),
        ...(data.data_competencia ? { data_competencia: data.data_competencia } : {}),
        ...(data.data_emissao ? { data_emissao: data.data_emissao } : {}),
-       observacoes: (current.observacoes || '') + `\n[AVR - Ajuste Realizado em ${timestampStr}] Valor alterado de R$ ${current.valor_original || current.valor_previsto} para R$ ${valorPagoEfetivo}. Motivo: ${data.motivo_ajuste || 'Não informado'}`,
+       observacoes: (current.observacoes || '') + `\n[AVR - Ajuste Realizado em ${timestampStr}] Valor alterado de R$ ${current.valor_original || current.valor_previsto} para R$ ${valorTotalAVR}. Motivo: ${data.motivo_ajuste || 'Não informado'}`,
      };
 
      // Se não for master, o status de aprovação volta para digital para conferência
