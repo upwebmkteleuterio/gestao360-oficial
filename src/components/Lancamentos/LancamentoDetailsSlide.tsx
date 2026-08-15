@@ -53,6 +53,7 @@ export default function LancamentoDetailsSlide() {
   const { data: contas = [] } = useContas();
 
   const [parcelas, setParcelas] = useState<any[]>([]);
+  const [uploadedAnexos, setUploadedAnexos] = useState<any[]>([]);
 
   const isMaster = role === 'master';
 
@@ -113,6 +114,7 @@ export default function LancamentoDetailsSlide() {
     setModalOpen('isComprovanteOpen', false);
     setSelectedLancamentoIdForModal(null);
     setDispensarComprovante(false);
+    setUploadedAnexos([]);
   };
 
   if (!isComprovanteOpen) return null;
@@ -201,6 +203,7 @@ export default function LancamentoDetailsSlide() {
           throw insertError;
         }
         diagnosticLogger.info('lancamento-anexos-upload', 'Registro do anexo salvo no banco', { filePath, insertedRows });
+        if (insertedRows?.[0]) setUploadedAnexos(prev => [...prev, insertedRows[0]]);
       }
 
       const refreshed = await refetchAnexos();
@@ -221,7 +224,8 @@ export default function LancamentoDetailsSlide() {
     }
   };
 
-  const hasAnexo = anexos.length > 0;
+  const displayedAnexos = [...anexos, ...uploadedAnexos.filter(uploaded => !anexos.some(anexo => anexo.id === uploaded.id))];
+  const hasAnexo = displayedAnexos.length > 0;
   const isQuitacaoPendente = lancamento?.status_pagamento === 'quitação_pendente';
   const canApprove = hasAnexo || dispensarComprovante;
   const quantidadeParcelas = lancamento?.quantidade_total_parcelas || parcelas.length;
@@ -560,9 +564,9 @@ export default function LancamentoDetailsSlide() {
                       </div>
                     )}
                     <div className="grid grid-cols-1 gap-2">
-                      {anexos.length > 0 ? (
+                      {displayedAnexos.length > 0 ? (
 
-                      anexos.map((anexo: any, index: number) => (
+                      displayedAnexos.map((anexo: any, index: number) => (
                         <div key={`comprovante-${index}`} className="group flex items-center justify-between p-4 bg-neutral-50 hover:bg-neutral-100 border border-neutral-100 rounded-2xl transition-all">
                           <a href={anexo.url} target="_blank" rel="noreferrer" download className="flex items-center gap-3 min-w-0">
                             <div className="w-10 h-10 rounded-xl bg-white border border-neutral-200 flex items-center justify-center text-primary shrink-0">
