@@ -354,6 +354,8 @@ export const lancamentosService = {
      }
      
      const updatePayload: any = {
+       tipo_baixa: 'avr',
+       motivo_ajuste: data.motivo_ajuste || current.motivo_ajuste || null,
        valor_previsto: valorTotalAVR,
        valor_original: valorTotalAVR,
        ...(recurrenceId ? {
@@ -415,6 +417,11 @@ export const lancamentosService = {
            numero_parcela: parcela.numero,
            recorrencia_id: recurrenceId,
            quantidade_total_parcelas: data.parcela_config?.quantidade || data.parcelas.length,
+           tipo_baixa: 'avr',
+           motivo_ajuste: data.motivo_ajuste || current.motivo_ajuste || null,
+           conta_bancaria_id: data.conta_bancaria_id || current.conta_bancaria_id,
+           centro_custo_id: data.centro_custo_id || current.centro_custo_id,
+           categoria_id: data.categoria_id || current.categoria_id,
            ...(data.condicao ? { condicao: data.condicao } : {}),
            ...(data.data_competencia ? { data_competencia: data.data_competencia } : {}),
            ...(data.data_emissao ? { data_emissao: data.data_emissao } : {})
@@ -463,6 +470,11 @@ export const lancamentosService = {
            .update({
              valor_previsto: parcelValue,
              valor_original: parcelValue,
+             tipo_baixa: 'avr',
+             motivo_ajuste: data.motivo_ajuste || current.motivo_ajuste || null,
+             ...(data.conta_bancaria_id ? { conta_bancaria_id: data.conta_bancaria_id } : {}),
+             ...(data.centro_custo_id ? { centro_custo_id: data.centro_custo_id } : {}),
+             ...(data.categoria_id ? { categoria_id: data.categoria_id } : {}),
              ...(data.condicao ? { condicao: data.condicao } : {}),
              ...(data.data_competencia ? { data_competencia: data.data_competencia } : {}),
              ...(data.data_emissao ? { data_emissao: data.data_emissao } : {}),

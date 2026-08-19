@@ -295,7 +295,7 @@ export default function NovoLancamentoDrawer() {
     if (editingItem) {
       setLancamentoFormDraft({
         tipo: editingItem.tipo,
-        valor_previsto: formatBRL((editingItem as any).tipo_baixa === 'avr' || (editingItem as any).motivo_ajuste ? (editingItem.valor_original || editingItem.valor_previsto) : editingItem.valor_previsto),
+        valor_previsto: formatBRL(editingItem.valor_original || editingItem.valor_previsto),
         data_emissao: editingItem.data_emissao,
         data_vencimento: editingItem.data_vencimento,
         data_competencia: editingItem.data_competencia || editingItem.data_emissao,
@@ -326,7 +326,7 @@ export default function NovoLancamentoDrawer() {
       return;
     }
 
-    setIsAVREdit((editingItem as any).tipo_baixa === 'avr' || !!(editingItem as any).motivo_ajuste);
+    setIsAVREdit(true);
     const existingAvrReason = (categoriasAjuste as any[]).find(reason => reason.nome === (editingItem as any).motivo_ajuste);
     setAvrReasonId((editingItem as any).motivo_ajuste_id || existingAvrReason?.id || '');
     setAvrQuantity(String(editingItem.quantidade_total_parcelas || 1));
@@ -353,6 +353,7 @@ export default function NovoLancamentoDrawer() {
         valor: formatBRL(parcel.valor_previsto),
         status: parcel.status_pagamento
       }));
+      setAvrWithEntry(loadedParcels[0]?.data === editingItem.data_emissao);
       setAvrParcels(loadedParcels);
       setParcelasManuais(loadedParcels.map(({ id, status, ...parcel }) => parcel));
     };
